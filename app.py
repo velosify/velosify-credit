@@ -17,6 +17,7 @@ clickable offline. See config.py for every setting.
 """
 from __future__ import annotations
 
+import hashlib
 import mimetypes
 import os
 import re
@@ -53,6 +54,45 @@ app.config["MAX_CONTENT_LENGTH"] = config.MAX_UPLOAD_BYTES
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 app.config["SESSION_COOKIE_SECURE"] = config.APP_BASE_URL.startswith("https://")
+
+# Fingerprinted asset URLs. Every /static reference gains a ?v=<hash of the
+# file>, so a deploy changes the URL and no cache anywhere can serve a stale
+# stylesheet. Without this, an intermediary that sets its own browser TTL
+# (Cloudflare defaults to 4 hours) will keep handing visitors the previous
+# CSS long after the origin has been updated, and purging the edge cache
+# does not recall what browsers already stored.
+#
+# Because the URL now changes whenever the bytes do, the files themselves can
+# be cached hard and forever.
+app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 60 * 60 * 24 * 365
+
+_ASSET_HASHES: dict[str, tuple[float, str]] = {}
+
+
+def asset_fingerprint(filename: str) -> str:
+    """Short content hash for a file under /static, memoised on mtime so the
+    digest is computed once per file per deploy rather than per request."""
+    path = Path(app.static_folder or "static") / filename
+    try:
+        mtime = path.stat().st_mtime
+    except OSError:
+        return "0"
+    cached = _ASSET_HASHES.get(filename)
+    if cached and cached[0] == mtime:
+        return cached[1]
+    digest = hashlib.md5(path.read_bytes()).hexdigest()[:10]
+    _ASSET_HASHES[filename] = (mtime, digest)
+    return digest
+
+
+@app.context_processor
+def _fingerprinted_url_for() -> dict:
+    def versioned(endpoint: str, **values):
+        if endpoint == "static" and values.get("filename"):
+            values["v"] = asset_fingerprint(values["filename"])
+        return url_for(endpoint, **values)
+    return {"url_for": versioned}
+
 
 app.teardown_appcontext(database.close_db)
 database.init_db()
