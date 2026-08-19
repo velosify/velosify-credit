@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Portal · {{ cfg.BRAND_NAME }}{% endblock %}</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#08070d">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+{% block head %}{% endblock %}
+</head>
+<body>
+
+<div class="app-shell">
+  <aside class="sidebar">
+    <a class="brand" href="{{ url_for('landing') }}">
+      <span class="brand-mark">V</span>
+      <span>Velosify<span class="gradient-text">Credit</span></span>
+    </a>
+
+    {% if is_admin %}
+      <a class="side-link {{ 'active' if request.path.startswith('/admin/clients') }}"
+         href="{{ url_for('admin_clients') }}"><span class="ico">◫</span> Clients</a>
+      <a class="side-link" href="{{ url_for('landing') }}"><span class="ico">↗</span> Public site</a>
+    {% else %}
+      <a class="side-link {{ 'active' if request.path == '/portal' }}"
+         href="{{ url_for('portal') }}"><span class="ico">◆</span> Overview</a>
+      <a class="side-link {{ 'active' if request.path.startswith('/portal/documents') }}"
+         href="{{ url_for('portal_documents') }}"><span class="ico">▤</span> Documents</a>
+      <a class="side-link {{ 'active' if request.path.startswith('/portal/account') }}"
+         href="{{ url_for('portal_account') }}"><span class="ico">◉</span> Account</a>
+      <a class="side-link {{ 'active' if request.path.startswith('/portal/agreement') }}"
+         href="{{ url_for('portal_agreement') }}"><span class="ico">§</span> My agreement</a>
+    {% endif %}
+
+    <div class="side-foot">
+      {% if user %}
+        <div class="tiny faint" style="padding:0 14px 8px">
+          {{ user.first_name }} {{ user.last_name }}
+        </div>
+      {% endif %}
+      <a class="side-link" href="{{ url_for('logout') }}"><span class="ico">⏻</span> Sign out</a>
+    </div>
+  </aside>
+
+  <main class="app-main">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ 'success' if category == 'success' else 'error' }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    {% block body %}{% endblock %}
+  </main>
+</div>
+
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

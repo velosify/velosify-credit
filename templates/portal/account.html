@@ -1,0 +1,81 @@
+{% extends "base_app.html" %}
+{% block title %}Account — {{ cfg.BRAND_NAME }}{% endblock %}
+
+{% block body %}
+<div class="page-head">
+  <h1>Account</h1>
+  <p class="muted mb-0">Your details, your password and your payment record.</p>
+</div>
+
+<div class="grid grid-2" style="align-items:start">
+  <div class="card">
+    <div class="card-title" style="margin-bottom:18px">Your details</div>
+    <form method="post" action="{{ url_for('portal_account_save') }}" data-guard>
+      <div class="field-row">
+        <div class="field">
+          <label for="first_name">First name</label>
+          <input class="input" id="first_name" name="first_name" required
+                 value="{{ user.first_name }}">
+        </div>
+        <div class="field">
+          <label for="last_name">Last name</label>
+          <input class="input" id="last_name" name="last_name" required
+                 value="{{ user.last_name }}">
+        </div>
+      </div>
+      <div class="field">
+        <label for="phone">Phone number</label>
+        <input class="input" id="phone" name="phone" type="tel" value="{{ user.phone }}">
+      </div>
+      <div class="field">
+        <label>Email address</label>
+        <input class="input" value="{{ user.email }}" disabled>
+        <div class="hint">
+          Email is your sign-in. To change it, write to
+          <a href="mailto:{{ cfg.SUPPORT_EMAIL }}" style="text-decoration:underline">{{ cfg.SUPPORT_EMAIL }}</a>.
+        </div>
+      </div>
+      <button class="btn btn-primary" type="submit" data-busy="Saving…">Save changes</button>
+    </form>
+  </div>
+
+  <div class="stack">
+    <div class="card">
+      <div class="card-title" style="margin-bottom:18px">Change password</div>
+      <form method="post" action="{{ url_for('portal_password') }}" data-guard>
+        <div class="field">
+          <label for="current_password">Current password</label>
+          <input class="input" id="current_password" name="current_password"
+                 type="password" required autocomplete="current-password">
+        </div>
+        <div class="field">
+          <label for="new_password">New password</label>
+          <input class="input" id="new_password" name="new_password" type="password"
+                 required minlength="10" autocomplete="new-password">
+          <div class="hint">At least 10 characters.</div>
+        </div>
+        <button class="btn btn-ghost" type="submit" data-busy="Updating…">Update password</button>
+      </form>
+    </div>
+
+    {% if order %}
+      <div class="card card-pad-sm">
+        <div class="card-title" style="font-size:.95rem">Payment</div>
+        <div class="row-between small">
+          <span class="muted">Amount</span><span class="strong">{{ order.amount_cents | money }}</span>
+        </div>
+        <div class="row-between small" style="margin-top:8px">
+          <span class="muted">Date</span><span>{{ order.paid_at | date }}</span>
+        </div>
+        <div class="row-between small" style="margin-top:8px">
+          <span class="muted">Status</span><span class="badge badge-success">Paid in full</span>
+        </div>
+        <p class="tiny faint" style="margin:14px 0 0">
+          One-time charge. There is no subscription on this account and nothing
+          further will be billed.
+        </p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

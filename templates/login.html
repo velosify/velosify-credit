@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign in — {{ cfg.BRAND_NAME }}</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+<div class="centered-page">
+  <div class="centered-card">
+    <div class="text-center" style="margin-bottom:26px">
+      <a class="brand" href="{{ url_for('landing') }}" style="justify-content:center">
+        <span class="brand-mark">V</span>
+        <span>Velosify<span class="gradient-text">Credit</span></span>
+      </a>
+    </div>
+
+    <div class="card">
+      <h1 style="font-size:1.5rem;margin-bottom:6px">Sign in</h1>
+      <p class="small muted" style="margin-bottom:24px">
+        Access your case, your documents and your agreement.
+      </p>
+
+      {% if error %}
+        <div class="alert alert-error">{{ error }}</div>
+      {% endif %}
+
+      <form method="post" action="{{ url_for('login_submit') }}" data-guard>
+        <input type="hidden" name="next" value="{{ request.args.get('next', '') }}">
+
+        <div class="field">
+          <label for="email">Email address</label>
+          <input class="input" id="email" name="email" type="email" required
+                 autocomplete="email" autofocus value="{{ email or '' }}">
+        </div>
+
+        <div class="field">
+          <label for="password">Password</label>
+          <input class="input" id="password" name="password" type="password"
+                 required autocomplete="current-password">
+        </div>
+
+        <button class="btn btn-primary btn-block" type="submit" data-busy="Signing in…">
+          Sign in
+        </button>
+      </form>
+
+      <p class="small faint text-center" style="margin:20px 0 0">
+        Not enrolled yet?
+        <a href="{{ url_for('order_page') }}" style="text-decoration:underline">Start here</a>
+      </p>
+      <p class="tiny faint text-center" style="margin:8px 0 0">
+        Forgotten your password? Email
+        <a href="mailto:{{ cfg.SUPPORT_EMAIL }}" style="text-decoration:underline">{{ cfg.SUPPORT_EMAIL }}</a>
+        and we'll reset it.
+      </p>
+    </div>
+  </div>
+</div>
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

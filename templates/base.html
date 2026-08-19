@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}{{ cfg.BRAND_NAME }}{% endblock %}</title>
+<meta name="description" content="{% block description %}Full-service credit restoration. We challenge the inaccurate, unverifiable and outdated items dragging your score down — and keep you in the loop the whole way.{% endblock %}">
+<meta name="theme-color" content="#08070d">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+{% block head %}{% endblock %}
+</head>
+<body>
+
+<header class="nav">
+  <div class="container">
+    <a class="brand" href="{{ url_for('landing') }}">
+      <span class="brand-mark">V</span>
+      <span>Velosify<span class="gradient-text">Credit</span></span>
+    </a>
+
+    <button class="nav-toggle" id="nav-toggle" aria-label="Menu" aria-expanded="false">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M3 6h18M3 12h18M3 18h18"/>
+      </svg>
+    </button>
+
+    <nav class="nav-links" id="nav-links">
+      <a href="{{ url_for('landing') }}#how">How it works</a>
+      <a href="{{ url_for('landing') }}#included">What's included</a>
+      <a href="{{ url_for('landing') }}#pricing">Pricing</a>
+      <a href="{{ url_for('landing') }}#faq">FAQ</a>
+      {% if user %}
+        <a href="{{ url_for('admin_clients') if is_admin else url_for('portal') }}">My portal</a>
+        <a class="btn btn-ghost btn-sm" href="{{ url_for('logout') }}">Sign out</a>
+      {% else %}
+        <a href="{{ url_for('login') }}">Sign in</a>
+        <a class="btn btn-primary btn-sm" href="{{ url_for('order_page') }}">Get started</a>
+      {% endif %}
+    </nav>
+  </div>
+</header>
+
+<main>
+  {% block body %}{% endblock %}
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div>
+        <a class="brand" href="{{ url_for('landing') }}">
+          <span class="brand-mark">V</span>
+          <span>Velosify<span class="gradient-text">Credit</span></span>
+        </a>
+        <p class="small" style="margin-top:16px;max-width:36ch">
+          Credit restoration done properly — real dispute work, honest
+          timelines, and a portal that shows you exactly where things stand.
+        </p>
+      </div>
+      <div>
+        <h4>Company</h4>
+        <ul>
+          <li><a href="{{ url_for('landing') }}#how">How it works</a></li>
+          <li><a href="{{ url_for('landing') }}#pricing">Pricing</a></li>
+          <li><a href="{{ url_for('landing') }}#faq">FAQ</a></li>
+          <li><a href="mailto:{{ cfg.SUPPORT_EMAIL }}">Contact</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Legal</h4>
+        <ul>
+          <li><a href="{{ url_for('agreement_preview') }}">Service agreement</a></li>
+          <li><a href="{{ url_for('terms') }}">Terms of service</a></li>
+          <li><a href="{{ url_for('privacy') }}">Privacy policy</a></li>
+          <li><a href="{{ url_for('login') }}">Client sign in</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer-legal">
+      <p>&copy; {{ current_year }} {{ cfg.COMPANY_LEGAL_NAME }}. All rights reserved.
+      {% if cfg.COMPANY_ADDRESS %} {{ cfg.COMPANY_ADDRESS }}.{% endif %}</p>
+      <p>
+        {{ cfg.BRAND_NAME }} is a credit repair organization as defined under
+        the federal Credit Repair Organizations Act. You have the right to
+        dispute inaccurate information in your credit report by contacting the
+        credit bureaus directly, at no cost to you. Results vary by client and
+        depend on the accuracy of the information reported. We do not remove
+        accurate, current and verifiable information, and no company can
+        promise a specific score increase.
+      </p>
+    </div>
+  </div>
+</footer>
+
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

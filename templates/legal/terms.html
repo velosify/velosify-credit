@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Terms of service — {{ cfg.BRAND_NAME }}{% endblock %}
+
+{% block body %}
+{#  TEMPLATE ONLY — have counsel review before launch. #}
+<section class="section-tight">
+  <div class="container container-narrow legal-doc">
+    <span class="eyebrow">Legal</span>
+    <h1 style="font-size:clamp(1.8rem,3.4vw,2.4rem)">Terms of service</h1>
+    <p class="faint small">Last updated {{ current_year }}</p>
+
+    <h2>1. Who we are</h2>
+    <p>
+      This site is operated by {{ cfg.COMPANY_LEGAL_NAME }}
+      {%- if cfg.COMPANY_ADDRESS %}, {{ cfg.COMPANY_ADDRESS }}{% endif %}.
+      Reach us at <a href="mailto:{{ cfg.SUPPORT_EMAIL }}">{{ cfg.SUPPORT_EMAIL }}</a>.
+      By using this site or enrolling in our programme you agree to these terms.
+    </p>
+
+    <h2>2. The service</h2>
+    <p>
+      We provide credit restoration services: reviewing your consumer credit
+      files, identifying items that appear inaccurate, incomplete, outdated or
+      unverifiable, and disputing those items with the consumer reporting
+      agencies and furnishers on your behalf. The specific commitments of the
+      engagement are set out in your
+      <a href="{{ url_for('agreement_preview') }}">service agreement</a>, which
+      controls if anything here conflicts with it.
+    </p>
+
+    <h2>3. No guaranteed outcome</h2>
+    <p>
+      Credit outcomes depend on what is actually reported about you and on how
+      reporting agencies and furnishers respond. We do not guarantee that any
+      item will be removed or that your score will change by any amount.
+      Nothing on this site is a promise of a specific result.
+    </p>
+
+    <h2>4. Your account</h2>
+    <p>
+      You are responsible for keeping your portal password confidential and
+      for everything done under your account. Tell us immediately if you think
+      someone else has access. Provide accurate information — we rely on it,
+      and submitting false information to a consumer reporting agency is a
+      federal offence.
+    </p>
+
+    <h2>5. Fees and cancellation</h2>
+    <p>
+      The programme fee is {{ cfg.PRICE_LABEL }}, charged once. You may cancel
+      without penalty or obligation within {{ cfg.CANCELLATION_DAYS }} business
+      days of signing your agreement, and we will refund you in full. After
+      that period, refunds are handled as described in your service agreement.
+    </p>
+
+    <h2>6. Documents you upload</h2>
+    <p>
+      You keep ownership of everything you upload. You grant us permission to
+      use those documents solely to perform the services — including attaching
+      them to dispute correspondence where the reporting agency or furnisher
+      requires proof of identity. We retain case records for as long as
+      required to run the engagement and to meet our record-keeping
+      obligations, then delete them.
+    </p>
+
+    <h2>7. Acceptable use</h2>
+    <p>
+      Don't upload malicious files, attempt to access another client's
+      information, probe or disrupt the service, or use it to further any
+      unlawful purpose. We may suspend an account that does.
+    </p>
+
+    <h2>8. Limitation of liability</h2>
+    <p>
+      To the fullest extent permitted by law, our total liability arising out
+      of or relating to the service is limited to the amount you paid us. We
+      are not liable for indirect, incidental or consequential damages. Nothing
+      in these terms limits any right you have under the Credit Repair
+      Organizations Act or other applicable consumer protection law.
+    </p>
+
+    <h2>9. Changes</h2>
+    <p>
+      We may update these terms. Material changes will be posted here with a
+      revised date, and where they affect an active engagement we'll notify you
+      by email.
+    </p>
+
+    <h2>10. Contact</h2>
+    <p>
+      Questions about these terms:
+      <a href="mailto:{{ cfg.SUPPORT_EMAIL }}">{{ cfg.SUPPORT_EMAIL }}</a>.
+    </p>
+  </div>
+</section>
+{% endblock %}

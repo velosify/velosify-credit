@@ -1,0 +1,176 @@
+{% extends "base_app.html" %}
+{% block title %}{{ client.first_name }} {{ client.last_name }} — {{ cfg.BRAND_NAME }} admin{% endblock %}
+
+{% block body %}
+<a class="btn btn-quiet btn-sm" href="{{ url_for('admin_clients') }}">← All clients</a>
+
+<div class="page-head" style="margin-top:14px">
+  <h1>{{ client.first_name }} {{ client.last_name }}</h1>
+  <p class="muted mb-0">
+    <a href="mailto:{{ client.email }}">{{ client.email }}</a>
+    {% if client.phone %} · {{ client.phone }}{% endif %}
+    · enrolled {{ client.created_at | date }}
+  </p>
+</div>
+
+<div class="grid" style="grid-template-columns:1.55fr 1fr;gap:24px" id="admin-grid">
+
+  <!-- ---------- Left: documents ---------- -->
+  <div class="stack">
+    <div class="card">
+      <div class="row-between" style="margin-bottom:16px">
+        <div class="card-title mb-0">
+          Documents — {{ checklist.required_done }}/{{ checklist.required_total }} required
+        </div>
+        {% if checklist.complete %}<span class="badge badge-success">Complete</span>{% endif %}
+      </div>
+
+      {% set has_files = checklist['items'] | selectattr('files') | list %}
+      {% if has_files %}
+        {% for item in checklist['items'] if item.files %}
+          <div style="margin-bottom:22px">
+            <div class="small strong" style="margin-bottom:8px">
+              {{ item.label }}
+              {% if not item.required %}<span class="badge" style="margin-left:6px">Optional</span>{% endif %}
+            </div>
+
+            {% for f in item.files %}
+              <div class="file-row">
+                <span class="file-ico">{{ f.original_name.rsplit('.', 1)[-1][:4] | upper }}</span>
+                <span class="name">
+                  <a href="{{ url_for('download_document', doc_id=f.id) }}" target="_blank">{{ f.original_name }}</a>
+                  <span class="tiny faint"> · {{ f.size_bytes | filesize }} · {{ f.uploaded_at | datetime }}</span>
+                </span>
+                <a class="btn btn-quiet btn-sm"
+                   href="{{ url_for('download_document', doc_id=f.id, download=1) }}">Download</a>
+                {% if f.status == 'accepted' %}
+                  <span class="badge badge-success">Accepted</span>
+                {% elif f.status == 'rejected' %}
+                  <span class="badge badge-danger">Rejected</span>
+                {% else %}
+                  <span class="badge badge-warn">New</span>
+                {% endif %}
+              </div>
+
+              <form method="post" action="{{ url_for('admin_document_status', doc_id=f.id) }}"
+                    class="row" style="gap:8px;margin:8px 0 0 44px">
+                <select class="select" name="status" style="max-width:150px">
+                  <option value="received" {{ 'selected' if f.status == 'received' }}>Unreviewed</option>
+                  <option value="accepted" {{ 'selected' if f.status == 'accepted' }}>Accepted</option>
+                  <option value="rejected" {{ 'selected' if f.status == 'rejected' }}>Rejected</option>
+                </select>
+                <input class="input" name="review_note" style="flex:1;min-width:180px"
+                       placeholder="Note to client (sent if rejected)"
+                       value="{{ f.review_note }}">
+                <button class="btn btn-ghost btn-sm" type="submit">Save</button>
+              </form>
+            {% endfor %}
+          </div>
+        {% endfor %}
+      {% else %}
+        <p class="small muted mb-0">Nothing uploaded yet.</p>
+      {% endif %}
+
+      <div class="small muted" style="border-top:1px solid var(--border);padding-top:14px">
+        <strong>Still missing:</strong>
+        {% set missing = checklist['items'] | selectattr('required') | rejectattr('satisfied') | list %}
+        {% if missing %}
+          {{ missing | map(attribute='label') | join(', ') }}
+        {% else %}
+          nothing — the required set is complete.
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="margin-bottom:18px">Case timeline</div>
+      {% if events %}
+        <ul class="timeline">
+          {% for e in events %}
+            <li>
+              <div class="t-title">{{ e.title }}</div>
+              <div class="t-meta">{{ e.created_at | datetime }} · {{ e.created_by }}</div>
+              {% if e.body %}<div class="t-body">{{ e.body }}</div>{% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="small muted mb-0">No events yet.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ---------- Right: actions ---------- -->
+  <div class="stack">
+    <div class="card card-pad-sm">
+      <div class="card-title" style="font-size:.95rem">Case stage</div>
+      <form method="post" action="{{ url_for('admin_set_stage', user_id=client.id) }}">
+        <select class="select" name="stage" style="margin-bottom:10px">
+          {% for key, label in CASE_STAGES %}
+            <option value="{{ key }}" {{ 'selected' if client.case_stage == key }}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <button class="btn btn-primary btn-sm btn-block" type="submit">Update stage</button>
+      </form>
+      <p class="tiny faint" style="margin:10px 0 0">
+        Changing the stage posts an entry to the client's timeline.
+      </p>
+    </div>
+
+    <div class="card card-pad-sm">
+      <div class="card-title" style="font-size:.95rem">Post an update</div>
+      <form method="post" action="{{ url_for('admin_add_event', user_id=client.id) }}" data-guard>
+        <div class="field">
+          <input class="input" name="title" required
+                 placeholder="e.g. Round 1 disputes sent">
+        </div>
+        <div class="field">
+          <textarea class="textarea" name="body" rows="4"
+                    placeholder="Optional detail the client will see"></textarea>
+        </div>
+        <button class="btn btn-ghost btn-sm btn-block" type="submit" data-busy="Posting…">
+          Post to timeline
+        </button>
+      </form>
+    </div>
+
+    <div class="card card-pad-sm">
+      <div class="card-title" style="font-size:.95rem">Payment</div>
+      {% if orders %}
+        {% for o in orders %}
+          <div class="row-between small" style="padding:7px 0;
+               {% if not loop.first %}border-top:1px solid var(--border){% endif %}">
+            <span>{{ o.amount_cents | money }}</span>
+            {% if o.status == 'paid' %}
+              <span class="badge badge-success">Paid {{ o.paid_at | date }}</span>
+            {% elif o.status == 'refunded' %}
+              <span class="badge badge-danger">Refunded</span>
+            {% else %}
+              <span class="badge badge-warn">Pending</span>
+            {% endif %}
+          </div>
+        {% endfor %}
+      {% else %}
+        <p class="small muted mb-0">No orders on file.</p>
+      {% endif %}
+    </div>
+
+    <div class="card card-pad-sm">
+      <div class="card-title" style="font-size:.95rem">Agreement</div>
+      {% if client.agreement_signed_at %}
+        <p class="small muted mb-0">
+          Signed by <strong style="color:var(--text)">{{ client.agreement_name }}</strong><br>
+          {{ client.agreement_signed_at | datetime }}<br>
+          {% if client.agreement_ip %}<span class="tiny faint">IP {{ client.agreement_ip }}</span>{% endif %}
+        </p>
+      {% else %}
+        <p class="small muted mb-0">Not signed.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<style>
+  @media (max-width: 980px) { #admin-grid { grid-template-columns: 1fr; } }
+</style>
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}{{ code }} — {{ cfg.BRAND_NAME }}{% endblock %}
+{% block head %}<meta name="robots" content="noindex">{% endblock %}
+
+{% block body %}
+<section class="section">
+  <div class="container container-narrow">
+    <div class="card text-center">
+      <div class="gradient-text" style="font-size:3.4rem;font-weight:800;line-height:1">{{ code }}</div>
+      <p class="lead lead-center" style="margin-top:12px">{{ message }}</p>
+      <div class="hero-cta" style="justify-content:center">
+        <a class="btn btn-primary" href="{{ url_for('landing') }}">Back to the homepage</a>
+        {% if user %}
+          <a class="btn btn-ghost" href="{{ url_for('portal') }}">My portal</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

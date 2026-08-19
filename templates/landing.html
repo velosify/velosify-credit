@@ -1,0 +1,387 @@
+{% extends "base.html" %}
+
+{% block title %}{{ cfg.BRAND_NAME }} — Credit Restoration Done Properly{% endblock %}
+
+{% block body %}
+
+<!-- ===================== Hero ===================== -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-grid">
+      <div>
+        <span class="pill-note">
+          <span class="dot">✦</span>
+          One flat fee. No monthly billing, ever.
+        </span>
+
+        <h1 style="margin-top:24px">
+          Get the errors off your report<br>
+          and <span class="gradient-text">your score back.</span>
+        </h1>
+
+        <p class="lead">
+          Most credit reports contain something that shouldn't be there —
+          an account that isn't yours, a balance that was paid, a collection
+          past its reporting window. We find those items, challenge them
+          with the bureaus and furnishers, and follow through until they're
+          resolved.
+        </p>
+
+        <div class="hero-cta">
+          <a class="btn btn-primary btn-lg" href="{{ url_for('order_page') }}">
+            Start my restoration — {{ cfg.PRICE_LABEL }}
+          </a>
+          <a class="btn btn-ghost btn-lg" href="#how">See how it works</a>
+        </div>
+
+        <div class="hero-assurances">
+          <span><span class="tick">✓</span> One-time fee, nothing recurring</span>
+          <span><span class="tick">✓</span> Track every dispute in your portal</span>
+          <span><span class="tick">✓</span> {{ cfg.CANCELLATION_DAYS }}-day cancellation right</span>
+        </div>
+      </div>
+
+      <!-- Illustrative score panel. Numbers are an example, and labelled
+           as one — nothing here implies a guaranteed outcome. -->
+      <div class="score-card">
+        <div class="card card-glass">
+          <div class="row-between" style="margin-bottom:18px">
+            <span class="badge badge-accent">Example client file</span>
+            <span class="tiny faint">Month 6</span>
+          </div>
+
+          <div class="score-row">
+            <span class="score-now">712</span>
+            <span class="score-delta">▲ 94 pts</span>
+          </div>
+          <div class="tiny faint">Started at 618</div>
+
+          <div class="score-track"><div class="score-fill"></div></div>
+          <div class="score-scale"><span>300</span><span>850</span></div>
+
+          <div class="score-items">
+            <div class="score-item">
+              <span class="label">Collection · unverified</span>
+              <span class="badge badge-success">Removed</span>
+            </div>
+            <div class="score-item">
+              <span class="label">Late payment · reported in error</span>
+              <span class="badge badge-success">Removed</span>
+            </div>
+            <div class="score-item">
+              <span class="label">Duplicate account</span>
+              <span class="badge badge-success">Removed</span>
+            </div>
+            <div class="score-item">
+              <span class="label">Charge-off · verified accurate</span>
+              <span class="badge">Stands</span>
+            </div>
+          </div>
+        </div>
+        <p class="tiny faint text-center" style="margin-top:14px">
+          Illustration only. Individual results vary and depend on what's
+          actually on your report.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== What we challenge ===================== -->
+<section class="section-tight section-alt">
+  <div class="container">
+    <p class="tiny faint text-center" style="letter-spacing:.14em;text-transform:uppercase;margin-bottom:26px">
+      What typically comes off a report
+    </p>
+    <div class="grid grid-4">
+      {% set challenges = [
+        ('Collections', 'Unverifiable, misreported, or past the reporting window'),
+        ('Late payments', 'Reported in error or against a paid-current account'),
+        ('Charge-offs', 'Duplicated, reaged, or inaccurately balanced'),
+        ('Hard inquiries', 'Made without your authorisation'),
+        ('Public records', 'Bankruptcies and judgments reported incorrectly'),
+        ('Identity theft', 'Accounts opened in your name that were never yours'),
+        ('Repossessions', 'Missing required notices or wrong figures'),
+        ('Mixed files', 'Someone else\'s history merged into yours')
+      ] %}
+      {% for title, note in challenges %}
+        <div class="card card-pad-sm card-hover">
+          <div class="card-title">{{ title }}</div>
+          <p class="small muted mb-0">{{ note }}</p>
+        </div>
+      {% endfor %}
+    </div>
+    <p class="small faint text-center mt-2" style="max-width:64ch;margin-inline:auto">
+      We challenge what is inaccurate, incomplete, or unverifiable. Accurate,
+      current and verifiable information stays on your report — that's the
+      law, and anyone who tells you otherwise is selling you something else.
+    </p>
+  </div>
+</section>
+
+<!-- ===================== How it works ===================== -->
+<section class="section" id="how">
+  <div class="container">
+    <div class="text-center" style="margin-bottom:56px">
+      <span class="eyebrow">How it works</span>
+      <h2>Four steps, and you can watch every one</h2>
+      <p class="lead lead-center">
+        No black box. From the day you enrol, your portal shows what we've
+        sent, what came back, and what's next.
+      </p>
+    </div>
+
+    <div class="grid grid-4">
+      <div class="step">
+        <div class="step-num">1</div>
+        <h3>Enrol and upload</h3>
+        <p class="small muted mb-0">
+          Pay once, create your portal login, and upload your credit report,
+          photo ID and proof of address. Takes about ten minutes.
+        </p>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <h3>We audit the report</h3>
+        <p class="small muted mb-0">
+          We read all three bureau files line by line and build a list of
+          every item that is inaccurate, incomplete or can't be verified.
+        </p>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <h3>Disputes go out</h3>
+        <p class="small muted mb-0">
+          Challenges are filed with the bureaus and, where it matters, direct
+          with the furnisher. Bureaus have 30 days to respond.
+        </p>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <h3>We work the responses</h3>
+        <p class="small muted mb-0">
+          Removed items are logged. Anything that comes back "verified"
+          without real proof gets escalated in the next round.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== What's included ===================== -->
+<section class="section section-alt" id="included">
+  <div class="container">
+    <div class="hero-grid">
+      <div>
+        <span class="eyebrow">What's included</span>
+        <h2>Everything, for one price</h2>
+        <p class="lead">
+          There is no starter tier, no per-item fee and no upsell halfway
+          through. You pay once and the case runs until it's finished.
+        </p>
+
+        <ul class="feature-list mt-2">
+          <li><span class="tick">✓</span> Full audit of all three bureau reports</li>
+          <li><span class="tick">✓</span> Unlimited dispute rounds — we don't stop at three letters</li>
+          <li><span class="tick">✓</span> Direct challenges to furnishers and collection agencies</li>
+          <li><span class="tick">✓</span> Debt validation requests where the debt is questionable</li>
+          <li><span class="tick">✓</span> Inquiry challenges for pulls you never authorised</li>
+          <li><span class="tick">✓</span> Identity theft blocks when accounts aren't yours</li>
+          <li><span class="tick">✓</span> A live portal showing every letter sent and every response</li>
+          <li><span class="tick">✓</span> Direct line to your case team whenever you need it</li>
+        </ul>
+      </div>
+
+      <div class="card card-glass">
+        <div class="row-between" style="margin-bottom:20px">
+          <span class="strong">Your portal</span>
+          <span class="badge badge-accent">Live</span>
+        </div>
+
+        <div class="tracker" style="margin-bottom:26px">
+          <div class="tracker-step done"><span class="knob"></span><span class="name">Intake</span></div>
+          <div class="tracker-step done"><span class="knob"></span><span class="name">Documents</span></div>
+          <div class="tracker-step current"><span class="knob"></span><span class="name">Analysis</span></div>
+          <div class="tracker-step"><span class="knob"></span><span class="name">Disputes</span></div>
+          <div class="tracker-step"><span class="knob"></span><span class="name">Responses</span></div>
+        </div>
+
+        <ul class="timeline">
+          <li>
+            <div class="t-title">All documents received</div>
+            <div class="t-meta">Today</div>
+            <div class="t-body">Your file is complete and has moved to report analysis.</div>
+          </li>
+          <li>
+            <div class="t-title">Uploaded: Government-issued photo ID</div>
+            <div class="t-meta">Yesterday</div>
+          </li>
+          <li>
+            <div class="t-title">Enrollment confirmed</div>
+            <div class="t-meta">3 days ago</div>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== Pricing ===================== -->
+<section class="section" id="pricing">
+  <div class="container container-narrow">
+    <div class="text-center" style="margin-bottom:44px">
+      <span class="eyebrow">Pricing</span>
+      <h2>One fee. The whole programme.</h2>
+      <p class="lead lead-center">
+        Monthly credit repair billing rewards companies for taking their
+        time. We'd rather be paid once and finish.
+      </p>
+    </div>
+
+    <div class="price-card">
+      <div class="row-between" style="align-items:flex-start">
+        <div>
+          <span class="badge badge-accent">Complete programme</span>
+          <div class="price-amount">
+            <span class="num">{{ cfg.PRICE_LABEL }}</span>
+            <span class="per">one time</span>
+          </div>
+          <p class="small muted mb-0">No monthly fees. No per-deletion charges.</p>
+        </div>
+      </div>
+
+      <ul class="feature-list" style="margin:26px 0">
+        <li><span class="tick">✓</span> Three-bureau audit and dispute strategy</li>
+        <li><span class="tick">✓</span> Unlimited rounds until the case closes</li>
+        <li><span class="tick">✓</span> Furnisher and collector challenges included</li>
+        <li><span class="tick">✓</span> Secure document portal and case timeline</li>
+        <li><span class="tick">✓</span> {{ cfg.CANCELLATION_DAYS }} business days to cancel without penalty</li>
+      </ul>
+
+      <a class="btn btn-primary btn-lg btn-block" href="{{ url_for('order_page') }}">
+        Enrol now
+      </a>
+      <p class="tiny faint text-center" style="margin:14px 0 0">
+        You'll review and sign the full service agreement before any payment
+        is taken. <a href="{{ url_for('agreement_preview') }}" style="text-decoration:underline">Read it first</a>.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== Straight talk ===================== -->
+<section class="section section-alt">
+  <div class="container container-narrow">
+    <div class="text-center" style="margin-bottom:40px">
+      <span class="eyebrow">Straight talk</span>
+      <h2>What we won't tell you</h2>
+    </div>
+
+    <div class="grid grid-2">
+      <div class="card">
+        <div class="card-title">We won't promise a number</div>
+        <p class="small muted mb-0">
+          Nobody can guarantee a specific score, and it's illegal to try. What
+          we can tell you is exactly what's disputable on your report, and
+          you'll see the result of every challenge we file.
+        </p>
+      </div>
+      <div class="card">
+        <div class="card-title">We won't remove accurate items</div>
+        <p class="small muted mb-0">
+          If an account is genuinely yours, current and correctly reported,
+          it stays. Anyone claiming otherwise is describing fraud, not credit
+          repair.
+        </p>
+      </div>
+      <div class="card">
+        <div class="card-title">We won't pretend it's instant</div>
+        <p class="small muted mb-0">
+          Bureaus get 30 days to investigate. Most clients see the first
+          removals in 30–60 days, and a full case usually runs three to six
+          months.
+        </p>
+      </div>
+      <div class="card">
+        <div class="card-title">We won't hide behind an inbox</div>
+        <p class="small muted mb-0">
+          You can do all of this yourself for free by writing to the bureaus
+          directly. People hire us for the strategy, the follow-through and
+          not having to think about it.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== FAQ ===================== -->
+<section class="section" id="faq">
+  <div class="container container-narrow">
+    <div class="text-center" style="margin-bottom:44px">
+      <span class="eyebrow">FAQ</span>
+      <h2>Questions people actually ask</h2>
+    </div>
+
+    {% set faqs = [
+      ('How long does the whole thing take?',
+       'Bureaus have 30 days to respond to a dispute, so the first results
+        land about a month after we file. Most cases run three to six months
+        end to end, depending on how many items are in play and how hard the
+        furnishers push back.'),
+      ('What do I need to give you?',
+       'A recent copy of your credit report, a government-issued photo ID,
+        proof of your current address, and proof of your Social Security
+        number. The bureaus require all four before they will act on a
+        dispute filed on your behalf. You upload them in the portal.'),
+      ('Can you remove something that is accurate?',
+       'No, and we would not try. Accurate, current and verifiable
+        information stays on your report. Our work is on the items that are
+        wrong, out of date, duplicated, or that the furnisher cannot actually
+        prove.'),
+      ('Is my personal information safe?',
+       'Your documents are stored privately and are only ever accessible to
+        you and the case team working your file. They are never served
+        publicly, never sold, and never shared with anyone outside the
+        dispute process.'),
+      ('What if I change my mind?',
+       'You have ' ~ cfg.CANCELLATION_DAYS ~ ' business days from signing to cancel for a full
+        refund, no questions asked. The cancellation form is in your portal
+        and in your signed agreement.'),
+      ('Do I have to do anything after I enrol?',
+       'Upload your documents, then forward us anything the bureaus mail you
+        — that is genuinely it. We handle the letters, the follow-ups and the
+        escalations.'),
+      ('Will you keep charging me monthly?',
+       'No. The fee is one time. There is no subscription, no per-item charge
+        and no renewal.')
+    ] %}
+
+    {% for question, answer in faqs %}
+      <details class="faq-item">
+        <summary>{{ question }}</summary>
+        <div class="faq-body"><p>{{ answer }}</p></div>
+      </details>
+    {% endfor %}
+  </div>
+</section>
+
+<!-- ===================== Final CTA ===================== -->
+<section class="section-tight">
+  <div class="container container-narrow">
+    <div class="price-card text-center">
+      <h2 style="margin-bottom:14px">Find out what's actually on your report</h2>
+      <p class="lead lead-center" style="margin-bottom:28px">
+        Enrol today, upload your documents, and we'll have your audit back to
+        you with a full list of disputable items.
+      </p>
+      <a class="btn btn-primary btn-lg" href="{{ url_for('order_page') }}">
+        Start my restoration — {{ cfg.PRICE_LABEL }}
+      </a>
+      <p class="tiny faint" style="margin:16px 0 0">
+        Already enrolled? <a href="{{ url_for('login') }}" style="text-decoration:underline">Sign in to your portal</a>.
+      </p>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

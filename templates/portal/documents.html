@@ -1,0 +1,104 @@
+{% extends "base_app.html" %}
+{% block title %}Documents — {{ cfg.BRAND_NAME }}{% endblock %}
+
+{% block body %}
+<div class="page-head">
+  <h1>Documents</h1>
+  <p class="muted mb-0">
+    Accepted formats: PDF, JPG, PNG or Word, up to {{ cfg.MAX_UPLOAD_MB }} MB per file.
+    Photos of a document are fine as long as all four corners are visible and
+    the text is readable.
+  </p>
+</div>
+
+<div class="card" style="margin-bottom:26px">
+  <div class="row-between">
+    <div>
+      <div class="card-title">
+        {{ checklist.required_done }} of {{ checklist.required_total }} required documents received
+      </div>
+      <p class="small muted mb-0">
+        {% if checklist.complete %}
+          Everything we need is in. You don't have to do anything else.
+        {% else %}
+          We can't file disputes on your behalf until all four are in.
+        {% endif %}
+      </p>
+    </div>
+    {% if checklist.complete %}<span class="badge badge-success">Complete</span>{% endif %}
+  </div>
+  <div class="score-track" style="margin-bottom:0">
+    <div class="score-fill" style="width: {{ checklist.percent }}%"></div>
+  </div>
+</div>
+
+{% for item in checklist['items'] %}
+  <div class="doc-item {{ 'satisfied' if item.satisfied }}">
+    <div class="doc-head">
+      <div class="doc-title-wrap">
+        <span class="doc-check">✓</span>
+        <div>
+          <div class="card-title" style="margin-bottom:2px">
+            {{ item.label }}
+            {% if not item.required %}<span class="badge" style="margin-left:6px">Optional</span>{% endif %}
+          </div>
+          <p class="small muted mb-0" style="max-width:60ch">{{ item.help }}</p>
+        </div>
+      </div>
+    </div>
+
+    {% if item.files %}
+      <div style="margin-top:16px">
+        {% for f in item.files %}
+          <div class="file-row">
+            <span class="file-ico">{{ f.original_name.rsplit('.', 1)[-1][:4] | upper }}</span>
+            <span class="name">
+              <a href="{{ url_for('download_document', doc_id=f.id) }}" target="_blank">{{ f.original_name }}</a>
+              <span class="tiny faint"> · {{ f.size_bytes | filesize }} · {{ f.uploaded_at | date }}</span>
+            </span>
+
+            {% if f.status == 'accepted' %}
+              <span class="badge badge-success">Accepted</span>
+            {% elif f.status == 'rejected' %}
+              <span class="badge badge-danger">Needs replacing</span>
+            {% else %}
+              <span class="badge">In review</span>
+            {% endif %}
+
+            {% if f.status != 'accepted' %}
+              <form method="post" action="{{ url_for('portal_delete_document', doc_id=f.id) }}"
+                    data-confirm="Remove {{ f.original_name }}?" style="margin:0">
+                <button class="btn btn-quiet btn-sm" type="submit" title="Remove">✕</button>
+              </form>
+            {% endif %}
+          </div>
+          {% if f.status == 'rejected' and f.review_note %}
+            <p class="tiny" style="color:var(--danger);margin:6px 0 0 44px">{{ f.review_note }}</p>
+          {% endif %}
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <form method="post" action="{{ url_for('portal_upload') }}"
+          enctype="multipart/form-data" data-guard style="margin-top:16px">
+      <input type="hidden" name="doc_type" value="{{ item.key }}">
+      <label class="dropzone" tabindex="0">
+        <input type="file" name="files" multiple
+               accept=".pdf,.png,.jpg,.jpeg,.heic,.webp,.doc,.docx">
+        <span data-zone-label>
+          <strong style="color:var(--text)">Choose files</strong> or drag them here
+        </span>
+      </label>
+      <button class="btn btn-primary btn-sm mt-2" type="submit" data-busy="Uploading…">
+        Upload files
+      </button>
+    </form>
+  </div>
+{% endfor %}
+
+<p class="tiny faint text-center mt-2" style="max-width:60ch;margin-inline:auto">
+  Your documents are stored privately and are visible only to you and the case
+  team working your file. Read how we handle them in our
+  <a href="{{ url_for('privacy') }}" style="text-decoration:underline">privacy policy</a>.
+</p>
+{% endblock %}

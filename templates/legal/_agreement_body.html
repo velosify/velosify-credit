@@ -1,0 +1,169 @@
+{#
+  ===========================================================================
+  SERVICE AGREEMENT — TEMPLATE, NOT LEGAL ADVICE.
+
+  This is drafted to track the structure the Credit Repair Organizations Act
+  (15 U.S.C. §1679 et seq.) requires: a written contract, the separate
+  "Consumer Credit File Rights" disclosure, and a 3-business-day cancellation
+  right. Several states add their own requirements on top — registration,
+  surety bonds, extra disclosures, different cancellation windows.
+
+  Have a lawyer licensed in your state review and finalise this before you
+  take a single payment. Fill in COMPANY_LEGAL_NAME and COMPANY_ADDRESS in
+  your environment so the placeholders resolve.
+  ===========================================================================
+#}
+<p><strong>Credit Restoration Service Agreement</strong></p>
+
+<p>
+  This agreement is between {{ cfg.COMPANY_LEGAL_NAME }}
+  {%- if cfg.COMPANY_ADDRESS %}, of {{ cfg.COMPANY_ADDRESS }}{% endif %}
+  (&ldquo;{{ cfg.BRAND_NAME }},&rdquo; &ldquo;we,&rdquo; &ldquo;us&rdquo;) and the
+  client identified in the enrolment form (&ldquo;you&rdquo;).
+</p>
+
+<p><strong>1. Services we will perform.</strong> We will:</p>
+<ul>
+  <li>obtain and review your credit files from the three nationwide consumer
+      reporting agencies;</li>
+  <li>identify items that appear inaccurate, incomplete, outdated,
+      duplicated or unverifiable;</li>
+  <li>prepare and send dispute correspondence to those reporting agencies
+      and, where appropriate, directly to the furnishers of the disputed
+      information;</li>
+  <li>review each response received, and escalate or re-dispute items that
+      are returned as verified without adequate substantiation;</li>
+  <li>keep a record of every item disputed and every response received,
+      visible to you in your client portal.</li>
+</ul>
+
+<p>
+  <strong>2. What we will not do.</strong> We will not dispute information
+  that is accurate, current and verifiable. We will not create a new credit
+  identity, advise you to misrepresent your credit history, or make any
+  statement to a consumer reporting agency that is untrue or misleading.
+</p>
+
+<p>
+  <strong>3. Timeline.</strong> Consumer reporting agencies generally have 30
+  days to investigate a dispute. A typical case runs approximately three to
+  six months from the date your documents are complete. We cannot control
+  how quickly a reporting agency or furnisher responds.
+</p>
+
+<p>
+  <strong>4. No guarantee of results.</strong> We do not guarantee that any
+  particular item will be removed, or that your credit score will change by
+  any particular amount. Any statement to the contrary, by anyone, is not
+  part of this agreement.
+</p>
+
+<p>
+  <strong>5. Your obligations.</strong> You agree to provide accurate
+  information, to upload the intake documents we request, and to forward us
+  correspondence you receive from the reporting agencies or furnishers
+  during the engagement. Delays in providing these will delay the work.
+</p>
+
+<p>
+  <strong>6. Fee.</strong> The total fee for the programme described above is
+  {{ cfg.PRICE_LABEL }}. This is a one-time charge. There are no monthly
+  fees, no per-deletion charges and no renewal.
+</p>
+
+<p>
+  <strong>7. Cancellation.</strong> You may cancel this contract without
+  penalty or obligation at any time before midnight of the
+  {{ cfg.CANCELLATION_DAYS }}rd business day after the date you signed it.
+  To cancel, send written notice to
+  <a href="mailto:{{ cfg.SUPPORT_EMAIL }}">{{ cfg.SUPPORT_EMAIL }}</a>
+  {%- if cfg.COMPANY_ADDRESS %}, or by mail to {{ cfg.COMPANY_ADDRESS }}{% endif %}.
+  A cancellation notice is also available in your client portal. If you
+  cancel within this period, you will receive a full refund.
+</p>
+
+<p>
+  <strong>8. Privacy.</strong> Documents you upload are stored securely and
+  are used only to perform the services described here. We do not sell your
+  personal information. See our privacy policy for the full detail.
+</p>
+
+<p>
+  <strong>9. Governing law.</strong> This agreement is governed by the laws
+  of the state in which {{ cfg.COMPANY_LEGAL_NAME }} is organised, without
+  regard to its conflict-of-laws rules.
+</p>
+
+<p><strong>Consumer Credit File Rights Under State and Federal Law</strong></p>
+
+<p>
+  You have a right to dispute inaccurate information in your credit report by
+  contacting the credit bureau directly. However, neither you nor any credit
+  repair company or credit repair organization has the right to have accurate,
+  current, and verifiable information removed from your credit report. The
+  credit bureau must remove accurate, negative information from your report
+  only if it is over 7 years old. Bankruptcy information can be reported for
+  10 years.
+</p>
+
+<p>
+  You have a right to obtain a copy of your credit report from a credit
+  bureau. You may be charged a reasonable fee. There is no fee, however, if
+  you have been turned down for credit, employment, insurance, or a rental
+  dwelling because of information in your credit report within the preceding
+  60 days. The credit bureau must provide someone to help you interpret the
+  information in your credit file. You are entitled to receive a free copy of
+  your credit report if you are unemployed and intend to apply for employment
+  in the next 60 days, if you are a recipient of public welfare assistance, or
+  if you have reason to believe that there is inaccurate information in your
+  credit report due to fraud.
+</p>
+
+<p>
+  You have a right to sue a credit repair organization that violates the
+  Credit Repair Organizations Act. This law prohibits deceptive practices by
+  credit repair organizations.
+</p>
+
+<p>
+  You have the right to cancel your contract with any credit repair
+  organization for any reason within 3 business days from the date you signed
+  it. Credit bureaus are required to follow reasonable procedures to ensure
+  that the information they report is accurate. However, mistakes may occur.
+</p>
+
+<p>
+  You may, on your own, notify a credit bureau in writing that you dispute the
+  accuracy of information in your credit file. The credit bureau must then
+  reinvestigate and modify or remove inaccurate or unverified information,
+  usually within 30 days, unless your dispute is frivolous. The credit bureau
+  may continue to report information it has verified as accurate.
+</p>
+
+<p>
+  You are entitled to receive a copy of your credit report from the credit
+  bureau. You may be charged a reasonable fee for information relating to your
+  credit file. You may also obtain a free copy of your report from each of the
+  nationwide consumer reporting agencies once every 12 months at
+  annualcreditreport.com.
+</p>
+
+<p>
+  Neither you nor any credit repair organization may permanently remove
+  accurate, negative information from your credit report.
+</p>
+
+<p>
+  You have a right to sue a credit repair organization that violates the
+  Credit Repair Organizations Act. This law prohibits deceptive practices by
+  credit repair organizations. You have the right to cancel your contract
+  with any credit repair organization for any reason within 3 business days
+  from the date you signed it. Credit bureaus are required to follow
+  reasonable procedures to ensure that the information they report is
+  accurate. However, mistakes may occur.
+</p>
+
+<p>
+  You may wish to consult the Consumer Financial Protection Bureau or your
+  state's Attorney General regarding your rights under state law.
+</p>

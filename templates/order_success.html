@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}You're enrolled — {{ cfg.BRAND_NAME }}{% endblock %}
+{% block head %}<meta name="robots" content="noindex">{% endblock %}
+
+{% block body %}
+<section class="section">
+  <div class="container container-narrow">
+    <div class="price-card text-center">
+      <div style="width:62px;height:62px;border-radius:50%;background:var(--success-bg);
+                  border:1px solid rgba(52,211,153,.35);display:grid;place-items:center;
+                  margin:0 auto 22px;font-size:1.6rem;color:var(--success)">✓</div>
+
+      <h1 style="font-size:clamp(1.7rem,3.2vw,2.3rem)">You're enrolled</h1>
+      <p class="lead lead-center">
+        Payment of {{ order.amount_cents | money }} received. Your case is open
+        and your portal is ready.
+      </p>
+
+      <div class="alert alert-info" style="text-align:left;margin:28px 0">
+        <strong>Next step — upload four documents.</strong>
+        Your credit report, a government-issued photo ID, proof of address and
+        proof of your Social Security number. The bureaus won't act on a
+        dispute filed on your behalf without them, so the sooner they're in,
+        the sooner we start.
+      </div>
+
+      <a class="btn btn-primary btn-lg" href="{{ url_for('portal_documents') }}">
+        Upload my documents
+      </a>
+      <p class="tiny faint" style="margin:16px 0 0">
+        A confirmation email is on its way to you. Your signed agreement is
+        saved in
+        <a href="{{ url_for('portal_agreement') }}" style="text-decoration:underline">your portal</a>.
+      </p>
+    </div>
+  </div>
+</section>
+{% endblock %}

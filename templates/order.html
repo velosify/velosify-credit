@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block title %}Enrol — {{ cfg.BRAND_NAME }}{% endblock %}
+{% block description %}Enrol in the {{ cfg.BRAND_NAME }} credit restoration programme. One flat fee of {{ cfg.PRICE_LABEL }}.{% endblock %}
+
+{% block body %}
+<section class="section-tight">
+  <div class="container">
+    <div class="hero-grid" style="align-items:flex-start">
+
+      <!-- ---------- Form ---------- -->
+      <div>
+        <span class="eyebrow">Enrolment</span>
+        <h1 style="font-size:clamp(1.9rem,3.6vw,2.6rem)">Start your restoration</h1>
+        <p class="lead" style="margin-bottom:32px">
+          Create your account and sign the service agreement. You'll go to our
+          payment processor next, then straight into your portal.
+        </p>
+
+        {% if error %}
+          <div class="alert alert-error">{{ error }}</div>
+        {% endif %}
+
+        <form method="post" action="{{ url_for('order_submit') }}" data-guard class="card">
+          <div class="field-row">
+            <div class="field">
+              <label for="first_name">First name</label>
+              <input class="input" id="first_name" name="first_name" required
+                     autocomplete="given-name" value="{{ form.first_name or '' }}">
+            </div>
+            <div class="field">
+              <label for="last_name">Last name</label>
+              <input class="input" id="last_name" name="last_name" required
+                     autocomplete="family-name" value="{{ form.last_name or '' }}">
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="email">Email address</label>
+            <input class="input" id="email" name="email" type="email" required
+                   autocomplete="email" value="{{ form.email or '' }}">
+            <div class="hint">This is your portal sign-in and where we send case updates.</div>
+          </div>
+
+          <div class="field">
+            <label for="phone">Phone number <span class="faint">(optional)</span></label>
+            <input class="input" id="phone" name="phone" type="tel"
+                   autocomplete="tel" value="{{ form.phone or '' }}">
+          </div>
+
+          <div class="field">
+            <label for="password">Create a password</label>
+            <input class="input" id="password" name="password" type="password"
+                   required minlength="10" autocomplete="new-password">
+            <div class="hint">At least 10 characters.</div>
+          </div>
+
+          <hr style="border:0;border-top:1px solid var(--border);margin:26px 0">
+
+          <div class="field">
+            <label>Service agreement</label>
+            <div style="max-height:210px;overflow-y:auto;background:var(--bg-soft);
+                        border:1px solid var(--border);border-radius:var(--radius);
+                        padding:18px 20px;font-size:.83rem;line-height:1.65;color:var(--text-muted)">
+              {% include "legal/_agreement_body.html" %}
+            </div>
+            <div class="hint">
+              <a href="{{ url_for('agreement_preview') }}" target="_blank"
+                 style="text-decoration:underline">Open the full agreement in a new tab</a>
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="check">
+              <input type="checkbox" name="accept_agreement" value="yes" required>
+              <span>
+                I have read and agree to the service agreement, the
+                <a href="{{ url_for('terms') }}" target="_blank" style="text-decoration:underline">terms of service</a>
+                and the
+                <a href="{{ url_for('privacy') }}" target="_blank" style="text-decoration:underline">privacy policy</a>.
+                I understand I may cancel within {{ cfg.CANCELLATION_DAYS }} business days for a full refund.
+              </span>
+            </label>
+          </div>
+
+          <div class="field">
+            <label for="signature">Electronic signature</label>
+            <input class="input" id="signature" name="signature" required
+                   placeholder="Type your full name" autocomplete="off"
+                   value="{{ form.signature or '' }}">
+            <div class="hint" id="signature-hint"></div>
+          </div>
+
+          <button class="btn btn-primary btn-lg btn-block" type="submit"
+                  data-busy="Taking you to checkout…">
+            {% if cfg.DEV_FAKE_CHECKOUT %}
+              Complete enrolment (test mode)
+            {% else %}
+              Continue to secure payment — {{ cfg.PRICE_LABEL }}
+            {% endif %}
+          </button>
+
+          <p class="tiny faint text-center" style="margin:14px 0 0">
+            {% if cfg.DEV_FAKE_CHECKOUT %}
+              Stripe isn't configured, so payment will be simulated.
+            {% else %}
+              Payment is processed by Stripe. We never see or store your card details.
+            {% endif %}
+          </p>
+        </form>
+
+        <p class="small faint text-center mt-2">
+          Already enrolled?
+          <a href="{{ url_for('login') }}" style="text-decoration:underline">Sign in</a>
+        </p>
+      </div>
+
+      <!-- ---------- Summary ---------- -->
+      <div>
+        <div class="card card-glass" style="position:sticky;top:96px">
+          <div class="row-between" style="margin-bottom:6px">
+            <span class="strong">Credit Restoration Programme</span>
+            <span class="badge badge-accent">One time</span>
+          </div>
+
+          <div class="price-amount" style="margin:14px 0 6px">
+            <span class="num" style="font-size:2.6rem">{{ cfg.PRICE_LABEL }}</span>
+          </div>
+          <p class="small muted">Charged once. No subscription, no per-item fees.</p>
+
+          <ul class="feature-list" style="margin-top:18px">
+            <li><span class="tick">✓</span> Full three-bureau audit</li>
+            <li><span class="tick">✓</span> Unlimited dispute rounds</li>
+            <li><span class="tick">✓</span> Furnisher &amp; collector challenges</li>
+            <li><span class="tick">✓</span> Secure document portal</li>
+            <li><span class="tick">✓</span> Direct access to your case team</li>
+          </ul>
+
+          <div class="alert alert-info" style="margin:22px 0 0">
+            <strong>Your right to cancel.</strong> You may cancel this
+            contract without penalty or obligation within
+            {{ cfg.CANCELLATION_DAYS }} business days of signing. Full details
+            are in the agreement.
+          </div>
+        </div>
+
+        <div class="card card-pad-sm mt-2">
+          <div class="card-title" style="font-size:.95rem">What you'll upload next</div>
+          <ul class="feature-list">
+            <li><span class="tick">›</span> Your credit report</li>
+            <li><span class="tick">›</span> Government-issued photo ID</li>
+            <li><span class="tick">›</span> Proof of address</li>
+            <li><span class="tick">›</span> Proof of Social Security number</li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+{% endblock %}

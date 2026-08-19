@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Checkout cancelled — {{ cfg.BRAND_NAME }}{% endblock %}
+{% block head %}<meta name="robots" content="noindex">{% endblock %}
+
+{% block body %}
+<section class="section">
+  <div class="container container-narrow">
+    <div class="card text-center">
+      <h1 style="font-size:1.7rem">Nothing was charged</h1>
+      <p class="lead lead-center">
+        You left checkout before payment went through. Your details are saved —
+        pick up where you left off whenever you're ready.
+      </p>
+      <div class="hero-cta" style="justify-content:center">
+        <a class="btn btn-primary" href="{{ url_for('order_page') }}">Back to enrolment</a>
+        <a class="btn btn-ghost" href="mailto:{{ cfg.SUPPORT_EMAIL }}">Ask a question first</a>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

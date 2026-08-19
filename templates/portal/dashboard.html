@@ -1,0 +1,130 @@
+{% extends "base_app.html" %}
+{% block title %}Overview — {{ cfg.BRAND_NAME }}{% endblock %}
+
+{% block body %}
+<div class="page-head">
+  <h1>Hi {{ user.first_name or 'there' }}</h1>
+  <p class="muted mb-0">
+    {% if not checklist.complete %}
+      You're {{ checklist.required_total - checklist.required_done }} document{{ '' if checklist.required_total - checklist.required_done == 1 else 's' }}
+      away from us starting work on your file.
+    {% else %}
+      Your documents are all in. Here's where your case stands.
+    {% endif %}
+  </p>
+</div>
+
+<!-- ---------- Case progress ---------- -->
+<div class="card" style="margin-bottom:24px">
+  <div class="row-between" style="margin-bottom:20px">
+    <span class="strong">Case progress</span>
+    <span class="badge badge-accent">{{ CASE_STAGE_LABELS.get(user.case_stage, 'Intake') }}</span>
+  </div>
+
+  <div class="tracker">
+    {% for key, label in CASE_STAGES %}
+      <div class="tracker-step {% if loop.index0 < stage_index %}done{% elif loop.index0 == stage_index %}current{% endif %}">
+        <span class="knob"></span>
+        <span class="name">{{ label }}</span>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- ---------- Documents ---------- -->
+<div class="card" style="margin-bottom:24px">
+  <div class="row-between" style="margin-bottom:16px">
+    <div>
+      <div class="card-title">Your documents</div>
+      <p class="small muted mb-0">
+        {{ checklist.required_done }} of {{ checklist.required_total }} required documents received
+      </p>
+    </div>
+    <a class="btn btn-primary btn-sm" href="{{ url_for('portal_documents') }}">
+      {{ 'Manage documents' if checklist.complete else 'Upload documents' }}
+    </a>
+  </div>
+
+  <div class="score-track" style="margin:0 0 18px">
+    <div class="score-fill" style="width: {{ checklist.percent }}%"></div>
+  </div>
+
+  <div class="grid grid-2" style="gap:10px">
+    {% for item in checklist['items'] if item.required %}
+      <div class="row" style="gap:10px;align-items:center">
+        <span class="doc-check" style="width:22px;height:22px;
+              {% if item.satisfied %}background:var(--success);border-color:var(--success);color:#06281c{% endif %}">✓</span>
+        <span class="small {{ '' if item.satisfied else 'muted' }}">{{ item.label }}</span>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- ---------- Timeline + side panel ---------- -->
+<div class="grid" style="grid-template-columns:1.5fr 1fr;gap:24px" id="case-grid">
+  <div class="card">
+    <div class="card-title" style="margin-bottom:20px">Case activity</div>
+    {% if events %}
+      <ul class="timeline">
+        {% for e in events %}
+          <li>
+            <div class="t-title">{{ e.title }}</div>
+            <div class="t-meta">{{ e.created_at | datetime }}</div>
+            {% if e.body %}<div class="t-body">{{ e.body }}</div>{% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="small muted mb-0">Nothing here yet — updates will appear as your case moves.</p>
+    {% endif %}
+  </div>
+
+  <div class="stack">
+    <div class="card card-pad-sm">
+      <div class="card-title" style="font-size:.95rem">Your programme</div>
+      <div class="row-between small">
+        <span class="muted">Paid</span>
+        <span class="strong">{{ order.amount_cents | money }}</span>
+      </div>
+      <div class="row-between small" style="margin-top:8px">
+        <span class="muted">Enrolled</span>
+        <span>{{ order.paid_at | date }}</span>
+      </div>
+      <div class="row-between small" style="margin-top:8px">
+        <span class="muted">Billing</span>
+        <span class="badge badge-success">One time · complete</span>
+      </div>
+      <a class="btn btn-ghost btn-sm btn-block mt-2" href="{{ url_for('portal_agreement') }}">
+        View my agreement
+      </a>
+    </div>
+
+    {% if cancel_by %}
+      <div class="card card-pad-sm">
+        <div class="card-title" style="font-size:.95rem">Right to cancel</div>
+        <p class="small muted mb-0">
+          You may cancel without penalty until
+          <strong style="color:var(--text)">{{ cancel_by | date }}</strong>.
+          Email <a href="mailto:{{ cfg.SUPPORT_EMAIL }}" style="text-decoration:underline">{{ cfg.SUPPORT_EMAIL }}</a>
+          and we'll refund you in full.
+        </p>
+      </div>
+    {% endif %}
+
+    <div class="card card-pad-sm">
+      <div class="card-title" style="font-size:.95rem">Need a hand?</div>
+      <p class="small muted">
+        Anything at all — a document you can't find, a letter that arrived,
+        a question about the process.
+      </p>
+      <a class="btn btn-ghost btn-sm btn-block" href="mailto:{{ cfg.SUPPORT_EMAIL }}">
+        Email your case team
+      </a>
+    </div>
+  </div>
+</div>
+
+<style>
+  @media (max-width: 900px) { #case-grid { grid-template-columns: 1fr; } }
+</style>
+{% endblock %}

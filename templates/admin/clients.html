@@ -1,0 +1,86 @@
+{% extends "base_app.html" %}
+{% block title %}Clients — {{ cfg.BRAND_NAME }} admin{% endblock %}
+
+{% block body %}
+<div class="page-head">
+  <h1>Clients</h1>
+  <p class="muted mb-0">{{ clients | length }} client{{ '' if clients|length == 1 else 's' }}
+    {%- if q %} matching &ldquo;{{ q }}&rdquo;{% endif %}.</p>
+</div>
+
+{% set unreviewed = clients | sum(attribute='unreviewed_count') %}
+{% set complete = clients | selectattr('case_stage', 'equalto', 'complete') | list | length %}
+
+<div class="grid grid-3" style="margin-bottom:26px">
+  <div class="stat">
+    <div class="k">Active cases</div>
+    <div class="v">{{ clients | length - complete }}</div>
+  </div>
+  <div class="stat">
+    <div class="k">Documents awaiting review</div>
+    <div class="v" {% if unreviewed %}style="color:var(--warn)"{% endif %}>{{ unreviewed }}</div>
+  </div>
+  <div class="stat">
+    <div class="k">Completed</div>
+    <div class="v">{{ complete }}</div>
+  </div>
+</div>
+
+<form method="get" action="{{ url_for('admin_clients') }}" class="row" style="margin-bottom:20px">
+  <input class="input" name="q" value="{{ q }}" placeholder="Search name or email"
+         style="max-width:320px">
+  <button class="btn btn-ghost" type="submit">Search</button>
+  {% if q %}<a class="btn btn-quiet" href="{{ url_for('admin_clients') }}">Clear</a>{% endif %}
+</form>
+
+{% if clients %}
+  <div class="table-wrap">
+    <table class="data">
+      <thead>
+        <tr>
+          <th>Client</th>
+          <th>Stage</th>
+          <th>Payment</th>
+          <th>Documents</th>
+          <th>Enrolled</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in clients %}
+          <tr>
+            <td>
+              <div class="strong">{{ c.first_name }} {{ c.last_name }}</div>
+              <div class="tiny faint">{{ c.email }}</div>
+            </td>
+            <td><span class="badge badge-accent">{{ CASE_STAGE_LABELS.get(c.case_stage, c.case_stage) }}</span></td>
+            <td>
+              {% if c.order_status == 'paid' %}
+                <span class="badge badge-success">Paid</span>
+              {% elif c.order_status == 'refunded' %}
+                <span class="badge badge-danger">Refunded</span>
+              {% else %}
+                <span class="badge badge-warn">Unpaid</span>
+              {% endif %}
+            </td>
+            <td>
+              {{ c.doc_count }}
+              {% if c.unreviewed_count %}
+                <span class="badge badge-warn" style="margin-left:6px">{{ c.unreviewed_count }} new</span>
+              {% endif %}
+            </td>
+            <td class="tiny faint">{{ c.created_at | date }}</td>
+            <td><a class="btn btn-ghost btn-sm" href="{{ url_for('admin_client_detail', user_id=c.id) }}">Open</a></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  <div class="card text-center">
+    <p class="muted mb-0">
+      {% if q %}No clients match that search.{% else %}No clients yet. They'll appear here as soon as the first enrolment comes through.{% endif %}
+    </p>
+  </div>
+{% endif %}
+{% endblock %}
