@@ -79,7 +79,12 @@ sent: client welcome, admin new-client alert, admin documents-complete alert.
 
 ## Deploying to Railway
 
-`Procfile` and `runtime.txt` are ready to go.
+`Procfile` is ready to go. There is deliberately **no** `runtime.txt` or
+`.python-version`: Railway's builder verifies GitHub artifact attestations
+before installing a Python build, and older pinned patch versions (3.11.9 and
+similar) have none, so the build dies during setup. Letting the builder pick
+its own Python avoids that entirely. The app has no version-specific
+dependencies — anything 3.11 or newer runs it.
 
 1. Push the repo, create the service.
 2. Add a **volume** and mount it at `/data`.
