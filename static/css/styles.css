@@ -348,18 +348,29 @@ p  { margin: 0 0 1em; }
   position: relative;
   padding: clamp(60px, 9vw, 118px) 0 clamp(56px, 8vw, 96px);
   overflow: hidden;
+  /* The scrim holds its strength across the full width of the copy column,
+     then falls away hard once past it, so the photograph reads at close to
+     full strength on the right and in the margins instead of being washed
+     out everywhere. The hold point is tied to where the text actually ends;
+     move the copy wider and this has to move with it. */
   background-image:
     linear-gradient(100deg,
-      rgba(246, 249, 253, 0.970) 0%,
-      rgba(246, 249, 253, 0.945) 30%,
-      rgba(246, 249, 253, 0.840) 54%,
-      rgba(246, 249, 253, 0.760) 100%),
+      rgba(246, 249, 253, 0.86) 0%,
+      rgba(246, 249, 253, 0.84) 52%,
+      rgba(246, 249, 253, 0.74) 60%,
+      rgba(246, 249, 253, 0.16) 72%,
+      rgba(246, 249, 253, 0.02) 100%),
     url("../img/hero-home.jpg");
   background-size: auto, cover;
   background-position: center, center 32%;
   background-repeat: no-repeat;
 }
 .hero .container { position: relative; z-index: 1; }
+/* Darker than the usual muted body colour. The hero copy sits over a
+   photograph rather than a flat surface, and the extra weight is what pays
+   for the thinner scrim. */
+.hero .lead,
+.hero-assurances { color: #1b2942; }
 
 .hero-grid {
   display: grid;
@@ -726,9 +737,10 @@ table.data tbody tr:hover { background: rgba(19, 100, 223, .04); }
   .hero {
     background-image:
       linear-gradient(180deg,
-        rgba(246, 249, 253, 0.965) 0%,
-        rgba(246, 249, 253, 0.940) 45%,
-        rgba(246, 249, 253, 0.880) 100%),
+        rgba(246, 249, 253, 0.90) 0%,
+        rgba(246, 249, 253, 0.87) 46%,
+        rgba(246, 249, 253, 0.62) 78%,
+        rgba(246, 249, 253, 0.42) 100%),
       url("../img/hero-home.jpg");
   }
   .hero-grid { grid-template-columns: 1fr; gap: 44px; }
