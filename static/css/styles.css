@@ -419,6 +419,37 @@ p  { margin: 0 0 1em; }
   to   { opacity: 1; transform: none; }
 }
 
+/* The score turns green once it clears the threshold on the element. */
+.score-now { transition: color .4s ease; }
+.score-now.is-good { color: var(--success); }
+
+/* --- Scroll reveal ------------------------------------------------------
+   .reveal-init is added by script, so with JS off nothing is ever hidden.
+   Skipped entirely under prefers-reduced-motion. */
+[data-reveal].reveal-init {
+  opacity: 0;
+  transform: translateY(16px);
+}
+[data-reveal].reveal-init.is-visible {
+  opacity: 1;
+  transform: none;
+  transition: opacity .55s ease, transform .55s cubic-bezier(.22, .8, .25, 1);
+}
+
+/* --- Portal panel replay ------------------------------------------------ */
+#portal-demo.is-animated .tracker-step .knob,
+#portal-demo.is-animated .tracker-step::before { transition: background .45s ease, box-shadow .45s ease; }
+#portal-demo.is-animated .tracker-step .name   { transition: color .45s ease; }
+#portal-demo.is-animated .timeline li {
+  opacity: 0;
+  transform: translateY(8px);
+}
+#portal-demo.is-animated .timeline li.is-in {
+  opacity: 1;
+  transform: none;
+  transition: opacity .5s ease, transform .5s cubic-bezier(.22, .8, .25, 1);
+}
+
 /* --- Steps ------------------------------------------------------------- */
 .step {
   position: relative;

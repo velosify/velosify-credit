@@ -121,6 +121,8 @@
 
     var from = parseInt(numEl.getAttribute("data-score-from"), 10);
     var to = parseInt(numEl.getAttribute("data-score-to"), 10);
+    var good = parseInt(numEl.getAttribute("data-score-good"), 10);
+    if (isNaN(good)) good = null;
     if (isNaN(from) || isNaN(to)) return;
 
     var FLOOR = 300, CEIL = 850;      // the FICO range the bar represents
@@ -142,6 +144,7 @@
       clearTimers();
       runId++;
       numEl.textContent = from;
+      numEl.classList.toggle("is-good", good !== null && from >= good);
       deltaEl.textContent = "";
       items.forEach(function (it) { it.classList.remove("is-done"); });
       fillEl.style.transition = "none";
@@ -162,6 +165,7 @@
           var p = Math.min(1, (now - t0) / COUNT_MS);
           var v = Math.round(from + (to - from) * easeOut(p));
           numEl.textContent = v;
+          numEl.classList.toggle("is-good", good !== null && v >= good);
           deltaEl.textContent = v > from ? "\u25B2 " + (v - from) + " pts" : "";
           if (p < 1) requestAnimationFrame(tick);
         })(performance.now());
@@ -183,6 +187,94 @@
         else { clearTimers(); runId++; }
       });
     }, { threshold: 0.35 }).observe(demo);
+  })();
+
+  /* ---- Scroll reveal ----------------------------------------------------
+     Staggers [data-reveal] elements in as their group scrolls into view.
+     The hiding class is applied by script, so nothing is ever stuck
+     invisible if JS fails or is switched off. */
+  (function reveal() {
+    var nodes = Array.prototype.slice.call(document.querySelectorAll("[data-reveal]"));
+    if (!nodes.length) return;
+    if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (!("IntersectionObserver" in window)) return;
+
+    nodes.forEach(function (n) { n.classList.add("reveal-init"); });
+
+    var io = new IntersectionObserver(function (entries) {
+      // Stagger by position within the batch that just became visible, so a
+      // row of cards cascades rather than all landing at once.
+      var shown = 0;
+      entries.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        var el = e.target;
+        setTimeout(function () { el.classList.add("is-visible"); }, shown * 110);
+        shown++;
+        io.unobserve(el);
+      });
+    }, { threshold: 0.2, rootMargin: "0px 0px -40px 0px" });
+
+    nodes.forEach(function (n) { io.observe(n); });
+  })();
+
+  /* ---- Portal panel replay ----------------------------------------------
+     Walks the case tracker forward and drops the timeline entries in oldest
+     first, then loops. Same contract as the score panel: the markup ships
+     finished, script rewinds it, reduced motion leaves it finished. */
+  (function portalDemo() {
+    var demo = document.getElementById("portal-demo");
+    if (!demo) return;
+    if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    var steps = Array.prototype.slice.call(demo.querySelectorAll(".tracker-step"));
+    // Newest sits at the top of the timeline, so replay from the bottom up.
+    var events = Array.prototype.slice.call(demo.querySelectorAll(".timeline li")).reverse();
+    if (!steps.length || !events.length) return;
+
+    var STOP_AT = steps.filter(function (s) { return s.classList.contains("current"); }).length
+      ? steps.indexOf(demo.querySelector(".tracker-step.current"))
+      : steps.length - 1;
+
+    var LEAD_MS = 500, STEP_MS = 700, EVENT_MS = 620, HOLD_MS = 3400;
+    var timers = [];
+    function clearTimers() { timers.forEach(clearTimeout); timers = []; }
+
+    demo.classList.add("is-animated");
+
+    function paint(upto) {
+      steps.forEach(function (s, i) {
+        s.classList.toggle("done", i < upto);
+        s.classList.toggle("current", i === upto);
+      });
+    }
+
+    function reset() {
+      clearTimers();
+      paint(-1);
+      events.forEach(function (e) { e.classList.remove("is-in"); });
+    }
+
+    function run() {
+      reset();
+      for (var i = 0; i <= STOP_AT; i++) {
+        (function (idx) {
+          timers.push(setTimeout(function () { paint(idx); }, LEAD_MS + idx * STEP_MS));
+        })(i);
+      }
+      var afterTracker = LEAD_MS + (STOP_AT + 1) * STEP_MS;
+      events.forEach(function (el, i) {
+        timers.push(setTimeout(function () { el.classList.add("is-in"); },
+                               afterTracker + i * EVENT_MS));
+      });
+      timers.push(setTimeout(run, afterTracker + events.length * EVENT_MS + HOLD_MS));
+    }
+
+    if (!("IntersectionObserver" in window)) { run(); return; }
+    new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) run(); else clearTimers();
+      });
+    }, { threshold: 0.3 }).observe(demo);
   })();
 
   function escapeHtml(str) {

@@ -51,9 +51,10 @@
           </div>
 
           <div class="score-row">
-            <span class="score-now" data-score-now
-                  data-score-from="618" data-score-to="712">712</span>
-            <span class="score-delta" data-score-delta>&#9650; 94 pts</span>
+            <span class="score-now is-good" data-score-now
+                  data-score-from="618" data-score-to="812"
+                  data-score-good="720">812</span>
+            <span class="score-delta" data-score-delta>&#9650; 194 pts</span>
           </div>
           <div class="tiny faint">Started at 618</div>
 
@@ -68,7 +69,7 @@
               ('Collection · unverified',           'badge-success', 'Removed'),
               ('Late payment · reported in error',  'badge-success', 'Removed'),
               ('Duplicate account',                 'badge-success', 'Removed'),
-              ('Charge-off · verified accurate',    '',              'Stands')
+              ('Charge-off · balance never updated','badge-success', 'Removed')
             ] %}
             {% for label, cls, outcome in disputed %}
               <div class="score-item">
@@ -131,7 +132,7 @@
     </div>
 
     <div class="grid grid-4">
-      <div class="step">
+      <div class="step" data-reveal>
         <div class="step-num">1</div>
         <h3>Enrol and upload</h3>
         <p class="small muted mb-0">
@@ -139,7 +140,7 @@
           photo ID and proof of address. Takes about ten minutes.
         </p>
       </div>
-      <div class="step">
+      <div class="step" data-reveal>
         <div class="step-num">2</div>
         <h3>We audit the report</h3>
         <p class="small muted mb-0">
@@ -147,7 +148,7 @@
           every item that is inaccurate, incomplete or can't be verified.
         </p>
       </div>
-      <div class="step">
+      <div class="step" data-reveal>
         <div class="step-num">3</div>
         <h3>Disputes go out</h3>
         <p class="small muted mb-0">
@@ -155,7 +156,7 @@
           with the furnisher. Bureaus have 30 days to respond.
         </p>
       </div>
-      <div class="step">
+      <div class="step" data-reveal>
         <div class="step-num">4</div>
         <h3>We work the responses</h3>
         <p class="small muted mb-0">
@@ -190,13 +191,15 @@
         </ul>
       </div>
 
-      <div class="card card-glass">
+      {#  Ships in its finished state so it reads correctly without JS. The
+          script adds .is-animated, rewinds it, and replays the sequence. #}
+      <div class="card card-glass" id="portal-demo">
         <div class="row-between" style="margin-bottom:20px">
           <span class="strong">Your portal</span>
           <span class="badge badge-accent">Live</span>
         </div>
 
-        <div class="tracker" style="margin-bottom:26px">
+        <div class="tracker" style="margin-bottom:26px" data-tracker>
           <div class="tracker-step done"><span class="knob"></span><span class="name">Intake</span></div>
           <div class="tracker-step done"><span class="knob"></span><span class="name">Documents</span></div>
           <div class="tracker-step current"><span class="knob"></span><span class="name">Analysis</span></div>
