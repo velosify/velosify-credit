@@ -181,10 +181,19 @@
     }
 
     if (!("IntersectionObserver" in window)) { run(); return; }
+    function settle() {
+      clearTimers();
+      runId++;
+      numEl.textContent = to;
+      numEl.classList.toggle("is-good", good !== null && to >= good);
+      deltaEl.textContent = "\u25B2 " + (to - from) + " pts";
+      fillEl.style.width = pct(to) + "%";
+      items.forEach(function (it) { it.classList.add("is-done"); });
+    }
+
     new IntersectionObserver(function (entries) {
       entries.forEach(function (e) {
-        if (e.isIntersecting) run();
-        else { clearTimers(); runId++; }
+        if (e.isIntersecting) run(); else settle();
       });
     }, { threshold: 0.35 }).observe(demo);
   })();
@@ -270,9 +279,17 @@
     }
 
     if (!("IntersectionObserver" in window)) { run(); return; }
+    function settle() {
+      clearTimers();
+      paint(STOP_AT);
+      events.forEach(function (el) { el.classList.add("is-in"); });
+    }
+
     new IntersectionObserver(function (entries) {
       entries.forEach(function (e) {
-        if (e.isIntersecting) run(); else clearTimers();
+        // Leaving mid-sequence would park the panel half drawn, so settle it
+        // on the finished state; re-entry rewinds and replays from there.
+        if (e.isIntersecting) run(); else settle();
       });
     }, { threshold: 0.3 }).observe(demo);
   })();

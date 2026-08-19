@@ -24,8 +24,11 @@
   /* Accents */
   --accent:        #1364df;
   --accent-deep:   #0c4bb0;
-  --accent-light:  #3f97f6;
-  --gradient:      linear-gradient(120deg, #1364df 0%, #3f97f6 100%);
+  /* The light stop is capped so WHITE TEXT clears 4.5:1 across the whole
+     gradient, not just at the dark end. Anything lighter than this fails on
+     the right-hand side of a filled button. */
+  --accent-light:  #2370d4;
+  --gradient:      linear-gradient(120deg, #1364df 0%, #2370d4 100%);
   --gradient-soft: linear-gradient(120deg, rgba(19,100,223,.10), rgba(63,151,246,.10));
 
   /* Semantic: each is used as text ON its own tint (badges, alerts), which
@@ -355,22 +358,26 @@ p  { margin: 0 0 1em; }
 .nav-toggle { display: none; background: none; border: 0; padding: 8px; cursor: pointer; color: var(--text); }
 
 /* --- Hero -------------------------------------------------------------- */
+/* The photograph sits under a white scrim that is near-opaque on the left,
+   where the headline and body copy live, and thins toward the right so the
+   image is actually visible behind the score panel. Every scrim stop is
+   chosen so text over it still clears AA; see the pixel-sampled check in
+   the contrast audit rather than eyeballing it if these values change. */
 .hero {
   position: relative;
   padding: clamp(60px, 9vw, 118px) 0 clamp(56px, 8vw, 96px);
   overflow: hidden;
+  background-image:
+    linear-gradient(100deg,
+      rgba(246, 249, 253, 0.970) 0%,
+      rgba(246, 249, 253, 0.945) 30%,
+      rgba(246, 249, 253, 0.840) 54%,
+      rgba(246, 249, 253, 0.760) 100%),
+    url("../img/hero-home.jpg");
+  background-size: auto, cover;
+  background-position: center, center 32%;
+  background-repeat: no-repeat;
 }
-.hero::before,
-.hero::after {
-  content: "";
-  position: absolute;
-  border-radius: 0;
-  filter: blur(90px);
-  pointer-events: none;
-  z-index: 0;
-}
-.hero::before { width: 620px; height: 620px; background: rgba(19,100,223,.10); top: -260px; left: -160px; }
-.hero::after  { width: 540px; height: 540px; background: rgba(63,151,246,.12); top: -90px; right: -200px; }
 .hero .container { position: relative; z-index: 1; }
 
 .hero-grid {
@@ -735,6 +742,14 @@ table.data tbody tr:hover { background: rgba(19, 100, 223, .04); }
 
 /* --- Responsive -------------------------------------------------------- */
 @media (max-width: 980px) {
+  .hero {
+    background-image:
+      linear-gradient(180deg,
+        rgba(246, 249, 253, 0.965) 0%,
+        rgba(246, 249, 253, 0.940) 45%,
+        rgba(246, 249, 253, 0.880) 100%),
+      url("../img/hero-home.jpg");
+  }
   .hero-grid { grid-template-columns: 1fr; gap: 44px; }
   .grid-3, .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .footer-grid { grid-template-columns: 1fr 1fr; }
@@ -771,6 +786,18 @@ table.data tbody tr:hover { background: rgba(19, 100, 223, .04); }
   .card { padding: 22px; }
   .tracker-step .name { font-size: .66rem; }
   .app-main { padding: 22px 16px 56px; }
+}
+
+/* Printing never scrolls, so anything waiting on an intersection would come
+   out blank. Force every deferred element to its finished state on paper. */
+@media print {
+  [data-reveal].reveal-init,
+  #portal-demo.is-animated .timeline li {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  #score-demo.is-animated .score-item .state-pending { display: none !important; }
+  #score-demo.is-animated .score-item .state-done { display: inline-flex !important; }
 }
 
 @media (prefers-reduced-motion: reduce) {
