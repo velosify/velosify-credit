@@ -10,7 +10,7 @@ surfaces:
 | Members area | `/portal` | Document upload, case progress, agreement, account |
 | Admin | `/admin` | Client list, document review, case stage, timeline updates |
 
-No build step, no frontend framework — server-rendered Jinja templates, one
+No build step, no frontend framework. Server-rendered Jinja templates, one
 stylesheet, one small JS file. SQLite for storage.
 
 ---
@@ -44,21 +44,21 @@ at `/login` and you'll land on `/admin/clients`.
 ## Configuration
 
 Copy `.env.example` to `.env` and fill in what applies. Every value is read
-from the environment — see `config.py` for the full list and defaults.
+from the environment. See `config.py` for the full list and defaults.
 
 The ones that matter most:
 
-- `SECRET_KEY` — **set this in production.** Without it a random key is
+- `SECRET_KEY`: **set this in production.** Without it a random key is
   generated at boot, which silently signs everyone out on every restart.
-- `APP_BASE_URL` — your public URL. Used to build Stripe redirect URLs and
+- `APP_BASE_URL`: your public URL. Used to build Stripe redirect URLs and
   links in emails, and to decide whether to set the `Secure` cookie flag.
-- `DB_PATH` / `UPLOAD_DIR` — put both on a persistent volume in production.
-- `PRICE_CENTS` — defaults to `99700` ($997).
+- `DB_PATH` / `UPLOAD_DIR`: put both on a persistent volume in production.
+- `PRICE_CENTS`: defaults to `99700` ($997).
 
 ### Stripe
 
 1. Create a **one-time** payment. You can either let the app build the price
-   inline (the default — just set `PRICE_CENTS`) or create a Price object in
+   inline (just set `PRICE_CENTS`) or create a Price object in
    the Stripe dashboard and set `STRIPE_PRICE_ID`.
 2. Set `STRIPE_SECRET_KEY` and `STRIPE_PUBLISHABLE_KEY`.
 3. Add a webhook endpoint pointing at `https://yourdomain.com/webhook/stripe`,
@@ -67,7 +67,7 @@ The ones that matter most:
 
 The webhook is the source of truth for payment state. The success page also
 verifies the session server-side, so a client who closes the tab mid-redirect
-still gets enrolled — both paths are idempotent.
+still gets enrolled. Both paths are idempotent.
 
 ### Email
 
@@ -84,7 +84,7 @@ sent: client welcome, admin new-client alert, admin documents-complete alert.
 before installing a Python build, and older pinned patch versions (3.11.9 and
 similar) have none, so the build dies during setup. Letting the builder pick
 its own Python avoids that entirely. The app has no version-specific
-dependencies — anything 3.11 or newer runs it.
+dependencies, so anything 3.11 or newer runs it.
 
 1. Push the repo, create the service.
 2. Add a **volume** and mount it at `/data`.
@@ -99,18 +99,18 @@ dependencies — anything 3.11 or newer runs it.
 
 Four tables, in `db.py`:
 
-- **users** — clients and admins, distinguished by `role`. Carries the case
+- **users**: clients and admins, distinguished by `role`. Carries the case
   stage and the agreement signature record (name, timestamp, IP).
-- **orders** — one row per enrolment attempt. `pending` until payment
+- **orders**: one row per enrolment attempt. `pending` until payment
   confirms, then `paid`, or `refunded` if a refund webhook arrives.
-- **documents** — one row per uploaded file, tagged with a `doc_type` from
+- **documents**: one row per uploaded file, tagged with a `doc_type` from
   the intake checklist and a review `status`.
-- **case_events** — the timeline. Written by the system (payment confirmed,
+- **case_events**: the timeline. Written by the system (payment confirmed,
   documents received) and by admins (stage changes, manual updates). This is
   what the client sees on their dashboard.
 
 The intake checklist and the case stages are both defined as lists at the top
-of `db.py` — add a document type or a pipeline stage there and it appears
+of `db.py`. Add a document type or a pipeline stage there and it appears
 everywhere automatically.
 
 ---
@@ -131,7 +131,7 @@ everywhere automatically.
 - Simulated checkout can't switch itself on in production. It requires an
   explicit `DEV_FAKE_CHECKOUT=1` (which prints a loud startup warning), or an
   unconfigured install on a real developer machine. Presence of any hosting
-  platform marker — `RAILWAY_ENVIRONMENT`, `DYNO`, `FLY_APP_NAME` and friends —
+  platform marker (`RAILWAY_ENVIRONMENT`, `DYNO`, `FLY_APP_NAME` and friends)
   disqualifies the local heuristic on its own, so a deploy where nobody has
   set `APP_BASE_URL` yet fails closed instead of giving the programme away.
 
@@ -139,8 +139,8 @@ everywhere automatically.
 
 ## Before you take a real payment
 
-The legal templates in `templates/legal/` — the service agreement, terms and
-privacy policy — are drafted to track what the federal **Credit Repair
+The legal templates in `templates/legal/` (the service agreement, terms and
+privacy policy) are drafted to track what the federal **Credit Repair
 Organizations Act** requires: a written contract, the separate "Consumer
 Credit File Rights Under State and Federal Law" disclosure, and a
 three-business-day cancellation right.
@@ -154,11 +154,11 @@ Two things to sort out with a lawyer licensed in your state:
    Common ways businesses structure around it are billing after the work is
    done, or splitting the fee into per-milestone charges as each stage
    completes. The app is built so this is a change to the order flow, not a
-   rewrite — `orders` already supports multiple rows per client.
+   rewrite, since `orders` already supports multiple rows per client.
 
 2. **State registration.** Many states require credit repair organizations to
    register and post a surety bond, and several impose their own disclosure
    language and cancellation windows on top of the federal ones.
 
-Neither of these is legal advice, and I'm not a lawyer — but both are worth
+Neither of these is legal advice, and I'm not a lawyer, but both are worth
 resolving before launch rather than after.

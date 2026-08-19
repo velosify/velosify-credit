@@ -1,11 +1,10 @@
 {% extends "base.html" %}
 
-{% block title %}Service agreement — {{ cfg.BRAND_NAME }}{% endblock %}
+{% block title %}Service agreement | {{ cfg.BRAND_NAME }}{% endblock %}
 
 {% block body %}
 <section class="section-tight">
   <div class="container container-narrow legal-doc">
-    <span class="eyebrow">Legal</span>
     <h1 style="font-size:clamp(1.8rem,3.4vw,2.4rem)">Service agreement</h1>
 
     {% if signed and signed.agreement_signed_at %}
@@ -14,7 +13,7 @@
         {{ signed.agreement_name }} signed this agreement on
         {{ signed.agreement_signed_at | datetime }}
         {%- if signed.agreement_ip %} from {{ signed.agreement_ip }}{% endif %}.
-        This is your copy — save or print it for your records.
+        This is your copy. Save or print it for your records.
       </div>
     {% else %}
       <p class="muted">

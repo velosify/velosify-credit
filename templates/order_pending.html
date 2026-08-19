@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Confirming your payment — {{ cfg.BRAND_NAME }}{% endblock %}
+{% block title %}Confirming your payment | {{ cfg.BRAND_NAME }}{% endblock %}
 {% block head %}<meta name="robots" content="noindex">{% endblock %}
 
 {% block body %}
@@ -9,7 +9,7 @@
       <h1 style="font-size:1.7rem">We're confirming your payment</h1>
       <p class="lead lead-center">
         This usually clears within a few seconds. Sign in and your portal will
-        be waiting — and if anything didn't go through, nothing was charged.
+        be waiting, and if anything didn't go through, nothing was charged.
       </p>
       <div class="hero-cta" style="justify-content:center">
         <a class="btn btn-primary" href="{{ url_for('login') }}">Sign in</a>

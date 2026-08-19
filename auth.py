@@ -1,5 +1,5 @@
 """
-VelosifyCredit — authentication.
+VelosifyCredit authentication.
 
 Session-cookie auth with PBKDF2 password hashing from the stdlib (no
 dependency on werkzeug's helpers, so the hashing scheme is explicit and

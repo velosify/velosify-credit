@@ -1,5 +1,5 @@
 """
-VelosifyCredit — outbound email.
+VelosifyCredit outbound email.
 
 Uses Resend when RESEND_API_KEY is set, otherwise prints the message to the
 console. Every send is best-effort: a mail failure must never break the
@@ -52,7 +52,7 @@ def send_welcome(user: dict, order_amount_label: str) -> None:
     first = user.get("first_name") or "there"
     send_email(
         to=user["email"],
-        subject=f"Welcome to {config.BRAND_NAME} — next steps inside",
+        subject=f"Welcome to {config.BRAND_NAME}, next steps inside",
         text=(
             f"Hi {first},\n\n"
             f"Your {config.BRAND_NAME} enrollment is confirmed and your "
@@ -62,12 +62,12 @@ def send_welcome(user: dict, order_amount_label: str) -> None:
             f"{config.APP_BASE_URL}/portal\n"
             "2. Upload your credit report, photo ID, proof of address and "
             "proof of Social Security number.\n"
-            "3. Once those are in, we begin your report analysis — usually "
+            "3. Once those are in, we begin your report analysis, usually "
             "within one business day.\n\n"
             "Everything you upload is stored privately and is only visible "
             "to you and our case team.\n\n"
             f"Questions? Just reply to this email or write to {config.SUPPORT_EMAIL}.\n\n"
-            f"— The {config.BRAND_NAME} team"
+            f"The {config.BRAND_NAME} team"
         ),
     )
 
@@ -80,7 +80,7 @@ def send_admin_new_client(user: dict) -> None:
         text=(
             f"{name} just enrolled.\n\n"
             f"Email: {user['email']}\n"
-            f"Phone: {user.get('phone') or '—'}\n\n"
+            f"Phone: {user.get('phone') or 'n/a'}\n\n"
             f"Open the admin panel: {config.APP_BASE_URL}/admin/clients/{user['id']}\n"
         ),
     )

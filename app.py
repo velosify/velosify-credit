@@ -1,5 +1,5 @@
 """
-VelosifyCredit — credit restoration site + client portal.
+VelosifyCredit credit restoration site + client portal.
 
 Three surfaces in one Flask app:
 
@@ -40,7 +40,7 @@ from db import (CASE_STAGE_KEYS, CASE_STAGE_LABELS, CASE_STAGES, DOC_STATUSES,
 try:
     import stripe
     HAS_STRIPE = True
-except ImportError:  # pragma: no cover — the app still runs in dev mode
+except ImportError:  # pragma: no cover. the app still runs in dev mode
     stripe = None
     HAS_STRIPE = False
 
@@ -95,7 +95,7 @@ def filesize_filter(num: int) -> str:
 @app.template_filter("datetime")
 def datetime_filter(iso: str | None, fmt: str = "%b %-d, %Y at %-I:%M %p") -> str:
     if not iso:
-        return "—"
+        return "n/a"
     try:
         dt = datetime.fromisoformat(iso)
     except ValueError:
@@ -148,7 +148,7 @@ _UNSAFE_NAME = re.compile(r"[^A-Za-z0-9._-]+")
 
 def _display_name(filename: str) -> str:
     """Sanitised version of the client's original filename, kept only for
-    display. It never touches the filesystem — see _store_upload."""
+    display. It never touches the filesystem. See _store_upload."""
     base = Path(filename or "file").name
     cleaned = _UNSAFE_NAME.sub("_", base).strip("._-") or "file"
     return cleaned[:120]
@@ -226,7 +226,7 @@ def agreement_preview():
 @app.get("/order")
 def order_page():
     user = current_user()
-    # Someone who already paid has nothing to buy — send them to the portal.
+    # Someone who already paid has nothing to buy, so send them to the portal.
     if user and _paid_order(user["id"]):
         return redirect(url_for("portal"))
     if config.CHECKOUT_UNAVAILABLE:
@@ -271,7 +271,7 @@ def order_submit():
     if existing:
         # An account already exists. If it's paid, this is a returning
         # client who should just sign in. If it isn't, they abandoned
-        # checkout earlier and we let them pick up where they left off —
+        # checkout earlier and we let them pick up where they left off, but
         # but only with the right password, so an email address alone
         # can't be used to take over a half-finished signup.
         if _paid_order(existing["id"]):
@@ -307,7 +307,7 @@ def order_submit():
     order_id = int(cur.lastrowid)
     conn.commit()
 
-    # No Stripe configured — simulate a successful payment so the rest of
+    # No Stripe configured, so simulate a successful payment and the rest of
     # the product is reachable in development.
     if config.DEV_FAKE_CHECKOUT:
         _mark_order_paid(order_id, payment_intent="dev_simulated")
@@ -320,7 +320,7 @@ def order_submit():
                          "currency": config.CURRENCY,
                          "unit_amount": config.PRICE_CENTS,
                          "product_data": {
-                             "name": f"{config.BRAND_NAME} — Credit Restoration Program",
+                             "name": f"{config.BRAND_NAME} Credit Restoration Program",
                              "description": "Full-service credit restoration, one-time fee.",
                          },
                       },
@@ -334,7 +334,7 @@ def order_submit():
             success_url=f"{config.APP_BASE_URL}/order/success?session_id={{CHECKOUT_SESSION_ID}}",
             cancel_url=f"{config.APP_BASE_URL}/order/cancel?order_id={order_id}",
         )
-    except Exception as exc:  # pragma: no cover — surfaces Stripe outages
+    except Exception as exc:  # pragma: no cover. surfaces Stripe outages
         app.logger.exception("stripe checkout failed")
         return fail(f"We couldn't reach our payment processor ({exc.__class__.__name__}). "
                     "Please try again in a moment.")
@@ -348,7 +348,7 @@ def order_submit():
 def _mark_order_paid(order_id: int, payment_intent: str = "") -> dict | None:
     """Flip an order to paid and kick off everything that follows.
 
-    Idempotent — Stripe will happily deliver the same webhook twice, and the
+    Idempotent, because Stripe will happily deliver the same webhook twice and the
     success page and the webhook race each other by design.
     """
     conn = get_db()
@@ -370,7 +370,7 @@ def _mark_order_paid(order_id: int, payment_intent: str = "") -> dict | None:
     add_event(
         conn, order["user_id"],
         title="Enrollment confirmed",
-        body="Payment received. Your case is open — the next step is "
+        body="Payment received. Your case is open. The next step is "
              "uploading your intake documents.",
         stage="documents",
     )
@@ -408,7 +408,7 @@ def order_success():
                 pi = cs.get("payment_intent")
                 order = _mark_order_paid(order_id, payment_intent=str(pi or ""))
     elif request.args.get("dev") == "1" and config.DEV_FAKE_CHECKOUT:
-        # Simulated checkout. The order id comes through the redirect — never
+        # Simulated checkout. The order id comes through the redirect. Never
         # infer it from "most recent", which silently signs you in as whoever
         # happened to pay last.
         try:
@@ -502,7 +502,7 @@ def login_submit():
     row = get_db().execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
 
     if not row or not verify_password(password, row["password_hash"]):
-        # Same message either way — don't confirm which emails have accounts.
+        # Same message either way, so we don't confirm which emails have accounts.
         return render_template(
             "login.html", email=email,
             error="That email and password don't match an account.",
@@ -534,7 +534,7 @@ def portal():
     conn = get_db()
     order = _paid_order(user["id"])
     if not order:
-        # Paid for nothing yet — the portal has nothing to show.
+        # Paid for nothing yet, so the portal has nothing to show.
         return render_template("portal/unpaid.html",
                                pending=_pending_order(user["id"]))
 
@@ -633,7 +633,7 @@ def portal_upload():
 @require_login
 def portal_delete_document(doc_id: int):
     """A client can withdraw a file they uploaded, as long as we haven't
-    accepted it yet — once it's accepted it's part of the case record."""
+    accepted it yet. Once it's accepted it's part of the case record."""
     user = current_user()
     conn = get_db()
     row = conn.execute(
@@ -656,14 +656,14 @@ def portal_delete_document(doc_id: int):
 @app.get("/files/<int:doc_id>")
 @require_login
 def download_document(doc_id: int):
-    """The only way an uploaded file is ever served. Owner or admin only —
+    """The only way an uploaded file is ever served. Owner or admin only,
     nothing under the upload directory is reachable from /static."""
     user = current_user()
     row = get_db().execute("SELECT * FROM documents WHERE id = ?", (doc_id,)).fetchone()
     if not row:
         abort(404)
     if row["user_id"] != user["id"] and not is_admin():
-        abort(404)  # 404 rather than 403 — don't confirm the id exists
+        abort(404)  # 404 rather than 403, so the id can't be confirmed
 
     path = config.UPLOAD_DIR / row["stored_name"]
     if not path.exists():

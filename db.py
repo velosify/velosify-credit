@@ -1,5 +1,5 @@
 """
-VelosifyCredit — database layer.
+VelosifyCredit database layer.
 
 SQLite via the stdlib. Schema is created idempotently at import time and
 each additive change goes in as its own guarded migration, so deploying a
@@ -17,7 +17,7 @@ import config
 # ---------------------------------------------------------------------------
 # The intake checklist. Order here is the order the client sees.
 #
-# `required` drives the "you're ready" gate on the dashboard — optional docs
+# `required` drives the "you're ready" gate on the dashboard. Optional docs
 # still show up, they just don't block the case from moving forward.
 # ---------------------------------------------------------------------------
 DOCUMENT_TYPES = [
@@ -25,7 +25,7 @@ DOCUMENT_TYPES = [
         "key": "credit_report",
         "label": "Credit report",
         "required": True,
-        "help": "All three bureaus if you have them — Experian, Equifax and "
+        "help": "All three bureaus if you have them: Experian, Equifax and "
                 "TransUnion. A PDF export from annualcreditreport.com is ideal.",
     },
     {
@@ -61,7 +61,7 @@ DOCUMENT_TYPES = [
         "label": "Anything else",
         "required": False,
         "help": "Bureau letters you've received, collection notices, court "
-                "documents — anything you think we should see.",
+                "documents, or anything else you think we should see.",
     },
 ]
 
@@ -85,7 +85,7 @@ DOC_STATUSES = ("received", "accepted", "rejected")
 
 
 def utcnow() -> str:
-    """ISO-8601 UTC timestamp. Stored as text — SQLite has no date type and
+    """ISO-8601 UTC timestamp. Stored as text, because SQLite has no date type and
     ISO strings sort correctly, which is all we need."""
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
@@ -189,7 +189,7 @@ def init_db() -> None:
 
 def add_event(conn: sqlite3.Connection, user_id: int, title: str,
               body: str = "", stage: str = "", created_by: str = "system") -> None:
-    """Append to a client's timeline. Callers commit — this way an event and
+    """Append to a client's timeline. Callers commit, so an event and
     the state change it describes land in the same transaction."""
     conn.execute(
         "INSERT INTO case_events (user_id, title, body, stage, created_at, created_by) "
@@ -202,7 +202,7 @@ def document_status_for(conn: sqlite3.Connection, user_id: int) -> dict:
     """Build the checklist view model: for each document type, the files the
     client has uploaded and whether that slot counts as satisfied.
 
-    A slot is satisfied by any upload that hasn't been rejected — we don't
+    A slot is satisfied by any upload that hasn't been rejected. We don't
     make the client wait on review to see progress, but a rejection reopens
     the slot immediately.
     """

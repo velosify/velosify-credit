@@ -1,5 +1,5 @@
 {% extends "base_app.html" %}
-{% block title %}{{ client.first_name }} {{ client.last_name }} — {{ cfg.BRAND_NAME }} admin{% endblock %}
+{% block title %}{{ client.first_name }} {{ client.last_name }} | {{ cfg.BRAND_NAME }} admin{% endblock %}
 
 {% block body %}
 <a class="btn btn-quiet btn-sm" href="{{ url_for('admin_clients') }}">← All clients</a>
@@ -20,7 +20,7 @@
     <div class="card">
       <div class="row-between" style="margin-bottom:16px">
         <div class="card-title mb-0">
-          Documents — {{ checklist.required_done }}/{{ checklist.required_total }} required
+          Documents: {{ checklist.required_done }}/{{ checklist.required_total }} required
         </div>
         {% if checklist.complete %}<span class="badge badge-success">Complete</span>{% endif %}
       </div>
@@ -77,7 +77,7 @@
         {% if missing %}
           {{ missing | map(attribute='label') | join(', ') }}
         {% else %}
-          nothing — the required set is complete.
+          nothing, the required set is complete.
         {% endif %}
       </div>
     </div>

@@ -1,5 +1,5 @@
 """
-VelosifyCredit — configuration.
+VelosifyCredit configuration.
 
 Every setting is env-driven so the same code runs locally (no keys needed)
 and in production (Railway) without edits. Copy .env.example to .env and
@@ -48,7 +48,7 @@ DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 UPLOAD_DIR = Path(_env("UPLOAD_DIR") or (DB_PATH.parent / "uploads"))
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
-# Uploads are never served from /static — they go through an auth-gated
+# Uploads are never served from /static. They go through an auth-gated
 # route. Keep the ceiling low enough that a bad actor can't fill the disk.
 MAX_UPLOAD_MB = _env_int("MAX_UPLOAD_MB", 25)
 MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024
@@ -78,13 +78,13 @@ BILLING_ENABLED = bool(STRIPE_SECRET_KEY)
 # This is deliberately hard to switch on by accident. It requires either an
 # explicit DEV_FAKE_CHECKOUT=1, or an unconfigured install that is clearly
 # running on a developer's machine. Deploying with no Stripe keys must fail
-# closed — an order flow that hands out enrolments for free is worse than one
+# closed. An order flow that hands out enrolments for free is worse than one
 # that is temporarily unavailable.
 _FAKE_CHECKOUT_EXPLICIT = _env("DEV_FAKE_CHECKOUT", "0") == "1"
 
 # Any of these means we're on a hosting platform, not someone's laptop. This
 # is checked FIRST and independently of APP_BASE_URL, because APP_BASE_URL
-# defaults to localhost — so a deploy where nobody set it yet would otherwise
+# defaults to localhost, so a deploy where nobody set it yet would otherwise
 # look local and quietly switch simulated checkout on, in public.
 _ON_PLATFORM = any(os.environ.get(key) for key in (
     "RAILWAY_ENVIRONMENT", "RAILWAY_PROJECT_ID", "RAILWAY_SERVICE_ID",
@@ -97,7 +97,7 @@ _RUNNING_LOCALLY = (
 )
 DEV_FAKE_CHECKOUT = _FAKE_CHECKOUT_EXPLICIT or (not BILLING_ENABLED and _RUNNING_LOCALLY)
 
-# True when the site is live but can't take money — the order page says so
+# True when the site is live but can't take money. The order page says so
 # instead of pretending to sell something.
 CHECKOUT_UNAVAILABLE = not BILLING_ENABLED and not DEV_FAKE_CHECKOUT
 

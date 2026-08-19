@@ -1,12 +1,12 @@
 {% extends "base.html" %}
-{% block title %}You're enrolled — {{ cfg.BRAND_NAME }}{% endblock %}
+{% block title %}You're enrolled | {{ cfg.BRAND_NAME }}{% endblock %}
 {% block head %}<meta name="robots" content="noindex">{% endblock %}
 
 {% block body %}
 <section class="section">
   <div class="container container-narrow">
     <div class="price-card text-center">
-      <div style="width:62px;height:62px;border-radius:50%;background:var(--success-bg);
+      <div style="width:62px;height:62px;border-radius:0;background:var(--success-bg);
                   border:1px solid rgba(6,92,59,.28);display:grid;place-items:center;
                   margin:0 auto 22px;font-size:1.6rem;color:var(--success)">✓</div>
 
@@ -17,7 +17,7 @@
       </p>
 
       <div class="alert alert-info" style="text-align:left;margin:28px 0">
-        <strong>Next step — upload four documents.</strong>
+        <strong>Next step: upload four documents.</strong>
         Your credit report, a government-issued photo ID, proof of address and
         proof of your Social Security number. The bureaus won't act on a
         dispute filed on your behalf without them, so the sooner they're in,

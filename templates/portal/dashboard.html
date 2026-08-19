@@ -1,5 +1,5 @@
 {% extends "base_app.html" %}
-{% block title %}Overview — {{ cfg.BRAND_NAME }}{% endblock %}
+{% block title %}Overview | {{ cfg.BRAND_NAME }}{% endblock %}
 
 {% block body %}
 <div class="page-head">
@@ -75,7 +75,7 @@
         {% endfor %}
       </ul>
     {% else %}
-      <p class="small muted mb-0">Nothing here yet — updates will appear as your case moves.</p>
+      <p class="small muted mb-0">Nothing here yet. Updates will appear as your case moves.</p>
     {% endif %}
   </div>
 
@@ -114,7 +114,7 @@
     <div class="card card-pad-sm">
       <div class="card-title" style="font-size:.95rem">Need a hand?</div>
       <p class="small muted">
-        Anything at all — a document you can't find, a letter that arrived,
+        Anything at all: a document you can't find, a letter that arrived,
         a question about the process.
       </p>
       <a class="btn btn-ghost btn-sm btn-block" href="mailto:{{ cfg.SUPPORT_EMAIL }}">

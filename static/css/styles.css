@@ -1,12 +1,12 @@
 /* ==========================================================================
-   VelosifyCredit — design system
+   VelosifyCredit design system
    One stylesheet for the marketing site, the order flow and the portal, so
    the whole product reads as one thing. Tokens first, then primitives, then
    the handful of page-specific blocks.
    ========================================================================== */
 
 :root {
-  /* Canvas — light, with a faint blue cast so white cards read as raised */
+  /* Canvas: light, with a faint blue cast so white cards read as raised */
   --bg:            #f6f9fd;
   --bg-soft:       #eaf1fa;
   --surface:       #ffffff;
@@ -15,7 +15,7 @@
   --border:        rgba(13, 27, 47, 0.12);
   --border-strong: rgba(13, 27, 47, 0.20);
 
-  /* Ink — every value below clears WCAG AA (4.5:1) on both --surface and
+  /* Ink: every value below clears WCAG AA (4.5:1) on both --surface and
      --bg-soft, which are the two backgrounds body copy ever sits on. */
   --text:          #0d1b2f;
   --text-muted:    #495c78;
@@ -28,7 +28,7 @@
   --gradient:      linear-gradient(120deg, #1364df 0%, #3f97f6 100%);
   --gradient-soft: linear-gradient(120deg, rgba(19,100,223,.10), rgba(63,151,246,.10));
 
-  /* Semantic — each is used as text ON its own tint (badges, alerts), which
+  /* Semantic: each is used as text ON its own tint (badges, alerts), which
      composites lighter than plain white. These values clear 4.5:1 in that
      worst case with headroom, not just against a white card. */
   --success:       #065c3b;
@@ -39,10 +39,12 @@
   --danger-bg:     rgba(158, 27, 50, 0.10);
 
   /* Shape */
-  --radius-sm:  8px;
-  --radius:     14px;
-  --radius-lg:  22px;
-  --radius-xl:  30px;
+  /* Squared throughout. Kept as tokens so a radius can be reintroduced in
+     one place if that ever changes. */
+  --radius-sm:  0;
+  --radius:     0;
+  --radius-lg:  0;
+  --radius-xl:  0;
 
   --shadow:     0 18px 42px rgba(13, 27, 47, 0.10);
   --shadow-sm:  0 3px 12px rgba(13, 27, 47, 0.06);
@@ -91,7 +93,7 @@ p  { margin: 0 0 1em; }
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
-  border-radius: 4px;
+  border-radius: 0;
 }
 
 /* --- Layout ------------------------------------------------------------ */
@@ -134,16 +136,6 @@ p  { margin: 0 0 1em; }
   color: transparent;
 }
 
-.eyebrow {
-  display: inline-block;
-  font-size: .74rem;
-  font-weight: 700;
-  letter-spacing: .18em;
-  text-transform: uppercase;
-  color: var(--accent-deep);
-  margin-bottom: 18px;
-}
-
 .lead {
   font-size: clamp(1.02rem, 1.6vw, 1.18rem);
   color: var(--text-muted);
@@ -159,7 +151,7 @@ p  { margin: 0 0 1em; }
   gap: 10px;
   padding: 14px 26px;
   border: 1px solid transparent;
-  border-radius: 999px;
+  border-radius: 0;
   background: var(--surface-2);
   color: var(--text);
   font-weight: 650;
@@ -205,7 +197,7 @@ p  { margin: 0 0 1em; }
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border-radius: 0;
   padding: 28px;
   box-shadow: var(--shadow-sm);
 }
@@ -225,7 +217,7 @@ p  { margin: 0 0 1em; }
   align-items: center;
   gap: 6px;
   padding: 4px 11px;
-  border-radius: 999px;
+  border-radius: 0;
   font-size: .74rem;
   font-weight: 650;
   letter-spacing: .02em;
@@ -243,7 +235,7 @@ p  { margin: 0 0 1em; }
   align-items: center;
   gap: 9px;
   padding: 7px 16px 7px 8px;
-  border-radius: 999px;
+  border-radius: 0;
   background: var(--surface);
   border: 1px solid var(--border);
   box-shadow: var(--shadow-sm);
@@ -252,7 +244,7 @@ p  { margin: 0 0 1em; }
 }
 .pill-note .dot {
   width: 22px; height: 22px;
-  border-radius: 50%;
+  border-radius: 0;
   background: var(--gradient);
   display: grid; place-items: center;
   font-size: .7rem; color: #fff;
@@ -274,7 +266,7 @@ p  { margin: 0 0 1em; }
   padding: 13px 15px;
   background: var(--bg-soft);
   border: 1px solid var(--border-strong);
-  border-radius: var(--radius);
+  border-radius: 0;
   color: var(--text);
   transition: border-color .15s ease, box-shadow .15s ease;
 }
@@ -302,9 +294,9 @@ p  { margin: 0 0 1em; }
   padding: 16px;
   background: var(--bg-soft);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: 0;
   cursor: pointer;
-  /* Sits inside .field, which bolds its label — reset that for the body copy. */
+  /* Sits inside .field, which bolds its label, so reset that for body copy. */
   font-weight: 400;
 }
 .check input { margin-top: 3px; width: 17px; height: 17px; accent-color: var(--accent); flex: none; }
@@ -313,7 +305,7 @@ p  { margin: 0 0 1em; }
 /* --- Alerts & flashes -------------------------------------------------- */
 .alert {
   padding: 14px 18px;
-  border-radius: var(--radius);
+  border-radius: 0;
   border: 1px solid var(--border);
   background: var(--surface-2);
   font-size: .9rem;
@@ -340,7 +332,7 @@ p  { margin: 0 0 1em; }
 .brand { display: inline-flex; align-items: center; gap: 11px; font-weight: 750; letter-spacing: -.02em; font-size: 1.06rem; }
 .brand-mark {
   width: 30px; height: 30px;
-  border-radius: 9px;
+  border-radius: 0;
   background: var(--gradient);
   display: grid; place-items: center;
   font-size: .9rem; font-weight: 800; color: #fff;
@@ -349,12 +341,12 @@ p  { margin: 0 0 1em; }
 .brand small { color: var(--text-faint); font-weight: 500; }
 
 .nav-links { display: flex; align-items: center; gap: 6px; }
-/* :not(.btn) matters — `.nav-links a` is more specific than `.btn-primary`,
+/* :not(.btn) matters, because `.nav-links a` is more specific than `.btn-primary`,
    so without it this rule wins and paints the header CTA's label muted grey
    on top of its blue gradient. */
 .nav-links a:not(.btn) {
   padding: 9px 14px;
-  border-radius: 999px;
+  border-radius: 0;
   font-size: .9rem;
   color: var(--text-muted);
   transition: color .15s ease, background .15s ease;
@@ -372,7 +364,7 @@ p  { margin: 0 0 1em; }
 .hero::after {
   content: "";
   position: absolute;
-  border-radius: 50%;
+  border-radius: 0;
   filter: blur(90px);
   pointer-events: none;
   z-index: 0;
@@ -402,13 +394,30 @@ p  { margin: 0 0 1em; }
 .score-row { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 4px; }
 .score-now { font-size: 3.1rem; font-weight: 800; letter-spacing: -.03em; line-height: 1; }
 .score-delta { color: var(--success); font-weight: 700; font-size: .95rem; }
-.score-track { height: 8px; border-radius: 999px; background: var(--surface-3); overflow: hidden; margin: 18px 0 8px; }
-.score-fill { height: 100%; border-radius: 999px; background: var(--gradient); width: 72%; }
+.score-track { height: 8px; border-radius: 0; background: var(--surface-3); overflow: hidden; margin: 18px 0 8px; }
+.score-fill { height: 100%; border-radius: 0; background: var(--gradient); width: 72%; }
 .score-scale { display: flex; justify-content: space-between; font-size: .72rem; color: var(--text-faint); }
 .score-items { margin-top: 24px; border-top: 1px solid var(--border); padding-top: 18px; }
-.score-item { display: flex; align-items: center; justify-content: space-between; padding: 9px 0; font-size: .88rem; }
+.score-item { display: flex; align-items: center; justify-content: space-between; padding: 9px 0; font-size: .88rem; gap: 12px; }
 .score-item + .score-item { border-top: 1px solid var(--border); }
-.score-item .label { color: var(--text-muted); }
+.score-item .label { color: var(--text-muted); transition: color .3s ease; }
+
+/* Animated hero panel.
+   The resolved outcome is what renders by default, so the panel is correct
+   with JS disabled. The script adds .is-animated, which reveals the pending
+   badge on rows that have not resolved yet. */
+.score-item .state-pending { display: none; }
+#score-demo.is-animated .score-item:not(.is-done) .state-pending { display: inline-flex; }
+#score-demo.is-animated .score-item:not(.is-done) .state-done { display: none; }
+#score-demo.is-animated .score-item:not(.is-done) .label { color: var(--text-faint); }
+#score-demo.is-animated .score-item.is-done .state-done { animation: state-settle .38s ease both; }
+#score-demo .score-fill { transition: width 2.2s cubic-bezier(.22, .8, .25, 1); }
+#score-demo .score-delta { transition: opacity .3s ease; }
+
+@keyframes state-settle {
+  from { opacity: 0; transform: translateY(-3px) scale(.94); }
+  to   { opacity: 1; transform: none; }
+}
 
 /* --- Steps ------------------------------------------------------------- */
 .step {
@@ -416,11 +425,11 @@ p  { margin: 0 0 1em; }
   padding: 28px 26px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border-radius: 0;
 }
 .step-num {
   width: 38px; height: 38px;
-  border-radius: 12px;
+  border-radius: 0;
   display: grid; place-items: center;
   background: var(--gradient-soft);
   border: 1px solid rgba(19,100,223,.22);
@@ -445,7 +454,7 @@ p  { margin: 0 0 1em; }
   position: relative;
   background: var(--surface);
   border: 1px solid var(--border-strong);
-  border-radius: var(--radius-xl);
+  border-radius: 0;
   padding: 40px;
   overflow: hidden;
 }
@@ -463,7 +472,7 @@ p  { margin: 0 0 1em; }
 /* --- FAQ --------------------------------------------------------------- */
 .faq-item {
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: 0;
   background: var(--surface);
   margin-bottom: 12px;
   overflow: hidden;
@@ -534,7 +543,7 @@ p  { margin: 0 0 1em; }
 .side-link {
   display: flex; align-items: center; gap: 11px;
   padding: 11px 14px;
-  border-radius: var(--radius);
+  border-radius: 0;
   color: var(--text-muted);
   font-size: .92rem;
   font-weight: 550;
@@ -557,11 +566,11 @@ p  { margin: 0 0 1em; }
   position: absolute; top: 9px; left: 0; right: 0;
   height: 3px; background: var(--surface-3);
 }
-.tracker-step:first-child::before { left: 50%; border-radius: 999px 0 0 999px; }
-.tracker-step:last-child::before  { right: 50%; border-radius: 0 999px 999px 0; }
+.tracker-step:first-child::before { left: 50%; border-radius: 0; }
+.tracker-step:last-child::before  { right: 50%; border-radius: 0; }
 .tracker-step .knob {
   position: absolute; top: 3px; left: 50%; transform: translateX(-50%);
-  width: 15px; height: 15px; border-radius: 50%;
+  width: 15px; height: 15px; border-radius: 0;
   background: var(--surface-3);
   border: 3px solid var(--bg);
   z-index: 1;
@@ -579,7 +588,7 @@ p  { margin: 0 0 1em; }
 /* --- Checklist / documents -------------------------------------------- */
 .doc-item {
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border-radius: 0;
   background: var(--surface);
   padding: 22px 24px;
   margin-bottom: 14px;
@@ -587,7 +596,7 @@ p  { margin: 0 0 1em; }
 .doc-item.satisfied { border-color: rgba(52,211,153,.28); }
 .doc-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
 .doc-check {
-  width: 26px; height: 26px; border-radius: 50%; flex: none;
+  width: 26px; height: 26px; border-radius: 0; flex: none;
   display: grid; place-items: center;
   border: 2px solid var(--border-strong);
   color: transparent;
@@ -602,17 +611,17 @@ p  { margin: 0 0 1em; }
   padding: 11px 14px;
   background: var(--bg-soft);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: 0;
   margin-top: 10px;
   font-size: .87rem;
 }
 .file-row .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.file-ico { width: 30px; height: 30px; border-radius: 8px; background: var(--surface-3); display: grid; place-items: center; font-size: .68rem; font-weight: 700; color: var(--text-muted); flex: none; }
+.file-ico { width: 30px; height: 30px; border-radius: 0; background: var(--surface-3); display: grid; place-items: center; font-size: .68rem; font-weight: 700; color: var(--text-muted); flex: none; }
 
 .dropzone {
   display: block;
   border: 1.5px dashed var(--border-strong);
-  border-radius: var(--radius);
+  border-radius: 0;
   padding: 22px;
   text-align: center;
   color: var(--text-muted);
@@ -635,7 +644,7 @@ p  { margin: 0 0 1em; }
 .timeline li:last-child { padding-bottom: 0; }
 .timeline li::before {
   content: ""; position: absolute; left: -26px; top: 6px;
-  width: 12px; height: 12px; border-radius: 50%;
+  width: 12px; height: 12px; border-radius: 0;
   background: var(--surface-3); border: 2px solid var(--bg);
 }
 .timeline li:first-child::before { background: var(--gradient); }
@@ -644,7 +653,7 @@ p  { margin: 0 0 1em; }
 .timeline .t-body  { font-size: .89rem; color: var(--text-muted); }
 
 /* --- Tables ------------------------------------------------------------ */
-.table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius-lg); }
+.table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 0; }
 table.data { width: 100%; border-collapse: collapse; font-size: .9rem; }
 table.data th {
   text-align: left;
@@ -662,7 +671,7 @@ table.data tbody tr:last-child td { border-bottom: 0; }
 table.data tbody tr:hover { background: rgba(19, 100, 223, .04); }
 
 /* --- Stat tiles -------------------------------------------------------- */
-.stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px 22px; }
+.stat { background: var(--surface); border: 1px solid var(--border); border-radius: 0; padding: 20px 22px; }
 .stat .k { font-size: .74rem; text-transform: uppercase; letter-spacing: .1em; color: var(--text-faint); margin-bottom: 8px; }
 .stat .v { font-size: 1.65rem; font-weight: 750; letter-spacing: -.02em; line-height: 1.1; }
 
@@ -676,7 +685,7 @@ table.data tbody tr:hover { background: rgba(19, 100, 223, .04); }
   border-left: 3px solid var(--accent);
   background: var(--surface);
   padding: 18px 22px;
-  border-radius: 0 var(--radius) var(--radius) 0;
+  border-radius: 0;
   margin: 22px 0;
   color: var(--text);
 }

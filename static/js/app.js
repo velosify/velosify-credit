@@ -1,4 +1,4 @@
-/* VelosifyCredit — small progressive enhancements.
+/* VelosifyCredit small progressive enhancements.
    Everything here is optional: every form and link works with JS disabled. */
 (function () {
   "use strict";
@@ -102,6 +102,88 @@
     last.addEventListener("input", updateMirror);
     updateMirror();
   }
+
+  /* ---- Hero score panel ------------------------------------------------
+     Counts the score up, fills the bar, and resolves each disputed account
+     in turn, then loops. Runs only while the panel is on screen, and not at
+     all when the visitor has asked for reduced motion; in that case the
+     markup's resolved state is already correct and is simply left alone. */
+  (function heroScore() {
+    var demo = document.getElementById("score-demo");
+    if (!demo) return;
+    if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    var numEl = demo.querySelector("[data-score-now]");
+    var deltaEl = demo.querySelector("[data-score-delta]");
+    var fillEl = demo.querySelector(".score-fill");
+    var items = Array.prototype.slice.call(demo.querySelectorAll(".score-item"));
+    if (!numEl || !fillEl || !items.length) return;
+
+    var from = parseInt(numEl.getAttribute("data-score-from"), 10);
+    var to = parseInt(numEl.getAttribute("data-score-to"), 10);
+    if (isNaN(from) || isNaN(to)) return;
+
+    var FLOOR = 300, CEIL = 850;      // the FICO range the bar represents
+    var COUNT_MS = 2200;              // score count-up
+    var LEAD_MS = 400;                // pause before anything moves
+    var STEP_MS = 620;                // gap between rows resolving
+    var HOLD_MS = 3200;               // dwell on the finished state before looping
+
+    var timers = [];
+    var runId = 0;                    // invalidates in-flight rAF loops on reset
+
+    demo.classList.add("is-animated");
+
+    function pct(v) { return ((v - FLOOR) / (CEIL - FLOOR)) * 100; }
+    function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
+    function clearTimers() { timers.forEach(clearTimeout); timers = []; }
+
+    function reset() {
+      clearTimers();
+      runId++;
+      numEl.textContent = from;
+      deltaEl.textContent = "";
+      items.forEach(function (it) { it.classList.remove("is-done"); });
+      fillEl.style.transition = "none";
+      fillEl.style.width = pct(from) + "%";
+      void fillEl.offsetWidth;        // flush, so the width change below animates
+      fillEl.style.transition = "";
+    }
+
+    function run() {
+      reset();
+      var id = runId;
+
+      timers.push(setTimeout(function () {
+        fillEl.style.width = pct(to) + "%";
+        var t0 = performance.now();
+        (function tick(now) {
+          if (id !== runId) return;   // a reset happened; abandon this loop
+          var p = Math.min(1, (now - t0) / COUNT_MS);
+          var v = Math.round(from + (to - from) * easeOut(p));
+          numEl.textContent = v;
+          deltaEl.textContent = v > from ? "\u25B2 " + (v - from) + " pts" : "";
+          if (p < 1) requestAnimationFrame(tick);
+        })(performance.now());
+      }, LEAD_MS));
+
+      items.forEach(function (it, i) {
+        timers.push(setTimeout(function () {
+          it.classList.add("is-done");
+        }, LEAD_MS + 500 + i * STEP_MS));
+      });
+
+      timers.push(setTimeout(run, LEAD_MS + 500 + items.length * STEP_MS + HOLD_MS));
+    }
+
+    if (!("IntersectionObserver" in window)) { run(); return; }
+    new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) run();
+        else { clearTimers(); runId++; }
+      });
+    }, { threshold: 0.35 }).observe(demo);
+  })();
 
   function escapeHtml(str) {
     return String(str).replace(/[&<>"']/g, function (c) {

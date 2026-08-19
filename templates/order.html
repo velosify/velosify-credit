@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Enrol — {{ cfg.BRAND_NAME }}{% endblock %}
+{% block title %}Enrol | {{ cfg.BRAND_NAME }}{% endblock %}
 {% block description %}Enrol in the {{ cfg.BRAND_NAME }} credit restoration programme. One flat fee of {{ cfg.PRICE_LABEL }}.{% endblock %}
 
 {% block body %}
@@ -10,7 +10,6 @@
 
       <!-- ---------- Form ---------- -->
       <div>
-        <span class="eyebrow">Enrolment</span>
         <h1 style="font-size:clamp(1.9rem,3.6vw,2.6rem)">Start your restoration</h1>
         <p class="lead" style="margin-bottom:32px">
           Create your account and sign the service agreement. You'll go to our
@@ -96,7 +95,7 @@
             {% if cfg.DEV_FAKE_CHECKOUT %}
               Complete enrolment (test mode)
             {% else %}
-              Continue to secure payment — {{ cfg.PRICE_LABEL }}
+              Continue to secure payment of {{ cfg.PRICE_LABEL }}
             {% endif %}
           </button>
 

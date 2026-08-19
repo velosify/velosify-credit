@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}{{ cfg.BRAND_NAME }} — Credit Restoration Done Properly{% endblock %}
+{% block title %}{{ cfg.BRAND_NAME }} | Credit Restoration Done Properly{% endblock %}
 
 {% block body %}
 
@@ -20,8 +20,8 @@
         </h1>
 
         <p class="lead">
-          Most credit reports contain something that shouldn't be there —
-          an account that isn't yours, a balance that was paid, a collection
+          Most credit reports contain something that shouldn't be there: an
+          account that isn't yours, a balance that was paid, a collection
           past its reporting window. We find those items, challenge them
           with the bureaus and furnishers, and follow through until they're
           resolved.
@@ -29,7 +29,7 @@
 
         <div class="hero-cta">
           <a class="btn btn-primary btn-lg" href="{{ url_for('order_page') }}">
-            Start my restoration — {{ cfg.PRICE_LABEL }}
+            Start my restoration for {{ cfg.PRICE_LABEL }}
           </a>
           <a class="btn btn-ghost btn-lg" href="#how">See how it works</a>
         </div>
@@ -42,40 +42,43 @@
       </div>
 
       <!-- Illustrative score panel. Numbers are an example, and labelled
-           as one — nothing here implies a guaranteed outcome. -->
+           as one, and nothing here implies a guaranteed outcome. -->
       <div class="score-card">
-        <div class="card card-glass">
+        <div class="card card-glass" id="score-demo">
           <div class="row-between" style="margin-bottom:18px">
             <span class="badge badge-accent">Example client file</span>
             <span class="tiny faint">Month 6</span>
           </div>
 
           <div class="score-row">
-            <span class="score-now">712</span>
-            <span class="score-delta">▲ 94 pts</span>
+            <span class="score-now" data-score-now
+                  data-score-from="618" data-score-to="712">712</span>
+            <span class="score-delta" data-score-delta>&#9650; 94 pts</span>
           </div>
           <div class="tiny faint">Started at 618</div>
 
           <div class="score-track"><div class="score-fill"></div></div>
           <div class="score-scale"><span>300</span><span>850</span></div>
 
+          {#  Each row carries both outcomes. Without JS the resolved one is
+              what shows, so the panel still reads correctly; the script adds
+              .is-animated and steps the rows through the pending state. #}
           <div class="score-items">
-            <div class="score-item">
-              <span class="label">Collection · unverified</span>
-              <span class="badge badge-success">Removed</span>
-            </div>
-            <div class="score-item">
-              <span class="label">Late payment · reported in error</span>
-              <span class="badge badge-success">Removed</span>
-            </div>
-            <div class="score-item">
-              <span class="label">Duplicate account</span>
-              <span class="badge badge-success">Removed</span>
-            </div>
-            <div class="score-item">
-              <span class="label">Charge-off · verified accurate</span>
-              <span class="badge">Stands</span>
-            </div>
+            {% set disputed = [
+              ('Collection · unverified',           'badge-success', 'Removed'),
+              ('Late payment · reported in error',  'badge-success', 'Removed'),
+              ('Duplicate account',                 'badge-success', 'Removed'),
+              ('Charge-off · verified accurate',    '',              'Stands')
+            ] %}
+            {% for label, cls, outcome in disputed %}
+              <div class="score-item">
+                <span class="label">{{ label }}</span>
+                <span class="state">
+                  <span class="badge badge-warn state-pending">Disputing</span>
+                  <span class="badge {{ cls }} state-done">{{ outcome }}</span>
+                </span>
+              </div>
+            {% endfor %}
           </div>
         </div>
         <p class="tiny faint text-center" style="margin-top:14px">
@@ -90,9 +93,6 @@
 <!-- ===================== What we challenge ===================== -->
 <section class="section-tight section-alt">
   <div class="container">
-    <p class="tiny faint text-center" style="letter-spacing:.14em;text-transform:uppercase;margin-bottom:26px">
-      What typically comes off a report
-    </p>
     <div class="grid grid-4">
       {% set challenges = [
         ('Collections', 'Unverifiable, misreported, or past the reporting window'),
@@ -113,7 +113,7 @@
     </div>
     <p class="small faint text-center mt-2" style="max-width:64ch;margin-inline:auto">
       We challenge what is inaccurate, incomplete, or unverifiable. Accurate,
-      current and verifiable information stays on your report — that's the
+      current and verifiable information stays on your report. That's the
       law, and anyone who tells you otherwise is selling you something else.
     </p>
   </div>
@@ -123,7 +123,6 @@
 <section class="section" id="how">
   <div class="container">
     <div class="text-center" style="margin-bottom:56px">
-      <span class="eyebrow">How it works</span>
       <h2>Four steps, and you can watch every one</h2>
       <p class="lead lead-center">
         No black box. From the day you enrol, your portal shows what we've
@@ -173,7 +172,6 @@
   <div class="container">
     <div class="hero-grid">
       <div>
-        <span class="eyebrow">What's included</span>
         <h2>Everything, for one price</h2>
         <p class="lead">
           There is no starter tier, no per-item fee and no upsell halfway
@@ -182,7 +180,7 @@
 
         <ul class="feature-list mt-2">
           <li><span class="tick">✓</span> Full audit of all three bureau reports</li>
-          <li><span class="tick">✓</span> Unlimited dispute rounds — we don't stop at three letters</li>
+          <li><span class="tick">✓</span> Unlimited dispute rounds, so we don't stop at three letters</li>
           <li><span class="tick">✓</span> Direct challenges to furnishers and collection agencies</li>
           <li><span class="tick">✓</span> Debt validation requests where the debt is questionable</li>
           <li><span class="tick">✓</span> Inquiry challenges for pulls you never authorised</li>
@@ -230,7 +228,6 @@
 <section class="section" id="pricing">
   <div class="container container-narrow">
     <div class="text-center" style="margin-bottom:44px">
-      <span class="eyebrow">Pricing</span>
       <h2>One fee. The whole programme.</h2>
       <p class="lead lead-center">
         Monthly credit repair billing rewards companies for taking their
@@ -273,7 +270,6 @@
 <section class="section section-alt">
   <div class="container container-narrow">
     <div class="text-center" style="margin-bottom:40px">
-      <span class="eyebrow">Straight talk</span>
       <h2>What we won't tell you</h2>
     </div>
 
@@ -318,7 +314,6 @@
 <section class="section" id="faq">
   <div class="container container-narrow">
     <div class="text-center" style="margin-bottom:44px">
-      <span class="eyebrow">FAQ</span>
       <h2>Questions people actually ask</h2>
     </div>
 
@@ -349,8 +344,8 @@
         and in your signed agreement.'),
       ('Do I have to do anything after I enrol?',
        'Upload your documents, then forward us anything the bureaus mail you
-        — that is genuinely it. We handle the letters, the follow-ups and the
-        escalations.'),
+        and that is genuinely it. We handle the letters, the follow-ups and
+        the escalations.'),
       ('Will you keep charging me monthly?',
        'No. The fee is one time. There is no subscription, no per-item charge
         and no renewal.')
@@ -375,7 +370,7 @@
         you with a full list of disputable items.
       </p>
       <a class="btn btn-primary btn-lg" href="{{ url_for('order_page') }}">
-        Start my restoration — {{ cfg.PRICE_LABEL }}
+        Start my restoration for {{ cfg.PRICE_LABEL }}
       </a>
       <p class="tiny faint" style="margin:16px 0 0">
         Already enrolled? <a href="{{ url_for('login') }}" style="text-decoration:underline">Sign in to your portal</a>.
