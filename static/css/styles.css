@@ -78,6 +78,12 @@ body {
 
 img, svg { max-width: 100%; display: block; }
 a { color: inherit; text-decoration: none; }
+
+/* An email address or URL is a single unbreakable token. Printed at phone
+   width it cannot wrap, so it widens the page and the whole document scrolls
+   sideways. These are allowed to break mid-token instead. */
+body { overflow-wrap: break-word; }
+a[href^="mailto:"], a[href^="http"] { overflow-wrap: anywhere; }
 button, input, select, textarea { font: inherit; color: inherit; }
 
 h1, h2, h3, h4 {
@@ -113,10 +119,12 @@ p  { margin: 0 0 1em; }
 .section-tight { padding: clamp(44px, 6vw, 72px) 0; }
 .section-alt { background: var(--bg-soft); }
 
+.stack { min-width: 0; }
 .stack > * + * { margin-top: 16px; }
 .row { display: flex; gap: 16px; flex-wrap: wrap; }
 .row-between { display: flex; gap: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
 .grid { display: grid; gap: 24px; }
+.grid > * { min-width: 0; }
 .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
@@ -193,7 +201,9 @@ p  { margin: 0 0 1em; }
 
 .btn-sm { padding: 9px 16px; font-size: .85rem; }
 .btn-lg { padding: 17px 34px; font-size: 1.02rem; }
-.btn-block { width: 100%; }
+/* A full-width button already has its width decided, so nowrap can only push
+   the page wider than the viewport. Long labels wrap instead. */
+.btn-block { width: 100%; white-space: normal; }
 .btn[disabled] { opacity: .5; cursor: not-allowed; transform: none; }
 
 /* --- Cards ------------------------------------------------------------- */
@@ -560,6 +570,10 @@ p  { margin: 0 0 1em; }
 
 .sidebar {
   background: var(--bg-soft);
+  /* Same guard as .app-main: on mobile this becomes a horizontally scrolling
+     bar, and without min-width:0 its min-content would size the grid column
+     and scroll the whole document instead of just the bar. */
+  min-width: 0;
   padding: 22px 16px;
   display: flex;
   flex-direction: column;
@@ -584,13 +598,18 @@ p  { margin: 0 0 1em; }
 .side-link .ico { width: 18px; text-align: center; flex: none; opacity: .9; }
 .side-foot { margin-top: auto; padding-top: 18px; border-top: 1px solid var(--border); }
 
-.app-main { padding: 34px 38px 70px; max-width: 1080px; }
+/* min-width:0 matters: a grid item's automatic minimum is its min-content
+   width, so a wide table or a long filename would widen the whole column and
+   scroll the document sideways instead of scrolling inside .table-wrap. */
+.app-main { padding: 34px 38px 70px; max-width: 1080px; min-width: 0; }
 .page-head { margin-bottom: 30px; }
 .page-head h1 { font-size: clamp(1.6rem, 3vw, 2.1rem); margin-bottom: 6px; }
 
 /* --- Progress tracker -------------------------------------------------- */
 .tracker { display: flex; gap: 0; margin: 6px 0 4px; }
-.tracker-step { flex: 1; text-align: center; position: relative; padding-top: 30px; }
+/* min-width:0 lets the six steps share a narrow viewport; without it each
+   label's min-content sets a floor and the tracker widens the page. */
+.tracker-step { flex: 1; min-width: 0; text-align: center; position: relative; padding-top: 30px; }
 .tracker-step::before {
   content: "";
   position: absolute; top: 9px; left: 0; right: 0;
@@ -612,7 +631,14 @@ p  { margin: 0 0 1em; }
   box-shadow: 0 0 0 4px rgba(19,100,223,.18);
   width: 17px; height: 17px; top: 2px;
 }
-.tracker-step .name { font-size: .76rem; color: var(--text-faint); }
+.tracker-step .name {
+  font-size: .76rem;
+  color: var(--text-faint);
+  display: block;
+  padding: 0 2px;
+  overflow-wrap: anywhere;
+  hyphens: auto;
+}
 .tracker-step.done .name, .tracker-step.current .name { color: var(--text); font-weight: 600; }
 
 /* --- Checklist / documents -------------------------------------------- */
@@ -645,7 +671,8 @@ p  { margin: 0 0 1em; }
   margin-top: 10px;
   font-size: .87rem;
 }
-.file-row .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-row { flex-wrap: wrap; }
+.file-row .name { flex: 1 1 140px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .file-ico { width: 30px; height: 30px; border-radius: 0; background: var(--surface-3); display: grid; place-items: center; font-size: .68rem; font-weight: 700; color: var(--text-muted); flex: none; }
 
 .dropzone {
@@ -705,6 +732,37 @@ table.data tbody tr:hover { background: rgba(19, 100, 223, .04); }
 .stat .k { font-size: .74rem; text-transform: uppercase; letter-spacing: .1em; color: var(--text-faint); margin-bottom: 8px; }
 .stat .v { font-size: 1.65rem; font-weight: 750; letter-spacing: -.02em; line-height: 1.1; }
 
+/* --- Order page --------------------------------------------------------- */
+.order-head { margin-bottom: 32px; max-width: 44ch; }
+.order-summary-card { position: sticky; top: 96px; }
+
+.agreement-scroll {
+  max-height: 210px;
+  overflow-y: auto;
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  font-size: .83rem;
+  line-height: 1.65;
+  color: var(--text-muted);
+  /* Momentum scrolling, and keep the gesture inside the box rather than
+     dragging the page once it bottoms out. */
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+@media (max-width: 980px) {
+  /* Price and inclusions before the form. Reading order on a phone is
+     top-to-bottom, so a summary in the second column lands after six fields
+     of typing, which is exactly backwards for a page that has to sell. */
+  .order-layout { display: flex; flex-direction: column; }
+  .order-layout .order-summary-col { order: -1; }
+  /* Sticky is meaningless once the columns stack. */
+  .order-summary-card { position: static; }
+  .agreement-scroll { max-height: 260px; }
+}
+
 /* --- Legal documents --------------------------------------------------- */
 .legal-doc { font-size: .95rem; color: var(--text-muted); }
 .legal-doc h2 { font-size: 1.2rem; color: var(--text); margin-top: 34px; }
@@ -757,6 +815,12 @@ table.data tbody tr:hover { background: rgba(19, 100, 223, .04); }
   .side-foot { margin-top: 0; padding-top: 0; border-top: 0; margin-left: auto; }
   .side-link { padding: 9px 12px; white-space: nowrap; }
   .app-main { padding: 26px 20px 60px; }
+}
+
+@media (max-width: 420px) {
+  /* On the narrowest phones any button label may need to wrap rather than
+     force horizontal scrolling on the whole document. */
+  .btn { white-space: normal; }
 }
 
 @media (max-width: 720px) {

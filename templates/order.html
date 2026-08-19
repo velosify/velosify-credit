@@ -6,15 +6,21 @@
 {% block body %}
 <section class="section-tight">
   <div class="container">
-    <div class="hero-grid" style="align-items:flex-start">
+    {#  The heading sits above both columns. On a phone the summary column is
+        ordered first, so a heading inside the form column would leave the page
+        opening on a price card with no context. #}
+    <div class="order-head">
+      <h1 style="font-size:clamp(1.9rem,3.6vw,2.6rem)">Start your restoration</h1>
+      <p class="lead mb-0">
+        Create your account and sign the service agreement. You'll go to our
+        payment processor next, then straight into your portal.
+      </p>
+    </div>
+
+    <div class="hero-grid order-layout" style="align-items:flex-start">
 
       <!-- ---------- Form ---------- -->
-      <div>
-        <h1 style="font-size:clamp(1.9rem,3.6vw,2.6rem)">Start your restoration</h1>
-        <p class="lead" style="margin-bottom:32px">
-          Create your account and sign the service agreement. You'll go to our
-          payment processor next, then straight into your portal.
-        </p>
+      <div class="order-form-col">
 
         {% if error %}
           <div class="alert alert-error">{{ error }}</div>
@@ -59,9 +65,7 @@
 
           <div class="field">
             <label>Service agreement</label>
-            <div style="max-height:210px;overflow-y:auto;background:var(--bg-soft);
-                        border:1px solid var(--border);border-radius:var(--radius);
-                        padding:18px 20px;font-size:.83rem;line-height:1.65;color:var(--text-muted)">
+            <div class="agreement-scroll">
               {% include "legal/_agreement_body.html" %}
             </div>
             <div class="hint">
@@ -116,8 +120,10 @@
       </div>
 
       <!-- ---------- Summary ---------- -->
-      <div>
-        <div class="card card-glass" style="position:sticky;top:96px">
+      {#  On narrow screens this column is ordered above the form, so the price
+          and what's included are read before six fields of typing. #}
+      <div class="order-summary-col">
+        <div class="card card-glass order-summary-card">
           <div class="row-between" style="margin-bottom:6px">
             <span class="strong">Credit Restoration Program</span>
             <span class="badge badge-accent">One time</span>
