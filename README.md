@@ -133,7 +133,7 @@ everywhere automatically.
   unconfigured install on a real developer machine. Presence of any hosting
   platform marker (`RAILWAY_ENVIRONMENT`, `DYNO`, `FLY_APP_NAME` and friends)
   disqualifies the local heuristic on its own, so a deploy where nobody has
-  set `APP_BASE_URL` yet fails closed instead of giving the programme away.
+  set `APP_BASE_URL` yet fails closed instead of giving the program away.
 
 ---
 
