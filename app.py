@@ -85,6 +85,25 @@ def asset_fingerprint(filename: str) -> str:
     return digest
 
 
+def absolute_url(path: str) -> str:
+    """Build a fully-qualified URL for social metadata.
+
+    Prefers APP_BASE_URL, but falls back to the live request host when that
+    setting still points at localhost. Open Graph images must be absolute, so
+    an unset APP_BASE_URL would otherwise publish link previews pointing at
+    127.0.0.1 and every share would render blank.
+    """
+    base = config.APP_BASE_URL
+    if not base or base.startswith(("http://127.0.0.1", "http://localhost")):
+        base = request.url_root.rstrip("/") if request else base
+    return f"{base}{path}"
+
+
+@app.context_processor
+def _social_meta() -> dict:
+    return {"absolute_url": absolute_url}
+
+
 @app.context_processor
 def _fingerprinted_url_for() -> dict:
     def versioned(endpoint: str, **values):
