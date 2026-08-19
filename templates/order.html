@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
-{% block title %}Enrol | {{ cfg.BRAND_NAME }}{% endblock %}
-{% block description %}Enrol in the {{ cfg.BRAND_NAME }} credit restoration program. One flat fee of {{ cfg.PRICE_LABEL }}.{% endblock %}
+{% block title %}Enroll | {{ cfg.BRAND_NAME }}{% endblock %}
+{% block description %}Enroll in the {{ cfg.BRAND_NAME }} credit restoration program. One flat fee of {{ cfg.PRICE_LABEL }}.{% endblock %}
 
 {% block body %}
 <section class="section-tight">
@@ -98,7 +98,7 @@
           <button class="btn btn-primary btn-lg btn-block" type="submit"
                   data-busy="Taking you to checkout…">
             {% if cfg.DEV_FAKE_CHECKOUT %}
-              Complete enrolment (test mode)
+              Complete enrollment (test mode)
             {% else %}
               Continue to secure payment of {{ cfg.PRICE_LABEL }}
             {% endif %}

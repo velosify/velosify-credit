@@ -78,7 +78,7 @@ BILLING_ENABLED = bool(STRIPE_SECRET_KEY)
 # This is deliberately hard to switch on by accident. It requires either an
 # explicit DEV_FAKE_CHECKOUT=1, or an unconfigured install that is clearly
 # running on a developer's machine. Deploying with no Stripe keys must fail
-# closed. An order flow that hands out enrolments for free is worse than one
+# closed. An order flow that hands out enrollments for free is worse than one
 # that is temporarily unavailable.
 _FAKE_CHECKOUT_EXPLICIT = _env("DEV_FAKE_CHECKOUT", "0") == "1"
 
@@ -103,7 +103,7 @@ CHECKOUT_UNAVAILABLE = not BILLING_ENABLED and not DEV_FAKE_CHECKOUT
 
 if DEV_FAKE_CHECKOUT and not _RUNNING_LOCALLY:
     print("\n*** WARNING: DEV_FAKE_CHECKOUT is on and APP_BASE_URL is not "
-          "localhost. Anyone can enrol without paying. ***\n", flush=True)
+          "localhost. Anyone can enroll without paying. ***\n", flush=True)
 
 # --- Email ----------------------------------------------------------------
 # Resend is used when a key is present; otherwise emails are logged to the

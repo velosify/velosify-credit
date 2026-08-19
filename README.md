@@ -101,7 +101,7 @@ Four tables, in `db.py`:
 
 - **users**: clients and admins, distinguished by `role`. Carries the case
   stage and the agreement signature record (name, timestamp, IP).
-- **orders**: one row per enrolment attempt. `pending` until payment
+- **orders**: one row per enrollment attempt. `pending` until payment
   confirms, then `paid`, or `refunded` if a refund webhook arrives.
 - **documents**: one row per uploaded file, tagged with a `doc_type` from
   the intake checklist and a review `status`.

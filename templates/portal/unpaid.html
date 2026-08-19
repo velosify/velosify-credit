@@ -4,7 +4,7 @@
 {% block body %}
 <div class="page-head">
   <h1>Almost there</h1>
-  <p class="muted mb-0">Your account exists, but enrolment isn't complete yet.</p>
+  <p class="muted mb-0">Your account exists, but enrollment isn't complete yet.</p>
 </div>
 
 <div class="card">
@@ -17,13 +17,13 @@
       wasn't completed, so nothing was charged. Pick it up whenever you're
       ready. Your details are already saved.
     {% else %}
-      There's no credit restoration program on this account yet. Enrol to
+      There's no credit restoration program on this account yet. Enroll to
       open a case and unlock your document portal.
     {% endif %}
   </p>
   <div class="row">
     <a class="btn btn-primary" href="{{ url_for('order_page') }}">
-      {{ 'Finish enrolling' if pending else 'Enrol now' }} for {{ cfg.PRICE_LABEL }}
+      {{ 'Finish enrolling' if pending else 'Enroll now' }} for {{ cfg.PRICE_LABEL }}
     </a>
     <a class="btn btn-ghost" href="mailto:{{ cfg.SUPPORT_EMAIL }}">Ask a question</a>
   </div>
