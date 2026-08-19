@@ -128,6 +128,12 @@ everywhere automatically.
   `APP_BASE_URL` is https.
 - The Stripe webhook verifies the signature and refuses to run at all if
   `STRIPE_WEBHOOK_SECRET` isn't configured.
+- Simulated checkout can't switch itself on in production. It requires an
+  explicit `DEV_FAKE_CHECKOUT=1` (which prints a loud startup warning), or an
+  unconfigured install on a real developer machine. Presence of any hosting
+  platform marker — `RAILWAY_ENVIRONMENT`, `DYNO`, `FLY_APP_NAME` and friends —
+  disqualifies the local heuristic on its own, so a deploy where nobody has
+  set `APP_BASE_URL` yet fails closed instead of giving the programme away.
 
 ---
 

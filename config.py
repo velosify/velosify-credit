@@ -81,7 +81,20 @@ BILLING_ENABLED = bool(STRIPE_SECRET_KEY)
 # closed — an order flow that hands out enrolments for free is worse than one
 # that is temporarily unavailable.
 _FAKE_CHECKOUT_EXPLICIT = _env("DEV_FAKE_CHECKOUT", "0") == "1"
-_RUNNING_LOCALLY = APP_BASE_URL.startswith(("http://127.0.0.1", "http://localhost"))
+
+# Any of these means we're on a hosting platform, not someone's laptop. This
+# is checked FIRST and independently of APP_BASE_URL, because APP_BASE_URL
+# defaults to localhost — so a deploy where nobody set it yet would otherwise
+# look local and quietly switch simulated checkout on, in public.
+_ON_PLATFORM = any(os.environ.get(key) for key in (
+    "RAILWAY_ENVIRONMENT", "RAILWAY_PROJECT_ID", "RAILWAY_SERVICE_ID",
+    "RENDER", "FLY_APP_NAME", "DYNO", "HEROKU_APP_NAME", "K_SERVICE",
+    "AWS_EXECUTION_ENV", "WEBSITE_INSTANCE_ID",
+))
+_RUNNING_LOCALLY = (
+    not _ON_PLATFORM
+    and APP_BASE_URL.startswith(("http://127.0.0.1", "http://localhost"))
+)
 DEV_FAKE_CHECKOUT = _FAKE_CHECKOUT_EXPLICIT or (not BILLING_ENABLED and _RUNNING_LOCALLY)
 
 # True when the site is live but can't take money — the order page says so
