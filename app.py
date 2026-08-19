@@ -202,6 +202,31 @@ def _safe_ext(filename: str) -> str | None:
     return ext if ext in config.ALLOWED_UPLOAD_EXTS else None
 
 
+_PHONE_NON_DIGIT = re.compile(r"\D+")
+
+
+def phone_problem(phone: str) -> str | None:
+    """Reason a phone number is unusable, or None if it's fine.
+
+    Deliberately relaxed about formatting, since people type numbers with
+    dashes, dots, parentheses and a leading +1, and rejecting those reads as
+    the form being broken. What it does insist on is enough digits to be a
+    real number. The case team has to be able to reach the client, which is
+    why this is required rather than optional.
+    """
+    digits = _PHONE_NON_DIGIT.sub("", phone or "")
+    if not digits:
+        return "Please enter a phone number so we can reach you about your case."
+    # A US number written with its country code is still ten digits.
+    if len(digits) == 11 and digits.startswith("1"):
+        digits = digits[1:]
+    if len(digits) < 10:
+        return "That phone number looks too short. Please include the area code."
+    if len(digits) > 15:
+        return "That phone number doesn't look right."
+    return None
+
+
 _UNSAFE_NAME = re.compile(r"[^A-Za-z0-9._-]+")
 
 
@@ -314,6 +339,9 @@ def order_submit():
         return fail("Please enter your first and last name.")
     if not valid_email(form["email"]):
         return fail("That email address doesn't look right.")
+    problem = phone_problem(form["phone"])
+    if problem:
+        return fail(problem)
     problem = password_problem(password)
     if problem:
         return fail(problem)
@@ -753,6 +781,10 @@ def portal_account_save():
     phone = (request.form.get("phone") or "").strip()
     if not first or not last:
         flash("Name can't be blank.", "error")
+        return redirect(url_for("portal_account"))
+    problem = phone_problem(phone)
+    if problem:
+        flash(problem, "error")
         return redirect(url_for("portal_account"))
     conn.execute(
         "UPDATE users SET first_name = ?, last_name = ?, phone = ? WHERE id = ?",

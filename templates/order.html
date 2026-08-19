@@ -42,9 +42,10 @@
           </div>
 
           <div class="field">
-            <label for="phone">Phone number <span class="faint">(optional)</span></label>
-            <input class="input" id="phone" name="phone" type="tel"
+            <label for="phone">Phone number</label>
+            <input class="input" id="phone" name="phone" type="tel" required
                    autocomplete="tel" value="{{ form.phone or '' }}">
+            <div class="hint">So your case team can reach you about your file.</div>
           </div>
 
           <div class="field">
