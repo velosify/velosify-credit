@@ -671,6 +671,22 @@ p  { margin: 0 0 1em; }
 
 .challenge-card h3 { font-size: 1.02rem; margin-bottom: 6px; }
 
+.challenge-callout {
+  max-width: 760px;
+  margin: 34px auto 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  box-shadow: var(--shadow-sm);
+  padding: 26px 28px;
+}
+.challenge-callout h3 { font-size: 1.05rem; margin-bottom: 10px; }
+.challenge-callout p {
+  font-size: .92rem;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
 .challenge-note {
   max-width: 66ch;
   margin: 36px auto 0;

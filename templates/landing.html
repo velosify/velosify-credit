@@ -143,6 +143,17 @@
         errors turn up most often, and where a challenge usually has something
         real to work with.
       </p>
+      {#  Answers the question a visitor actually arrives with, which is "do
+          you handle my kind of debt", without drifting into claiming we make
+          debts disappear. Deleting a tradeline does not extinguish what is
+          owed, and a client who believes otherwise is a lawsuit waiting to
+          happen. The second sentence is the part that keeps this honest. #}
+      <p class="lead lead-center" data-reveal>
+        We work every account type on your report: credit cards, student
+        loans, medical bills, personal and auto loans, charge-offs and
+        collections. The kind of debt is not what decides whether something
+        comes off. Whether it is being reported accurately is.
+      </p>
     </div>
 
     {#  Icons are decorative, so each is aria-hidden and the heading carries
@@ -181,6 +192,28 @@
           <p class="small muted mb-0">{{ note }}</p>
         </article>
       {% endfor %}
+    </div>
+
+    {#  Facts checked against the CFPB and the bureaus' own announcements, and
+        against the July 2025 ruling. Dated deliberately: this paragraph goes
+        stale the moment any of it changes, and a stale claim here is worse
+        than no claim. #}
+    <div class="challenge-callout" data-reveal>
+      <h3>A word on medical bills</h3>
+      <p>
+        These are worth checking line by line. Paid medical collections,
+        anything under $500, and anything less than a year old should not be
+        on your report at all: the bureaus removed those between 2022 and
+        2023, and they still turn up. The broader rule that would have taken
+        medical debt off credit reports entirely was struck down in July 2025,
+        so everything else can still be reported.
+      </p>
+      <p class="mb-0">
+        Medical billing also produces more errors than any other category we
+        see. Balances that changed once insurance paid, the same bill listed
+        twice by a provider and its collection agency, and amounts that were
+        never the patient's to owe in the first place.
+      </p>
     </div>
 
     <p class="challenge-note" data-reveal>
