@@ -1509,13 +1509,22 @@ def admin_system():
             if mailer.last_error else "")
 
     sender = config.MAIL_FROM.split("<")[-1].strip(">").strip()
-    if "@" in sender and not sender.endswith("@" + config.BRAND_DOMAIN):
+    sender_domain = sender.rsplit("@", 1)[-1] if "@" in sender else ""
+    if sender_domain and sender_domain != config.BRAND_DOMAIN:
+        # Not an error. A different domain is fine as long as the provider has
+        # verified THAT one; matching the site's domain is a trust and
+        # deliverability preference, not a requirement.
         add("Sending address", "warn",
-            f"{config.MAIL_FROM} is not on {config.BRAND_DOMAIN}, which "
-            f"usually means it cannot be authenticated for that domain.",
-            "Send from your own domain and verify it with your provider.")
+            f"Sending as {config.MAIL_FROM}, which is not {config.BRAND_DOMAIN}. "
+            f"That works if {sender_domain} is verified with your provider, "
+            f"but mail from the same domain as the site is trusted more and "
+            f"filtered less.",
+            f"Check {sender_domain} is verified, or verify "
+            f"{config.BRAND_DOMAIN} and send from there.")
     else:
-        add("Sending address", "ok", config.MAIL_FROM)
+        add("Sending address", "ok",
+            f"{config.MAIL_FROM} — confirm the domain is verified with your "
+            f"provider, which is the one thing this cannot check from here.")
 
     # --- Compliance and storage ------------------------------------------
     add("Company address", "ok" if config.COMPANY_ADDRESS else "fail",
@@ -1544,6 +1553,41 @@ def admin_system():
         "warn": sum(1 for c in checks if c["state"] == "warn"),
     }
     return render_template("admin/system.html", checks=checks, counts=counts)
+
+
+@app.post("/admin/system/test-email")
+@require_admin
+def admin_test_email():
+    """Send a real message to the signed-in admin and report what happened.
+
+    "Is email working?" was previously answerable only by inviting a colleague
+    and waiting to hear whether anything arrived. This asks the provider
+    directly and shows its own words back, which is how an unverified sending
+    domain becomes a sentence instead of a mystery.
+    """
+    actor = current_user()
+    ok = mailer.send_email(
+        to=actor["email"],
+        subject=f"{config.BRAND_NAME} test email",
+        text=(
+            "This is a test from your admin panel.\n\n"
+            "If you are reading it, outbound email is working: invites, "
+            "password resets and client case updates will all reach people.\n\n"
+            f"Sent from {config.MAIL_FROM}\n"
+            f"Requested by {actor['email']}\n"
+        ),
+    )
+    audit("admin.test_email", actor=actor,
+          detail="delivered to provider" if ok else mailer.last_error)
+    get_db().commit()
+
+    if ok:
+        flash(f"Accepted by the mail provider, addressed to {actor['email']}. "
+              f"If it does not arrive within a minute or two, check your spam "
+              f"folder and then the provider's own logs.", "success")
+    else:
+        flash(f"The mail provider refused it: {mailer.last_error}", "error")
+    return redirect(url_for("admin_system"))
 
 
 @app.post("/admin/team/invite")

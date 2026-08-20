@@ -40,6 +40,22 @@ DEMO_EMAIL = "demo.client@example.com"
 DEMO_FIRST = "Dana"
 DEMO_LAST = "Demo"
 
+# With --count you get several at once, each parked at a different point in
+# the pipeline, so the admin list has something realistic to click through
+# rather than three identical rows.
+DEMO_PEOPLE = [
+    ("Dana",  "Demo",   "documents"),
+    ("Marcus", "Testcase", "analysis"),
+    ("Priya", "Sample",  "disputes"),
+    ("Ellis", "Trial",   "responses"),
+    ("Robin", "Example", "complete"),
+]
+
+
+def demo_email(index: int) -> str:
+    """demo.client@example.com for the first, then numbered."""
+    return DEMO_EMAIL if index == 0 else f"demo.client{index + 1}@example.com"
+
 
 def _now(offset_days: int = 0) -> str:
     return (datetime.now(timezone.utc) + timedelta(days=offset_days)
@@ -129,24 +145,37 @@ def write_samples(out_dir: Path) -> list[Path]:
 # ---------------------------------------------------------------------------
 
 def remove(conn: sqlite3.Connection) -> None:
-    row = conn.execute("SELECT id FROM users WHERE email = ?", (DEMO_EMAIL,)).fetchone()
-    if not row:
-        print("No demo account to remove.")
+    """Take out every seeded account, however many were made.
+
+    Matched on the reserved example.com pattern rather than on a list, so a
+    demo account created by an older run of this script is still cleaned up.
+    """
+    rows = conn.execute(
+        "SELECT id, email FROM users WHERE email LIKE 'demo.client%@example.com'"
+    ).fetchall()
+    if not rows:
+        print("No demo accounts to remove.")
         return
-    files = conn.execute("SELECT stored_name FROM documents WHERE user_id = ?",
-                         (row["id"],)).fetchall()
-    for f in files:
-        (config.UPLOAD_DIR / f["stored_name"]).unlink(missing_ok=True)
-    # Orders, documents and case events all cascade from the user row.
-    conn.execute("DELETE FROM users WHERE id = ?", (row["id"],))
+    total_files = 0
+    for row in rows:
+        files = conn.execute("SELECT stored_name FROM documents WHERE user_id = ?",
+                             (row["id"],)).fetchall()
+        for f in files:
+            (config.UPLOAD_DIR / f["stored_name"]).unlink(missing_ok=True)
+        total_files += len(files)
+        # Orders, documents and case events all cascade from the user row.
+        conn.execute("DELETE FROM users WHERE id = ?", (row["id"],))
+        print(f"  removed {row['email']}")
     conn.commit()
-    print(f"Removed {DEMO_EMAIL} and {len(files)} uploaded file(s).")
+    print(f"Removed {len(rows)} demo account(s) and {total_files} uploaded file(s).")
 
 
-def create(conn: sqlite3.Connection, with_files: bool) -> str:
+def create(conn: sqlite3.Connection, with_files: bool, index: int = 0) -> str:
     password = secrets.token_urlsafe(12)
+    first, last, stage = DEMO_PEOPLE[index % len(DEMO_PEOPLE)]
+    email = demo_email(index)
     existing = conn.execute("SELECT id FROM users WHERE email = ?",
-                            (DEMO_EMAIL,)).fetchone()
+                            (email,)).fetchone()
 
     if existing:
         user_id = int(existing["id"])
@@ -155,17 +184,17 @@ def create(conn: sqlite3.Connection, with_files: bool) -> str:
             "role = 'client' WHERE id = ?",
             (hash_password(password), _now(), user_id),
         )
-        print(f"Reset the password on the existing demo account (id {user_id}).")
+        print(f"Reset the password on {email} (id {user_id}).")
     else:
         cur = conn.execute(
             "INSERT INTO users (email, password_hash, first_name, last_name, "
             "phone, role, case_stage, created_at, agreement_signed_at, "
             "agreement_name, agreement_ip, disclosure_ack_at, "
             "email_verified_at, password_changed_at) "
-            "VALUES (?, ?, ?, ?, '(555) 010-0100', 'client', 'documents', "
+            "VALUES (?, ?, ?, ?, '(555) 010-0100', 'client', ?, "
             "?, ?, ?, '127.0.0.1', ?, ?, ?)",
-            (DEMO_EMAIL, hash_password(password), DEMO_FIRST, DEMO_LAST,
-             _now(-2), _now(-2), f"{DEMO_FIRST} {DEMO_LAST}", _now(-2),
+            (email, hash_password(password), first, last, stage,
+             _now(-2), _now(-2), f"{first} {last}", _now(-2),
              _now(-2), _now()),
         )
         user_id = int(cur.lastrowid)
@@ -186,8 +215,8 @@ def create(conn: sqlite3.Connection, with_files: bool) -> str:
         conn.execute(
             "INSERT INTO case_events (user_id, title, body, stage, created_at, "
             "created_by) VALUES (?, 'Enrollment complete', "
-            "'Demo account seeded for testing.', 'documents', ?, 'system')",
-            (user_id, _now(-2)),
+            "'Demo account seeded for testing.', ?, ?, 'system')",
+            (user_id, stage, _now(-2)),
         )
 
     if with_files:
@@ -219,6 +248,9 @@ def main() -> int:
     ap.add_argument("--with-files", action="store_true",
                     help="pre-attach sample uploads so the admin review flow "
                          "has something in it already")
+    ap.add_argument("--count", type=int, default=1, metavar="N",
+                    help="how many demo clients to create (default 1, max 5). "
+                         "Each lands at a different case stage.")
     ap.add_argument("--samples-to", metavar="DIR",
                     help="also write the sample files here, to upload by hand")
     args = ap.parse_args()
@@ -228,7 +260,9 @@ def main() -> int:
         if args.remove:
             remove(conn)
             return 0
-        password = create(conn, args.with_files)
+        made = []
+        for i in range(max(1, min(args.count, len(DEMO_PEOPLE)))):
+            made.append((demo_email(i), create(conn, args.with_files, i)))
     finally:
         conn.close()
 
@@ -237,17 +271,18 @@ def main() -> int:
             print(f"  sample file: {path}")
 
     print()
-    print("=" * 58)
-    print("  Demo client ready. This is the only time the password is")
-    print("  shown; run the script again to get a new one.")
+    print("=" * 62)
+    print("  Demo client(s) ready. This is the only time the passwords are")
+    print("  shown; run the script again to get new ones.")
     print()
     print(f"  Sign in at   {config.APP_BASE_URL}/login")
-    print(f"  Email        {DEMO_EMAIL}")
-    print(f"  Password     {password}")
     print()
-    print("  Paid, at the 'Collecting documents' stage, ready to upload.")
-    print("  Remove it with:  python seed_demo.py --remove")
-    print("=" * 58)
+    for email, password in made:
+        print(f"  {email:<32} {password}")
+    print()
+    print("  All paid, at assorted case stages, ready to upload.")
+    print("  Remove them all with:  python seed_demo.py --remove")
+    print("=" * 62)
     return 0
 
 

@@ -57,6 +57,23 @@
   </table>
 </div>
 
+{#  A real send, to the signed-in admin, reporting the provider's own answer.
+    Cheaper than inviting a colleague and waiting to see if anything lands. #}
+<div class="card mt-2">
+  <div class="card-title" style="font-size:.95rem">Test outbound email</div>
+  <p class="small muted">
+    Sends one message to <strong>{{ user.email }}</strong> and shows you exactly
+    what the provider said. The usual cause of silence is a sending domain that
+    was never verified, which fails without any visible error anywhere else.
+  </p>
+  <form method="post" action="{{ url_for('admin_test_email') }}">
+    {{ csrf_field() }}
+    <button class="btn btn-ghost btn-sm" type="submit" data-busy="Sending…">
+      Send a test email to myself
+    </button>
+  </form>
+</div>
+
 <p class="small faint mt-2">
   Values are read at boot, so a change in the deployment environment shows up
   here only after a restart.

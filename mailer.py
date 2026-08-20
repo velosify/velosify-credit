@@ -49,6 +49,14 @@ def send_email(to: str, subject: str, text: str) -> bool:
         headers={
             "Authorization": f"Bearer {config.RESEND_API_KEY}",
             "Content-Type": "application/json",
+            "Accept": "application/json",
+            # Not decoration. Resend's API sits behind Cloudflare, which bans
+            # clients by request signature, and urllib's default
+            # "Python-urllib/3.x" is on that list. Without this header every
+            # send came back 403 with Cloudflare error 1010 and never reached
+            # Resend at all, which looks exactly like a bad key or an
+            # unverified domain and is neither.
+            "User-Agent": f"{config.BRAND_NAME}/1.0 (+{config.APP_BASE_URL})",
         },
         method="POST",
     )
