@@ -131,7 +131,11 @@ CREATE TABLE IF NOT EXISTS users (
     -- These three columns together are the audit trail.
     agreement_signed_at TEXT,
     agreement_name      TEXT,
-    agreement_ip        TEXT
+    agreement_ip        TEXT,
+    -- Separate from the agreement: the Credit Repair Organizations Act wants
+    -- a signed acknowledgment that the credit file rights disclosure was
+    -- received BEFORE the contract was signed, kept for two years.
+    disclosure_ack_at   TEXT
 );
 
 CREATE TABLE IF NOT EXISTS orders (
@@ -177,11 +181,34 @@ CREATE INDEX IF NOT EXISTS idx_events_user ON case_events(user_id, created_at);
 """
 
 
+# Columns added after the first release. CREATE TABLE IF NOT EXISTS will not
+# add a column to a table that already exists, so each one is applied here as
+# its own guarded ALTER. Adding to this list is the only thing a new additive
+# column needs; the guard makes it a no-op on a database that already has it.
+_ADDED_COLUMNS = [
+    ("users", "disclosure_ack_at", "TEXT"),
+]
+
+
+def _apply_added_columns(conn: sqlite3.Connection) -> None:
+    for table, column, decl in _ADDED_COLUMNS:
+        have = {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}
+        if not have:
+            continue  # table isn't there yet; the schema will create it whole
+        if column not in have:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {decl}")
+
+
 def init_db() -> None:
-    """Create the schema. Safe to call on every boot."""
+    """Create the schema, then apply any additive migrations.
+
+    Safe to call on every boot, and safe to run against a database created by
+    an older version of this file.
+    """
     conn = sqlite3.connect(str(config.DB_PATH))
     try:
         conn.executescript(SCHEMA)
+        _apply_added_columns(conn)
         conn.commit()
     finally:
         conn.close()

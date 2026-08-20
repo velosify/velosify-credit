@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}State disclosures | {{ cfg.BRAND_NAME }}{% endblock %}
+{% block description %}State-specific registration, bonding and disclosure information for {{ cfg.BRAND_NAME }}.{% endblock %}
+
+{% block body %}
+{#  ===========================================================================
+    TEMPLATE. THIS PAGE IS NOT FINISHED UNTIL A LAWYER FILLS IT IN.
+
+    The federal baseline below is accurate and safe to publish. The state
+    table is deliberately empty: a credit repair organization operating
+    nationwide typically has to register, bond, and in several states publish
+    a specific disclosure with wording the state prescribes, and those
+    requirements differ enough that guessing at them would be worse than
+    saying nothing.
+
+    Populate STATE_REGISTRATIONS in config from the registrations actually
+    held, and the table fills itself. Until then the page tells the truth:
+    that this is being worked through.
+    =========================================================================== #}
+<section class="section-tight">
+  <div class="container container-narrow legal-doc">
+    <h1 data-reveal style="font-size:clamp(1.8rem,3.4vw,2.4rem)">
+      State disclosures
+    </h1>
+    <p class="faint small">Last updated {{ current_year }}</p>
+
+    <p>
+      Credit repair is regulated federally by the Credit Repair Organizations
+      Act, and separately by most states, which add their own registration,
+      bonding, contract and disclosure rules on top. Where a state gives you
+      more protection than federal law does, that state&rsquo;s rules win, and
+      nothing in our agreement or on this site takes them away from you.
+    </p>
+
+    <h2>Rights every client has, in every state</h2>
+    <ul>
+      <li>
+        You may cancel within {{ cfg.CANCELLATION_DAYS }} business days of
+        signing, for any reason, and be refunded in full. See the
+        <a href="{{ url_for('notice_of_cancellation') }}">Notice of Cancellation</a>.
+      </li>
+      <li>
+        You must receive the
+        <a href="{{ url_for('credit_file_rights') }}">Consumer Credit File Rights</a>
+        disclosure, as its own document, before you sign anything.
+      </li>
+      <li>
+        You must receive a written contract that states the total cost, a full
+        description of the services, an estimate of how long they will take,
+        and our name and business address.
+      </li>
+      <li>
+        No one may remove accurate, current and verifiable information from
+        your credit report, and no one may promise you a score.
+      </li>
+      <li>
+        You may do all of this yourself, free, directly with the credit
+        bureaus.
+      </li>
+    </ul>
+
+    <h2>Where we are registered</h2>
+    {% if cfg.STATE_REGISTRATIONS %}
+      <div class="table-wrap">
+        <table class="data">
+          <thead>
+            <tr><th>State</th><th>Registration or licence</th><th>Surety bond</th></tr>
+          </thead>
+          <tbody>
+            {% for row in cfg.STATE_REGISTRATIONS %}
+              <tr>
+                <td>{{ row.state }}</td>
+                <td>{{ row.registration or 'Not required' }}</td>
+                <td>{{ row.bond or '—' }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="alert alert-warn">
+        <strong>We are still completing our state registrations.</strong>
+        Rather than list states we have not finished registering in, this
+        section stays empty until each one is confirmed. If you want to know
+        whether we are registered in your state before you enroll, email
+        <a href="mailto:{{ cfg.SUPPORT_EMAIL }}?subject=State%20registration">{{ cfg.SUPPORT_EMAIL }}</a>
+        and we will tell you straight.
+      </div>
+    {% endif %}
+
+    <h2>States with additional requirements</h2>
+    <p>
+      The following states regulate credit services organizations beyond the
+      federal baseline, most commonly through registration, a surety bond, a
+      prescribed contract form, or a longer cancellation period than the
+      federal {{ cfg.CANCELLATION_DAYS }} days:
+    </p>
+    <p class="small">
+      Arizona, Arkansas, California, Delaware, Florida, Georgia, Illinois,
+      Indiana, Iowa, Kansas, Louisiana, Maine, Maryland, Massachusetts,
+      Michigan, Minnesota, Missouri, Nebraska, Nevada, New Hampshire, New York,
+      North Carolina, Ohio, Oklahoma, Oregon, Pennsylvania, Rhode Island,
+      Tennessee, Texas, Utah, Virginia, Washington, West Virginia, Wisconsin.
+    </p>
+    <p class="small muted">
+      Requirements and amounts change. Confirm current rules with the state
+      regulator or Attorney General rather than relying on this list.
+    </p>
+
+    <h2>Complaints</h2>
+    <p>
+      You can complain about a credit repair organization to your state
+      Attorney General, to the
+      <a href="https://www.consumerfinance.gov/complaint/" rel="noopener">Consumer Financial Protection Bureau</a>,
+      or to the Federal Trade Commission at
+      <a href="https://reportfraud.ftc.gov" rel="noopener">reportfraud.ftc.gov</a>.
+      You do not have to raise it with us first, though we would like the
+      chance to fix it.
+    </p>
+
+    <p class="small faint">
+      See also the <a href="{{ url_for('agreement_preview') }}">service agreement</a>,
+      the <a href="{{ url_for('disclaimer') }}">disclaimer</a> and the
+      <a href="{{ url_for('refunds') }}">refund policy</a>.
+    </p>
+  </div>
+</section>
+{% endblock %}

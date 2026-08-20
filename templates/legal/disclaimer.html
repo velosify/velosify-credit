@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Disclaimer | {{ cfg.BRAND_NAME }}{% endblock %}
+{% block description %}What {{ cfg.BRAND_NAME }} does and does not promise, and the limits of what any credit repair organization can lawfully claim.{% endblock %}
+
+{% block body %}
+{#  TEMPLATE ONLY. Have counsel review before launch. #}
+<section class="section-tight">
+  <div class="container container-narrow legal-doc">
+    <h1 data-reveal style="font-size:clamp(1.8rem,3.4vw,2.4rem)">Disclaimer</h1>
+    <p class="faint small">Last updated {{ current_year }}</p>
+
+    <h2>1. No guaranteed result</h2>
+    <p>
+      We do not guarantee that any item will be removed from your credit report
+      or that your score will move by any amount, in any direction, in any
+      timeframe. What happens to your file depends on what is actually reported
+      about you and on how the bureaus and furnishers respond. Any company that
+      promises you a number is telling you something it cannot deliver, and
+      federal law forbids the claim.
+    </p>
+
+    <h2>2. Score illustrations are illustrations</h2>
+    <p>
+      Credit scores, dials, before-and-after figures and timelines shown
+      anywhere on this site are examples chosen to explain how the process
+      works. They are not client results, not averages, and not a projection of
+      what will happen to your file.
+    </p>
+
+    <h2>3. Accurate information stays</h2>
+    <p>
+      Neither we nor any credit repair organization can remove accurate,
+      current and verifiable information from your credit report. Accurate
+      negative information generally remains for 7 years, and bankruptcy for 10.
+      Our work is limited to items that appear inaccurate, incomplete,
+      outdated, duplicated or unverifiable.
+    </p>
+
+    <h2>4. You can do this yourself</h2>
+    <p>
+      Everything we do, you have the right to do on your own, directly with the
+      consumer reporting agencies, at no cost. You may request your reports free
+      once every 12 months at
+      <a href="https://www.annualcreditreport.com" rel="noopener">annualcreditreport.com</a>.
+      What you are buying from us is the work, the drafting and the follow-up.
+    </p>
+
+    <h2>5. Not legal, financial or tax advice</h2>
+    <p>
+      We are not a law firm, not a financial adviser and not a credit
+      counselling agency. Nothing on this site or in your portal is legal,
+      financial, tax or investment advice, and reading it does not create an
+      attorney-client relationship. If your situation involves litigation,
+      bankruptcy, identity theft prosecution or debt settlement, speak to a
+      licensed professional in your state.
+    </p>
+
+    <h2>6. Not affiliated with the credit bureaus</h2>
+    <p>
+      {{ cfg.BRAND_NAME }} is an independent company. We are not affiliated
+      with, endorsed by, sponsored by or acting on behalf of TransUnion,
+      Equifax, Experian, any furnisher, or any government agency. Those names
+      and marks belong to their owners and appear here only to identify the
+      organizations we correspond with.
+    </p>
+
+    <h2>7. Third-party links</h2>
+    <p>
+      Where we link out, we do it because the destination is useful, not
+      because we control it or vouch for everything on it.
+    </p>
+
+    <h2>8. Information on this site</h2>
+    <p>
+      We keep this site accurate and current, but consumer credit law changes
+      and pages can fall behind. Nothing here is a substitute for the terms of
+      your own <a href="{{ url_for('agreement_preview') }}">service agreement</a>,
+      which controls.
+    </p>
+  </div>
+</section>
+{% endblock %}

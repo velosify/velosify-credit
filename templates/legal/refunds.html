@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Refund policy | {{ cfg.BRAND_NAME }}{% endblock %}
+{% block description %}When {{ cfg.BRAND_NAME }} refunds, how long it takes, and what the {{ cfg.CANCELLATION_DAYS }}-day cancellation right guarantees.{% endblock %}
+
+{% block body %}
+{#  TEMPLATE ONLY. Have counsel review before launch. #}
+<section class="section-tight">
+  <div class="container container-narrow legal-doc">
+    <h1 data-reveal style="font-size:clamp(1.8rem,3.4vw,2.4rem)">Refund policy</h1>
+    <p class="faint small">Last updated {{ current_year }}</p>
+
+    <h2>1. The cancellation window</h2>
+    <p>
+      You may cancel within {{ cfg.CANCELLATION_DAYS }} business days of
+      signing, for any reason, and receive a full refund of everything you have
+      paid. This is your right under federal law, it is not something we grant
+      you, and we cannot condition it on anything. See the
+      <a href="{{ url_for('notice_of_cancellation') }}">Notice of Cancellation</a>
+      for the form and the deadline.
+    </p>
+
+    <h2>2. After the cancellation window</h2>
+    <p>
+      Once the window closes the fee is earned as the work is performed. You can
+      still stop the engagement at any time by telling us in writing, and we
+      will stop work and close your file. Whether any part of the fee is
+      returned at that point depends on how much of the program has been
+      delivered:
+    </p>
+    <ul>
+      <li>
+        If we have not yet filed your first round of disputes, we refund in
+        full. You have paid for work we have not done.
+      </li>
+      <li>
+        If disputes have been filed and responses are outstanding, we refund on
+        a pro rata basis against the work still to be performed.
+      </li>
+      <li>
+        If the case has run its course and every round has been worked, the fee
+        is fully earned and there is nothing to return, whatever the outcome
+        was.
+      </li>
+    </ul>
+
+    <h2>3. We do not refund for outcome</h2>
+    <p>
+      You are paying for the audit, the disputes and the follow-up, not for a
+      particular result. We cannot promise a score, and a case that ends with
+      fewer deletions than you hoped for is not, on its own, grounds for a
+      refund. If we have not done the work we said we would, that is a
+      different matter, and you should tell us.
+    </p>
+
+    <h2>4. Billing errors and duplicate charges</h2>
+    <p>
+      If you were charged twice, charged the wrong amount, or charged after
+      cancelling, tell us and we will return it in full. We would rather you
+      contact us than open a dispute with your bank, because we can act faster,
+      but nothing here limits your right to do either.
+    </p>
+
+    <h2>5. How to ask for a refund</h2>
+    <p>
+      Email <a href="mailto:{{ cfg.SUPPORT_EMAIL }}?subject=Refund%20request">{{ cfg.SUPPORT_EMAIL }}</a>
+      {%- if cfg.COMPANY_ADDRESS %}, or write to us at {{ cfg.COMPANY_ADDRESS }}{% endif %}.
+      Tell us the email on your account and, if you have it, the date you
+      enrolled. We will confirm in writing within 5 business days.
+    </p>
+
+    <h2>6. How refunds are returned</h2>
+    <p>
+      Refunds go back to the card or account you paid with. We do not issue
+      refunds in any other form, and we do not offer credit toward future
+      services in place of a refund you are entitled to. Your bank decides how
+      quickly the returned funds appear, which is usually 5 to 10 business
+      days.
+    </p>
+
+    <p class="small faint">
+      This policy sits alongside your
+      <a href="{{ url_for('agreement_preview') }}">service agreement</a>, which
+      controls if the two ever conflict.
+    </p>
+  </div>
+</section>
+{% endblock %}

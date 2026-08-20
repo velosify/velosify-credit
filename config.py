@@ -8,6 +8,7 @@ crashing at import time.
 """
 from __future__ import annotations
 
+import json
 import os
 import secrets
 from pathlib import Path
@@ -122,3 +123,21 @@ ADMIN_BOOTSTRAP_PASSWORD = _env("ADMIN_BOOTSTRAP_PASSWORD")
 # The Credit Repair Organizations Act gives consumers 3 business days to
 # cancel without penalty. Surfaced in the agreement and the portal.
 CANCELLATION_DAYS = _env_int("CANCELLATION_DAYS", 3)
+
+# State registrations, published on /legal/state-disclosures. Empty until real
+# registrations exist, and the page says so plainly rather than implying
+# coverage we do not have. Set STATE_REGISTRATIONS to a JSON array of
+# {"state", "registration", "bond"} objects as each one is granted, e.g.
+#   [{"state": "Texas", "registration": "CSO #12345", "bond": "$10,000"}]
+def _env_json_list(name: str) -> list:
+    raw = _env(name, "").strip()
+    if not raw:
+        return []
+    try:
+        value = json.loads(raw)
+    except ValueError:
+        return []
+    return value if isinstance(value, list) else []
+
+
+STATE_REGISTRATIONS = _env_json_list("STATE_REGISTRATIONS")

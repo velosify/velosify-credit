@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Cookie policy | {{ cfg.BRAND_NAME }}{% endblock %}
+{% block description %}What {{ cfg.BRAND_NAME }} stores in your browser, why, and how to get rid of it.{% endblock %}
+
+{% block body %}
+{#  TEMPLATE ONLY. Have counsel review before launch.
+
+    Written to match what the application ACTUALLY sets today: one signed
+    session cookie, and nothing else. If analytics, ads, chat or a pixel are
+    ever added, this page has to be updated at the same time, and a consent
+    banner becomes necessary in several jurisdictions. #}
+<section class="section-tight">
+  <div class="container container-narrow legal-doc">
+    <h1 data-reveal style="font-size:clamp(1.8rem,3.4vw,2.4rem)">Cookie policy</h1>
+    <p class="faint small">Last updated {{ current_year }}</p>
+
+    <h2>1. The short version</h2>
+    <p>
+      We set one cookie, and only once you sign in. It exists to keep you
+      signed in. We do not run advertising cookies, we do not run third-party
+      analytics, and we do not sell or share what you do here with anyone.
+      That is why you are not being asked to dismiss a consent banner.
+    </p>
+
+    <h2>2. What we set</h2>
+    <div class="table-wrap">
+      <table class="data">
+        <thead>
+          <tr><th>Name</th><th>Purpose</th><th>Lasts</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>session</code></td>
+            <td>
+              Keeps you signed in to your portal and protects forms against
+              cross-site request forgery. It is cryptographically signed, and
+              it holds an account reference, not your documents or your credit
+              data.
+            </td>
+            <td>Until you sign out or the session expires</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="small muted">
+      It is a strictly necessary cookie: sign-in cannot work without it, so it
+      does not require consent under the ePrivacy rules or their state
+      equivalents.
+    </p>
+
+    <h2>3. What we do not set</h2>
+    <ul>
+      <li>No advertising or retargeting cookies, and no ad-network pixels.</li>
+      <li>No third-party analytics or session-recording tools.</li>
+      <li>No social media trackers or embedded like buttons.</li>
+      <li>No cross-site profiling of any kind.</li>
+    </ul>
+
+    <h2>4. Other browser storage</h2>
+    <p>
+      We do not use local storage, session storage or fingerprinting. Your
+      browser will cache our stylesheet, script and images, which is ordinary
+      caching and holds nothing about you.
+    </p>
+
+    <h2>5. Fonts</h2>
+    <p>
+      Our typeface is served by Google Fonts, so loading a page makes a request
+      to Google that includes your IP address and browser details. Google does
+      not set cookies on that request. If that matters to you, a content
+      blocker will stop it and the site will fall back to a system font.
+    </p>
+
+    <h2>6. Turning cookies off</h2>
+    <p>
+      Every browser lets you block or delete cookies in its privacy settings.
+      Blocking ours means you will not be able to sign in to your portal, since
+      there is nothing left to remember you by. The public pages will work
+      normally.
+    </p>
+
+    <h2>7. Do Not Track</h2>
+    <p>
+      There is nothing for us to honour or ignore: we do not track you across
+      sites in the first place.
+    </p>
+
+    <p class="small faint">
+      How we handle the information you give us is covered in the
+      <a href="{{ url_for('privacy') }}">privacy policy</a>.
+    </p>
+  </div>
+</section>
+{% endblock %}

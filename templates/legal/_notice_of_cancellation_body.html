@@ -1,0 +1,46 @@
+{#
+  ===========================================================================
+  STATUTORY FORM. DO NOT EDIT THE WORDING.
+
+  The Notice of Cancellation required by the Credit Repair Organizations Act,
+  15 U.S.C. 1679e(b), reproduced verbatim from the United States Code. The
+  statute requires the heading "Notice of Cancellation" and the statement
+  below in bold face type, and requires the form to accompany the contract IN
+  DUPLICATE, which is why the standalone page renders two copies.
+
+  Only the bracketed blanks are filled: our name, our address, and the
+  consumer's own deadline date. `deadline` may be passed in; when it is not,
+  the blank is left to be completed by hand.
+  ===========================================================================
+#}
+<div class="croa-form">
+  <h2 class="croa-title">Notice of Cancellation</h2>
+
+  <p class="croa-bold">
+    You may cancel this contract, without any penalty or obligation, at any
+    time before midnight of the 3rd day which begins after the date the
+    contract is signed by you.
+  </p>
+
+  <p class="croa-bold">
+    To cancel this contract, mail or deliver a signed, dated copy of this
+    cancellation notice, or any other written notice to
+    {{ cfg.COMPANY_LEGAL_NAME }}
+    at {% if cfg.COMPANY_ADDRESS %}{{ cfg.COMPANY_ADDRESS }}{% else %}<span class="croa-blank"></span>{% endif %}
+    before midnight on
+    {% if deadline %}{{ deadline }}{% else %}<span class="croa-blank"></span>{% endif %}
+  </p>
+
+  <p class="croa-bold">I hereby cancel this transaction,</p>
+
+  <div class="croa-sign">
+    <div>
+      <span class="croa-rule"></span>
+      <span class="croa-caption">Date</span>
+    </div>
+    <div>
+      <span class="croa-rule"></span>
+      <span class="croa-caption">Purchaser&rsquo;s signature</span>
+    </div>
+  </div>
+</div>

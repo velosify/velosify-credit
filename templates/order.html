@@ -63,6 +63,35 @@
 
           <hr style="border:0;border-top:1px solid var(--border);margin:26px 0">
 
+          {#  This block comes BEFORE the agreement on purpose. The Credit
+              Repair Organizations Act requires the credit file rights
+              disclosure to be a separate document, given before the contract
+              is signed, with a separate acknowledgment we keep. Putting it
+              after the contract, or folding it into the same checkbox, would
+              defeat both requirements. #}
+          <div class="field">
+            <label>Before you sign: your credit file rights</label>
+            <div class="alert alert-info" style="margin-bottom:12px">
+              Federal law requires us to give you a written statement of your
+              credit file rights before you sign anything. It is short, and it
+              is the honest version of what any company in this industry can
+              and cannot do for you.
+              <a href="{{ url_for('credit_file_rights') }}" target="_blank"
+                 style="text-decoration:underline">Read it now, in a new tab</a>.
+            </div>
+            <label class="check">
+              <input type="checkbox" name="accept_disclosure" value="yes" required>
+              <span>
+                I have received and read the
+                <a href="{{ url_for('credit_file_rights') }}" target="_blank"
+                   style="text-decoration:underline">Consumer Credit File Rights</a>
+                disclosure.
+              </span>
+            </label>
+          </div>
+
+          <hr style="border:0;border-top:1px solid var(--border);margin:26px 0">
+
           <div class="field">
             <label>Service agreement</label>
             <div class="agreement-scroll">
@@ -79,13 +108,26 @@
               <input type="checkbox" name="accept_agreement" value="yes" required>
               <span>
                 I have read and agree to the service agreement, the
-                <a href="{{ url_for('terms') }}" target="_blank" style="text-decoration:underline">terms of service</a>
+                <a href="{{ url_for('terms') }}" target="_blank" style="text-decoration:underline">terms of service</a>,
+                the
+                <a href="{{ url_for('privacy') }}" target="_blank" style="text-decoration:underline">privacy policy</a>
                 and the
-                <a href="{{ url_for('privacy') }}" target="_blank" style="text-decoration:underline">privacy policy</a>.
+                <a href="{{ url_for('esign') }}" target="_blank" style="text-decoration:underline">consent to electronic records and signatures</a>.
                 I understand I may cancel within {{ cfg.CANCELLATION_DAYS }} business days for a full refund.
               </span>
             </label>
           </div>
+
+          {#  15 U.S.C. 1679d(b)(4) requires this exact wording, in bold face
+              type, in immediate proximity to the signature space. Do not
+              reword it and do not move it away from the field below. #}
+          <p class="croa-bold sign-notice">
+            You may cancel this contract without penalty or obligation at any
+            time before midnight of the 3rd business day after the date on
+            which you signed the contract. See the attached
+            <a href="{{ url_for('notice_of_cancellation') }}" target="_blank">notice
+            of cancellation form</a> for an explanation of this right.
+          </p>
 
           <div class="field">
             <label for="signature">Electronic signature</label>

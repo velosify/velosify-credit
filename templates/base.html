@@ -84,16 +84,24 @@
           <li><a href="{{ url_for('landing') }}#how">How it works</a></li>
           <li><a href="{{ url_for('landing') }}#pricing">Pricing</a></li>
           <li><a href="{{ url_for('landing') }}#faq">FAQ</a></li>
+          <li><a href="{{ url_for('refunds') }}">Refunds</a></li>
+          <li><a href="{{ url_for('accessibility') }}">Accessibility</a></li>
           <li><a href="mailto:{{ cfg.SUPPORT_EMAIL }}">Contact</a></li>
+          <li><a href="{{ url_for('login') }}">Client sign in</a></li>
         </ul>
       </div>
+      {#  The first two are the documents the Credit Repair Organizations Act
+          requires a consumer to have before signing, so they lead. The rest
+          live on the /legal index rather than making this column endless. #}
       <div data-reveal>
         <h4>Legal</h4>
         <ul>
+          <li><a href="{{ url_for('credit_file_rights') }}">Your credit file rights</a></li>
+          <li><a href="{{ url_for('notice_of_cancellation') }}">Right to cancel</a></li>
           <li><a href="{{ url_for('agreement_preview') }}">Service agreement</a></li>
-          <li><a href="{{ url_for('terms') }}">Terms of service</a></li>
           <li><a href="{{ url_for('privacy') }}">Privacy policy</a></li>
-          <li><a href="{{ url_for('login') }}">Client sign in</a></li>
+          <li><a href="{{ url_for('terms') }}">Terms of service</a></li>
+          <li><a href="{{ url_for('legal_index') }}">All legal documents</a></li>
         </ul>
       </div>
     </div>

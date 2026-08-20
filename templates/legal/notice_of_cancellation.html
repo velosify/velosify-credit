@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Notice of Cancellation | {{ cfg.BRAND_NAME }}{% endblock %}
+{% block description %}Your right to cancel your contract with {{ cfg.BRAND_NAME }} without penalty or obligation, and the form to do it with.{% endblock %}
+
+{% block body %}
+{#  15 U.S.C. 1679e(b) requires this form to accompany the contract IN
+    DUPLICATE, so two copies are rendered: one to send and one to keep. #}
+<section class="section-tight">
+  <div class="container container-narrow legal-doc">
+    <h1 data-reveal style="font-size:clamp(1.8rem,3.4vw,2.4rem)">
+      Your right to cancel
+    </h1>
+    <p class="faint small">
+      Required form under the Credit Repair Organizations Act
+    </p>
+
+    <div class="alert alert-info">
+      <strong>You can cancel, and it costs you nothing.</strong> You have until
+      midnight of the {{ cfg.CANCELLATION_DAYS }}rd business day after you sign
+      to cancel for any reason at all, with a full refund and no obligation.
+      You do not have to give us a reason and we will not ask you for one.
+    </div>
+
+    <h2>How to cancel</h2>
+    <p>
+      Any written notice works. Print and send one of the forms below, or
+      simply email
+      <a href="mailto:{{ cfg.SUPPORT_EMAIL }}?subject=Cancellation">{{ cfg.SUPPORT_EMAIL }}</a>
+      saying you are cancelling. If you have already enrolled, the cancellation
+      form is also in your portal. What matters is that your notice is sent
+      before the deadline, not that it has reached us by then.
+    </p>
+    <p>
+      Cancelling after the {{ cfg.CANCELLATION_DAYS }}-day window is still
+      allowed at any time, and stops all further work, but the statutory
+      guarantee of a full refund applies within the window. Our
+      <a href="{{ url_for('refunds') }}">refund policy</a> covers what happens
+      after it.
+    </p>
+
+    <h2>The form</h2>
+    <p class="small faint">
+      Two copies, as the statute requires: send one and keep one.
+    </p>
+
+    {% for copy in ['Copy 1 — send this one to us', 'Copy 2 — keep this one'] %}
+      <p class="small faint croa-copy-label">{{ copy }}</p>
+      {% include "legal/_notice_of_cancellation_body.html" %}
+    {% endfor %}
+
+    <p class="small faint">
+      Source: 15 U.S.C. &sect; 1679e. See also the
+      <a href="{{ url_for('credit_file_rights') }}">Consumer Credit File Rights</a>
+      disclosure and the
+      <a href="{{ url_for('agreement_preview') }}">service agreement</a>.
+    </p>
+  </div>
+</section>
+{% endblock %}

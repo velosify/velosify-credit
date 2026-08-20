@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}Electronic communications consent | {{ cfg.BRAND_NAME }}{% endblock %}
+{% block description %}Your consent to sign and receive documents electronically, and how to withdraw it or ask for paper.{% endblock %}
+
+{% block body %}
+{#  TEMPLATE ONLY. Have counsel review before launch.
+
+    Tracks the consumer-consent conditions in the federal E-SIGN Act,
+    15 U.S.C. 7001(c): what the consent covers, hardware and software
+    requirements, the right to paper, and how to withdraw. #}
+<section class="section-tight">
+  <div class="container container-narrow legal-doc">
+    <h1 data-reveal style="font-size:clamp(1.8rem,3.4vw,2.4rem)">
+      Consent to electronic records and signatures
+    </h1>
+    <p class="faint small">Last updated {{ current_year }}</p>
+
+    <p>
+      Our whole process runs online: you sign the agreement in a browser, your
+      documents live in a portal, and we email you when something changes.
+      Federal law lets us do that only if you agree to it knowingly, so this
+      page sets out exactly what you are agreeing to and how to change your
+      mind.
+    </p>
+
+    <h2>1. What your consent covers</h2>
+    <p>
+      When you tick the box on the enrollment form, you agree that we may
+      provide the following electronically rather than on paper:
+    </p>
+    <ul>
+      <li>the service agreement and anything that amends it;</li>
+      <li>the Consumer Credit File Rights disclosure and the Notice of
+          Cancellation;</li>
+      <li>receipts, invoices and refund confirmations;</li>
+      <li>case updates, dispute results and correspondence about your file;</li>
+      <li>any notice or disclosure the law would otherwise require in
+          writing.</li>
+    </ul>
+
+    <h2>2. Your electronic signature</h2>
+    <p>
+      Typing your name where the enrollment form asks for a signature is your
+      signature. It has the same legal effect as signing on paper. We record
+      the name you typed, the date and time, and the IP address it came from,
+      and we keep that record for as long as we are required to.
+    </p>
+
+    <h2>3. What you need to read and keep these records</h2>
+    <p>
+      A current web browser, an internet connection, an email account you can
+      receive mail at, and enough storage to save or print a PDF. If you cannot
+      meet all of these, do not consent, and contact us instead so we can send
+      paper.
+    </p>
+
+    <h2>4. Getting a paper copy</h2>
+    <p>
+      You may ask for a paper copy of any document at any time, before or after
+      you enroll, and we will not charge you for it. Email
+      <a href="mailto:{{ cfg.SUPPORT_EMAIL }}?subject=Paper%20copy%20request">{{ cfg.SUPPORT_EMAIL }}</a>
+      {%- if cfg.COMPANY_ADDRESS %} or write to {{ cfg.COMPANY_ADDRESS }}{% endif %}.
+      Asking for paper does not cancel your consent and does not affect your
+      case.
+    </p>
+
+    <h2>5. Withdrawing your consent</h2>
+    <p>
+      You may withdraw this consent at any time, at no cost, by emailing
+      <a href="mailto:{{ cfg.SUPPORT_EMAIL }}?subject=Withdraw%20e-sign%20consent">{{ cfg.SUPPORT_EMAIL }}</a>.
+      Withdrawal takes effect once we have had a reasonable chance to act on
+      it, and it does not undo the validity of anything already signed or sent
+      electronically. If you withdraw it, we will send future documents on
+      paper to the address we have for you, which may slow your case down.
+    </p>
+
+    <h2>6. Keeping your contact details current</h2>
+    <p>
+      Tell us when your email address changes. You can update it yourself in
+      your portal. If mail to you starts bouncing we may suspend electronic
+      delivery until we can reach you.
+    </p>
+
+    <h2>7. Scope</h2>
+    <p>
+      This consent applies to {{ cfg.COMPANY_LEGAL_NAME }} and to the services
+      described in your
+      <a href="{{ url_for('agreement_preview') }}">service agreement</a>. It does
+      not extend to any other company.
+    </p>
+  </div>
+</section>
+{% endblock %}

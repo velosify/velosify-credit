@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Legal | {{ cfg.BRAND_NAME }}{% endblock %}
+{% block description %}Every policy, disclosure and agreement {{ cfg.BRAND_NAME }} operates under, in one place.{% endblock %}
+
+{% block body %}
+<section class="section-tight">
+  <div class="container container-narrow">
+    <div class="section-head">
+      <h1 data-reveal style="font-size:clamp(1.9rem,3.6vw,2.6rem)">Legal</h1>
+      <p class="lead lead-center mb-0" data-reveal>
+        Everything we operate under, in one place. The first two are documents
+        federal law requires you to have before you sign anything, so they are
+        worth reading first.
+      </p>
+    </div>
+
+    {% set docs = [
+      ('Consumer Credit File Rights', 'credit_file_rights',
+       'The disclosure the Credit Repair Organizations Act requires us to give you, in writing, before you sign. Its wording is set by statute.', true),
+      ('Notice of Cancellation', 'notice_of_cancellation',
+       'Your right to cancel within ' ~ cfg.CANCELLATION_DAYS ~ ' business days for a full refund, and the form to do it with.', true),
+      ('Service agreement', 'agreement_preview',
+       'The contract itself: what we do, what it costs, how long it takes, and how it ends.', false),
+      ('Terms of service', 'terms',
+       'The rules for using this site and your portal.', false),
+      ('Privacy policy', 'privacy',
+       'What we collect, why we have it, who can see it, and how long we keep it.', false),
+      ('Refund policy', 'refunds',
+       'When we refund, how much, and how long it takes to reach you.', false),
+      ('Disclaimer', 'disclaimer',
+       'What we do not promise, and the limits of what any credit repair company can lawfully claim.', false),
+      ('Electronic communications consent', 'esign',
+       'Signing and receiving documents electronically, and how to ask for paper instead.', false),
+      ('Cookie policy', 'cookies',
+       'What we store in your browser. It is one cookie, and only once you sign in.', false),
+      ('Accessibility', 'accessibility',
+       'What we have tested, where we fall short, and how to tell us something does not work.', false),
+      ('State disclosures', 'state_disclosures',
+       'Registration, bonding and the state rules that sit on top of federal law.', false)
+    ] %}
+
+    <div class="legal-index">
+      {% for title, endpoint, blurb, required in docs %}
+        <a class="legal-card" href="{{ url_for(endpoint) }}" data-reveal data-reveal-step="55">
+          <span class="legal-card-head">
+            <span class="legal-card-title">{{ title }}</span>
+            {% if required %}<span class="badge badge-accent">Required by law</span>{% endif %}
+          </span>
+          <span class="small muted">{{ blurb }}</span>
+        </a>
+      {% endfor %}
+    </div>
+
+    <p class="small faint text-center mt-3">
+      Questions about any of it? Email
+      <a href="mailto:{{ cfg.SUPPORT_EMAIL }}">{{ cfg.SUPPORT_EMAIL }}</a>.
+    </p>
+  </div>
+</section>
+{% endblock %}

@@ -115,8 +115,15 @@ p  { margin: 0 0 1em; }
 .container-narrow { max-width: 760px; }
 .container-form   { max-width: 560px; }
 
-.section { padding: clamp(64px, 9vw, 118px) 0; }
-.section-tight { padding: clamp(44px, 6vw, 72px) 0; }
+.section { padding: clamp(56px, 7.4vw, 94px) 0; }
+.section-tight { padding: clamp(40px, 5.4vw, 66px) 0; }
+/* One measure for the space under a section's heading block, so five
+   sections cannot drift to five different values. */
+.section-head {
+  text-align: center;
+  margin: 0 auto clamp(28px, 3.2vw, 42px);
+}
+.section-head > :last-child { margin-bottom: 0; }
 .section-alt { background: var(--bg-soft); }
 
 .stack { min-width: 0; }
@@ -321,6 +328,7 @@ p  { margin: 0 0 1em; }
 .alert-success { background: var(--success-bg); border-color: rgba(6,92,59,.28); color: #054d31; }
 .alert-error   { background: var(--danger-bg);  border-color: rgba(158,27,50,.28); color: #7d1224; }
 .alert-info    { background: rgba(19,100,223,.07); border-color: rgba(19,100,223,.22); color: #0c4bb0; }
+.alert-warn    { background: var(--warn-bg);     border-color: rgba(122,71,0,.28);   color: #653b00; }
 
 /* --- Site nav ---------------------------------------------------------- */
 .nav {
@@ -558,7 +566,12 @@ p  { margin: 0 0 1em; }
   transform-origin: left center;
 }
 
-.flow-step { position: relative; text-align: center; }
+.flow-step {
+  position: relative;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+}
 
 .flow-num {
   position: relative;
@@ -589,7 +602,7 @@ p  { margin: 0 0 1em; }
   box-shadow: var(--shadow-sm);
   padding: 24px 22px;
   text-align: left;
-  height: 100%;
+  flex: 1;
   transition: opacity .5s ease, transform .5s cubic-bezier(.22, .8, .25, 1);
 }
 .flow-card h3 { font-size: 1.08rem; margin-bottom: 8px; }
@@ -1016,6 +1029,96 @@ table.data tbody tr:hover { background: rgba(19, 100, 223, .04); }
   color: var(--text);
 }
 
+/* Statutory text. Set apart from our own prose so a reader can see at a
+   glance where our words stop and the law's begin, and so it prints as a
+   discrete document. */
+.croa-statute,
+.croa-form {
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  padding: clamp(22px, 3.4vw, 34px);
+  margin: 26px 0;
+  color: var(--text);
+}
+.croa-title {
+  font-size: 1.05rem;
+  margin: 0 0 18px;
+  text-align: center;
+  letter-spacing: .01em;
+}
+.legal-doc .croa-statute h2.croa-title,
+.legal-doc .croa-form h2.croa-title { margin-top: 0; }
+.croa-address { margin-bottom: 0; }
+/* The statute requires this wording in bold face type. */
+.croa-bold { font-weight: 700; }
+.croa-blank {
+  display: inline-block;
+  min-width: 160px;
+  border-bottom: 1px solid var(--text-faint);
+  vertical-align: baseline;
+}
+.croa-copy-label { margin: 30px 0 -14px; }
+.croa-sign {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 22px;
+  margin-top: 34px;
+}
+.croa-rule {
+  display: block;
+  border-bottom: 1px solid var(--text-faint);
+  height: 26px;
+}
+.croa-caption {
+  display: block;
+  margin-top: 6px;
+  font-size: .78rem;
+  color: var(--text-faint);
+}
+
+/* The statutory cancellation notice on the order form. It has to be bold and
+   immediately next to the signature field, so it gets a little emphasis of
+   its own rather than reading as one more paragraph of fine print. */
+.sign-notice {
+  border-left: 3px solid var(--accent);
+  background: var(--surface-2);
+  padding: 14px 18px;
+  margin: 0 0 20px;
+  font-size: .88rem;
+  color: var(--text);
+}
+.sign-notice a { text-decoration: underline; }
+
+.agreement-rule { border: 0; border-top: 1px solid var(--border); margin: 30px 0; }
+
+/* --- Legal index -------------------------------------------------------- */
+.legal-index {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.legal-card {
+  display: block;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  padding: 20px 22px;
+  transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease;
+}
+.legal-card:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow);
+  transform: translateY(-2px);
+}
+.legal-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+.legal-card-title { font-weight: 700; color: var(--text); }
+
 /* --- Auth / centered pages --------------------------------------------- */
 .centered-page {
   min-height: 100vh;
@@ -1123,6 +1226,11 @@ table.data tbody tr:hover { background: rgba(19, 100, 223, .04); }
   .side-foot { margin-top: 0; padding-top: 0; border-top: 0; margin-left: auto; }
   .side-link { padding: 9px 12px; white-space: nowrap; }
   .app-main { padding: 26px 20px 60px; }
+}
+
+@media (max-width: 700px) {
+  .legal-index { grid-template-columns: 1fr; }
+  .croa-sign { grid-template-columns: 1fr; gap: 14px; }
 }
 
 @media (max-width: 620px) {

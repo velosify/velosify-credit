@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Accessibility | {{ cfg.BRAND_NAME }}{% endblock %}
+{% block description %}How {{ cfg.BRAND_NAME }} approaches accessibility, what we have tested, and how to tell us when something does not work.{% endblock %}
+
+{% block body %}
+{#  Written against what has actually been built and checked, not a generic
+    statement of intent. Every claim below corresponds to something in the
+    codebase or in the test harnesses. If a claim stops being true, remove it
+    rather than leaving it here. #}
+<section class="section-tight">
+  <div class="container container-narrow legal-doc">
+    <h1 data-reveal style="font-size:clamp(1.8rem,3.4vw,2.4rem)">
+      Accessibility
+    </h1>
+    <p class="faint small">Last updated {{ current_year }}</p>
+
+    <p>
+      People come to a credit restoration service under stress, and often from
+      a phone. A site that is hard to read or hard to operate fails them
+      twice. We aim to meet
+      <a href="https://www.w3.org/TR/WCAG21/" rel="noopener">WCAG 2.1 Level AA</a>,
+      and we would rather tell you plainly where we are than post a badge.
+    </p>
+
+    <h2>What we have done</h2>
+    <ul>
+      <li>
+        <strong>Contrast.</strong> Every text and background pairing on the
+        public pages and in the portal is checked against the 4.5:1 minimum,
+        including text over the hero photograph, which is measured from
+        rendered pixels rather than from the stylesheet.
+      </li>
+      <li>
+        <strong>Keyboard.</strong> Every link, button, form field and upload
+        area can be reached and operated with a keyboard alone, and the focus
+        ring is never removed.
+      </li>
+      <li>
+        <strong>Motion.</strong> If your system is set to reduce motion, the
+        animations do not run. Nothing on the site depends on an animation
+        finishing in order to be readable.
+      </li>
+      <li>
+        <strong>Without JavaScript.</strong> Every page renders complete and
+        every form submits with scripting switched off. Animation is an
+        enhancement layered on top, never a prerequisite.
+      </li>
+      <li>
+        <strong>Small screens.</strong> Layouts are tested down to 320px wide
+        with no horizontal scrolling, and text resizes without breaking.
+      </li>
+      <li>
+        <strong>Structure.</strong> Headings are in order, images have
+        alternative text, decorative graphics are hidden from screen readers,
+        and every form field has a real label.
+      </li>
+    </ul>
+
+    <h2>Where we fall short</h2>
+    <p>
+      Our checks are a mix of automated testing and manual review. They are not
+      a substitute for a full audit with assistive technology, and we have not
+      had one done. The most likely gaps are in the client portal, which has
+      had less scrutiny than the public pages, and in documents you upload,
+      whose accessibility we do not control.
+    </p>
+
+    <h2>Tell us when something does not work</h2>
+    <p>
+      This is the part that matters. If any page, form or document is difficult
+      or impossible for you to use, email
+      <a href="mailto:{{ cfg.SUPPORT_EMAIL }}?subject=Accessibility">{{ cfg.SUPPORT_EMAIL }}</a>
+      and tell us what happened, what you were trying to do, and what you use
+      to browse. We aim to reply within 5 business days.
+    </p>
+    <p>
+      If something on the site is blocking you from enrolling or from sending
+      us a document, say so and we will complete it with you another way,
+      including by phone, email or post. You will not be asked to pay more or
+      wait longer for that.
+    </p>
+  </div>
+</section>
+{% endblock %}

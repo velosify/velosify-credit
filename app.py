@@ -332,6 +332,58 @@ def agreement_preview():
     return render_template("legal/agreement.html", signed=None)
 
 
+@app.get("/legal")
+def legal_index():
+    return render_template("legal/index.html")
+
+
+# The two documents below are not marketing pages. The Credit Repair
+# Organizations Act requires the disclosure to be handed over as a SEPARATE
+# written document before any contract is signed (15 U.S.C. 1679c), and the
+# cancellation notice to accompany the contract in duplicate (1679e). They
+# have their own URLs so that both can be linked, printed and acknowledged
+# independently of the agreement.
+
+@app.get("/legal/credit-file-rights")
+def credit_file_rights():
+    return render_template("legal/credit_file_rights.html")
+
+
+@app.get("/legal/notice-of-cancellation")
+def notice_of_cancellation():
+    return render_template("legal/notice_of_cancellation.html")
+
+
+@app.get("/refunds")
+def refunds():
+    return render_template("legal/refunds.html")
+
+
+@app.get("/disclaimer")
+def disclaimer():
+    return render_template("legal/disclaimer.html")
+
+
+@app.get("/legal/electronic-communications")
+def esign():
+    return render_template("legal/esign.html")
+
+
+@app.get("/cookies")
+def cookies():
+    return render_template("legal/cookies.html")
+
+
+@app.get("/accessibility")
+def accessibility():
+    return render_template("legal/accessibility.html")
+
+
+@app.get("/legal/state-disclosures")
+def state_disclosures():
+    return render_template("legal/state_disclosures.html")
+
+
 # ---------------------------------------------------------------------------
 # Order flow
 # ---------------------------------------------------------------------------
@@ -360,6 +412,13 @@ def order_submit():
     }
     password = request.form.get("password") or ""
     accepted = request.form.get("accept_agreement") == "yes"
+    # The Credit Repair Organizations Act requires the credit file rights
+    # disclosure to be given as a separate document BEFORE the contract is
+    # signed, and requires us to keep the consumer's signed acknowledgment
+    # that they received it for two years (15 U.S.C. 1679c). This is that
+    # acknowledgment, and it is recorded separately from agreement consent so
+    # the audit trail shows two distinct acts, not one.
+    disclosure_ack = request.form.get("accept_disclosure") == "yes"
 
     def fail(message: str):
         return render_template("order.html", form=form, error=message), 400
@@ -374,6 +433,10 @@ def order_submit():
     problem = password_problem(password)
     if problem:
         return fail(problem)
+    if not disclosure_ack:
+        return fail("Please confirm you have read your credit file rights. "
+                    "Federal law requires us to give you that disclosure "
+                    "before you sign anything.")
     if not accepted:
         return fail("You'll need to accept the service agreement to continue.")
     if form["signature"].lower() != f"{form['first_name']} {form['last_name']}".lower():
@@ -398,20 +461,21 @@ def order_submit():
         user_id = existing["id"]
         conn.execute(
             "UPDATE users SET first_name = ?, last_name = ?, phone = ?, "
-            "agreement_signed_at = ?, agreement_name = ?, agreement_ip = ? "
+            "agreement_signed_at = ?, agreement_name = ?, agreement_ip = ?, "
+            "disclosure_ack_at = ? "
             "WHERE id = ?",
             (form["first_name"], form["last_name"], form["phone"],
-             utcnow(), form["signature"], _client_ip(), user_id),
+             utcnow(), form["signature"], _client_ip(), utcnow(), user_id),
         )
     else:
         cur = conn.execute(
             "INSERT INTO users (email, password_hash, first_name, last_name, "
             "phone, role, case_stage, created_at, agreement_signed_at, "
-            "agreement_name, agreement_ip) "
-            "VALUES (?, ?, ?, ?, ?, 'client', 'intake', ?, ?, ?, ?)",
+            "agreement_name, agreement_ip, disclosure_ack_at) "
+            "VALUES (?, ?, ?, ?, ?, 'client', 'intake', ?, ?, ?, ?, ?)",
             (form["email"], hash_password(password), form["first_name"],
              form["last_name"], form["phone"], utcnow(), utcnow(),
-             form["signature"], _client_ip()),
+             form["signature"], _client_ip(), utcnow()),
         )
         user_id = int(cur.lastrowid)
 

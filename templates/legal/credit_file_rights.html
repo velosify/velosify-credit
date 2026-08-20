@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Consumer Credit File Rights | {{ cfg.BRAND_NAME }}{% endblock %}
+{% block description %}The disclosure the Credit Repair Organizations Act requires every credit repair organization to give you, in writing, before you sign anything.{% endblock %}
+
+{% block body %}
+{#  This page exists to satisfy 15 U.S.C. 1679c: the disclosure has to be a
+    SEPARATE written document, given before the contract is signed. That is
+    why it is its own URL rather than a heading inside the agreement, and why
+    the order form links here and records that it was acknowledged. #}
+<section class="section-tight">
+  <div class="container container-narrow legal-doc">
+    <h1 data-reveal style="font-size:clamp(1.8rem,3.4vw,2.4rem)">
+      Your credit file rights
+    </h1>
+    <p class="faint small">
+      Required disclosure under the Credit Repair Organizations Act
+    </p>
+
+    <div class="alert alert-info">
+      <strong>Read this before you sign anything.</strong> Federal law requires
+      us to give you this statement, in writing and as its own document, before
+      you sign a contract with us. The wording below is set by the statute and
+      we are not allowed to change it. Nothing on the rest of this site
+      overrides it.
+    </div>
+
+    <div class="croa-statute">
+      {% include "legal/_credit_file_rights_body.html" %}
+    </div>
+
+    <h2>What this means for how we work</h2>
+    <p>
+      We say the same thing throughout this site, and it is worth repeating
+      here: we cannot remove accurate, current and verifiable information from
+      your credit report, and neither can anyone else. Our work is confined to
+      items that are inaccurate, incomplete, outdated, duplicated or that a
+      furnisher cannot substantiate. Any company that tells you otherwise is
+      describing something the law does not permit.
+    </p>
+    <p>
+      You are also free to do all of this yourself, directly with the credit
+      bureaus, at no cost. You are paying us for the work and the follow-up,
+      not for access to a right you already have.
+    </p>
+
+    <h2>Where to complain</h2>
+    <p>
+      The statutory text above names the Federal Trade Commission. The Consumer
+      Financial Protection Bureau also takes complaints about credit repair
+      organizations, at
+      <a href="https://www.consumerfinance.gov/complaint/" rel="noopener">consumerfinance.gov/complaint</a>,
+      as does your state Attorney General.
+    </p>
+
+    <p class="small faint">
+      Source: 15 U.S.C. &sect; 1679c(a). See also our
+      <a href="{{ url_for('notice_of_cancellation') }}">Notice of Cancellation</a>,
+      the <a href="{{ url_for('agreement_preview') }}">service agreement</a> and our
+      <a href="{{ url_for('state_disclosures') }}">state disclosures</a>.
+    </p>
+  </div>
+</section>
+{% endblock %}
