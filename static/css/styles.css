@@ -510,6 +510,13 @@ p  { margin: 0 0 1em; }
   font-size: min(2.5rem, calc(6.2vw - 3px));
 }
 
+.gauge-note {
+  margin: 22px 0 0;
+  text-align: center;
+  font-size: .76rem;
+  color: var(--text-faint);
+}
+
 /* --- How it works: connected flow ---------------------------------------
    Four markers sitting on a single track, so the steps read as one process
    rather than four unrelated cards. The track is a static rule with a filled
