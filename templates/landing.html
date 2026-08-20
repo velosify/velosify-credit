@@ -87,6 +87,46 @@
   </div>
 </section>
 
+<!-- ===================== How it works ===================== -->
+<section class="section" id="how">
+  <div class="container">
+    <div class="text-center" style="margin-bottom:52px">
+      <h2>Four steps, and you can watch every one</h2>
+      <p class="lead lead-center">
+        No black box. From the day you enroll, your portal shows what we've
+        sent, what came back, and what's next.
+      </p>
+    </div>
+
+    {#  A connected flow rather than four loose cards. The track runs between
+        the first and last markers, and script fills it while lighting each
+        step as the fill arrives. Every step ships with .is-on, so with JS
+        off this reads as a finished flow rather than an empty one. #}
+    <ol class="flow" id="how-flow">
+      <div class="flow-track" aria-hidden="true"><span class="flow-fill"></span></div>
+      {% set steps = [
+        ('Enroll and upload',
+         'Pay once, create your portal login, and upload your credit report, photo ID and proof of address. Takes about ten minutes.'),
+        ('We audit the report',
+         'We read all three bureau files line by line and build a list of every item that is inaccurate, incomplete or cannot be verified.'),
+        ('Disputes go out',
+         'Challenges are filed with the bureaus and, where it matters, direct with the furnisher. Bureaus have 30 days to respond.'),
+        ('We work the responses',
+         'Removed items are logged. Anything that comes back verified without real proof gets escalated in the next round.')
+      ] %}
+      {% for title, body in steps %}
+        <li class="flow-step is-on">
+          <span class="flow-num">{{ loop.index }}</span>
+          <div class="flow-card">
+            <h3>{{ title }}</h3>
+            <p class="small muted mb-0">{{ body }}</p>
+          </div>
+        </li>
+      {% endfor %}
+    </ol>
+  </div>
+</section>
+
 <!-- ===================== What we challenge ===================== -->
 <section class="section-tight section-alt">
   <div class="container">
@@ -116,56 +156,8 @@
   </div>
 </section>
 
-<!-- ===================== How it works ===================== -->
-<section class="section" id="how">
-  <div class="container">
-    <div class="text-center" style="margin-bottom:56px">
-      <h2>Four steps, and you can watch every one</h2>
-      <p class="lead lead-center">
-        No black box. From the day you enroll, your portal shows what we've
-        sent, what came back, and what's next.
-      </p>
-    </div>
-
-    <div class="grid grid-4">
-      <div class="step" data-reveal>
-        <div class="step-num">1</div>
-        <h3>Enroll and upload</h3>
-        <p class="small muted mb-0">
-          Pay once, create your portal login, and upload your credit report,
-          photo ID and proof of address. Takes about ten minutes.
-        </p>
-      </div>
-      <div class="step" data-reveal>
-        <div class="step-num">2</div>
-        <h3>We audit the report</h3>
-        <p class="small muted mb-0">
-          We read all three bureau files line by line and build a list of
-          every item that is inaccurate, incomplete or can't be verified.
-        </p>
-      </div>
-      <div class="step" data-reveal>
-        <div class="step-num">3</div>
-        <h3>Disputes go out</h3>
-        <p class="small muted mb-0">
-          Challenges are filed with the bureaus and, where it matters, direct
-          with the furnisher. Bureaus have 30 days to respond.
-        </p>
-      </div>
-      <div class="step" data-reveal>
-        <div class="step-num">4</div>
-        <h3>We work the responses</h3>
-        <p class="small muted mb-0">
-          Removed items are logged. Anything that comes back "verified"
-          without real proof gets escalated in the next round.
-        </p>
-      </div>
-    </div>
-  </div>
-</section>
-
 <!-- ===================== What's included ===================== -->
-<section class="section section-alt" id="included">
+<section class="section" id="included">
   <div class="container">
     <div class="hero-grid">
       <div>
@@ -224,7 +216,7 @@
 </section>
 
 <!-- ===================== Pricing ===================== -->
-<section class="section" id="pricing">
+<section class="section section-alt" id="pricing">
   <div class="container container-narrow">
     <div class="text-center" style="margin-bottom:44px">
       <h2>One fee. The whole program.</h2>
@@ -266,7 +258,7 @@
 </section>
 
 <!-- ===================== FAQ ===================== -->
-<section class="section section-alt" id="faq">
+<section class="section" id="faq">
   <div class="container container-narrow">
     <div class="text-center" style="margin-bottom:44px">
       <h2>Questions people actually ask</h2>
@@ -316,7 +308,7 @@
 </section>
 
 <!-- ===================== Final CTA ===================== -->
-<section class="section-tight">
+<section class="section-tight section-alt">
   <div class="container container-narrow">
     <div class="price-card text-center">
       <h2 style="margin-bottom:14px">Find out what's actually on your report</h2>

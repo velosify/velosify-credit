@@ -226,6 +226,42 @@
     nodes.forEach(function (n) { io.observe(n); });
   })();
 
+  /* ---- How-it-works flow -------------------------------------------------
+     Fills the track and lights each marker as the fill reaches it, so the
+     four steps read as one connected process. Runs once, on first view.
+     The markup ships finished; this only rewinds it when it is safe to. */
+  (function howFlow() {
+    var flow = document.getElementById("how-flow");
+    if (!flow) return;
+    if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (!("IntersectionObserver" in window)) return;
+
+    var steps = Array.prototype.slice.call(flow.querySelectorAll(".flow-step"));
+    if (!steps.length) return;
+
+    var FILL_MS = 2000;           // must match the CSS transition on .flow-fill
+    var LEAD_MS = 220;
+
+    // Rewind only now that we know the script is running.
+    flow.classList.add("is-armed");
+    steps.forEach(function (s) { s.classList.remove("is-on"); });
+
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        io.unobserve(flow);
+        setTimeout(function () { flow.classList.add("is-running"); }, LEAD_MS);
+        // Light each marker as the fill passes it. The first sits at the
+        // track's origin, so it lights immediately.
+        steps.forEach(function (step, i) {
+          var at = LEAD_MS + (i / (steps.length - 1)) * FILL_MS;
+          setTimeout(function () { step.classList.add("is-on"); }, at);
+        });
+      });
+    }, { threshold: 0.25 });
+    io.observe(flow);
+  })();
+
   /* ---- Portal panel replay ----------------------------------------------
      Walks the case tracker forward and drops the timeline entries in oldest
      first, then loops. Same contract as the score panel: the markup ships

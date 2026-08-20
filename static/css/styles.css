@@ -459,24 +459,84 @@ p  { margin: 0 0 1em; }
   transition: opacity .5s ease, transform .5s cubic-bezier(.22, .8, .25, 1);
 }
 
-/* --- Steps ------------------------------------------------------------- */
-.step {
+/* --- How it works: connected flow ---------------------------------------
+   Four markers sitting on a single track, so the steps read as one process
+   rather than four unrelated cards. The track is a static rule with a filled
+   span on top; script grows the fill and lights each marker as it arrives.
+   ------------------------------------------------------------------------ */
+.flow {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   position: relative;
-  padding: 28px 26px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 24px;
+}
+
+/* Runs between the centres of the first and last markers: with four equal
+   columns those sit at 12.5% and 87.5%. */
+.flow-track {
+  position: absolute;
+  top: 23px;
+  left: 12.5%;
+  right: 12.5%;
+  height: 2px;
+  background: var(--surface-3);
+}
+.flow-fill {
+  display: block;
+  height: 100%;
+  width: 100%;
+  background: var(--gradient);
+  transform-origin: left center;
+}
+
+.flow-step { position: relative; text-align: center; }
+
+.flow-num {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 20px;
+  background: var(--surface);
+  border: 2px solid var(--surface-3);
+  color: var(--text-faint);
+  font-weight: 750;
+  font-size: 1.02rem;
+  transition: background .45s ease, border-color .45s ease,
+              color .45s ease, box-shadow .45s ease, transform .45s ease;
+}
+.flow-step.is-on .flow-num {
+  background: var(--gradient);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: var(--glow);
+}
+
+.flow-card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 0;
+  box-shadow: var(--shadow-sm);
+  padding: 24px 22px;
+  text-align: left;
+  height: 100%;
+  transition: opacity .5s ease, transform .5s cubic-bezier(.22, .8, .25, 1);
 }
-.step-num {
-  width: 38px; height: 38px;
-  border-radius: 0;
-  display: grid; place-items: center;
-  background: var(--gradient-soft);
-  border: 1px solid rgba(19,100,223,.22);
-  color: var(--accent-deep);
-  font-weight: 750;
-  margin-bottom: 16px;
+.flow-card h3 { font-size: 1.08rem; margin-bottom: 8px; }
+
+/* Animated state, applied by script, so nothing is hidden without JS. */
+.flow.is-armed .flow-fill { transform: scaleX(0); }
+.flow.is-armed .flow-step:not(.is-on) .flow-num { transform: scale(.86); }
+.flow.is-armed .flow-step:not(.is-on) .flow-card { opacity: 0; transform: translateY(14px); }
+.flow.is-running .flow-fill {
+  transform: scaleX(1);
+  transition: transform 2s cubic-bezier(.35, 0, .2, 1);
 }
+
 
 /* --- Feature list ------------------------------------------------------ */
 .feature-list { list-style: none; margin: 0; padding: 0; }
@@ -792,6 +852,45 @@ table.data tbody tr:hover { background: rgba(19, 100, 223, .04); }
 
 /* --- Responsive -------------------------------------------------------- */
 @media (max-width: 980px) {
+  /* Stacked: each step draws its own connector down to the next marker.
+     A single absolute track can't work here, because its end would have to
+     know the height of the last card, so it overshoots past the final
+     marker to the bottom of the list. */
+  .flow { grid-template-columns: 1fr; gap: 18px; }
+  .flow-track { display: none; }
+  .flow-step {
+    display: grid;
+    grid-template-columns: 48px 1fr;
+    gap: 18px;
+    align-items: start;
+    text-align: left;
+  }
+  .flow-num { margin: 0; }
+
+  .flow-step::before,
+  .flow-step::after {
+    content: "";
+    position: absolute;
+    left: 23px;
+    top: 48px;
+    bottom: -18px;
+    width: 2px;
+  }
+  .flow-step::before { background: var(--surface-3); }
+  .flow-step::after {
+    background: var(--gradient);
+    transform-origin: center top;
+  }
+  .flow-step:last-child::before,
+  .flow-step:last-child::after { display: none; }
+
+  /* The connector fills as its own step lights up. */
+  .flow.is-armed .flow-step::after { transform: scaleY(0); }
+  .flow.is-armed .flow-step.is-on::after {
+    transform: scaleY(1);
+    transition: transform .6s cubic-bezier(.35, 0, .2, 1);
+  }
+
   .hero {
     background-image:
       linear-gradient(180deg,
