@@ -173,45 +173,6 @@
     window.addEventListener("resize", sweep, { passive: true });
   })();
 
-  /* ---- Hero video (phones only) -----------------------------------------
-     The element ships with no src at all, so a desktop visitor never spends
-     the bytes. It is decorative: if anything here fails, the hero keeps the
-     photograph it already has behind it. */
-  (function heroVideo() {
-    var video = document.querySelector("[data-hero-video]");
-    if (!video) return;
-    if (!window.matchMedia) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    if (!window.matchMedia("(max-width: 720px)").matches) return;
-    // Respect a metered connection or an explicit data-saver preference.
-    var conn = navigator.connection;
-    if (conn && (conn.saveData || /(^|-)2g$/.test(conn.effectiveType || ""))) return;
-
-    // VP9 where it is available (smaller file), H.264 everywhere else, which
-    // is what iOS actually decodes.
-    var src = "";
-    if (video.canPlayType('video/webm; codecs="vp9"')) src = video.dataset.srcWebm;
-    if (!src && video.canPlayType("video/mp4")) src = video.dataset.srcMp4;
-    if (!src) return;
-
-    video.muted = true;              // as a property too, for iOS autoplay
-    video.src = src;
-
-    function play() {
-      var attempt = video.play();
-      if (attempt && attempt.catch) attempt.catch(function () { /* poster stands in */ });
-    }
-    play();
-    // Some browsers refuse before any interaction. One retry on the first
-    // touch or scroll costs nothing and rescues those.
-    ["touchstart", "scroll"].forEach(function (evt) {
-      window.addEventListener(evt, function once() {
-        window.removeEventListener(evt, once);
-        if (video.paused) play();
-      }, { passive: true });
-    });
-  })();
-
   /* ---- How-it-works flow -------------------------------------------------
      Fills the track and lights each marker as the fill reaches it, so the
      four steps read as one connected process. Runs once, on first view.

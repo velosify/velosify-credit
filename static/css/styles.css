@@ -395,24 +395,6 @@ p  { margin: 0 0 1em; }
 }
 .hero .container { position: relative; z-index: 2; }
 
-/* Phones only. The source has a watermark in its bottom-right corner, so the
-   encode is cropped to remove it; on a wide screen the crop would have to be
-   shown almost whole, which is why this stays off there. Script attaches the
-   src, so a desktop visitor never downloads half a megabyte of video. */
-.hero-video { display: none; }
-@media (max-width: 720px) {
-  .hero-video {
-    display: block;
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    pointer-events: none;
-  }
-}
-
 .hero-logo {
   width: min(560px, 84vw);
   height: auto;

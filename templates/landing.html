@@ -6,16 +6,6 @@
 
 <!-- ===================== Hero ===================== -->
 <section class="hero hero-brand">
-  {#  Decorative, and only ever shown on phones. The src is held in data-src
-      so a desktop browser never fetches it; script moves it across once it
-      has checked the viewport and that reduced motion is not requested. #}
-  <video class="hero-video" data-hero-video
-         data-src-webm="{{ url_for('static', filename='video/hero-mobile.webm') }}"
-         data-src-mp4="{{ url_for('static', filename='video/hero-mobile.mp4') }}"
-         poster="{{ url_for('static', filename='img/hero-mobile-poster.jpg') }}"
-         muted loop playsinline preload="none"
-         aria-hidden="true" tabindex="-1"></video>
-
   <div class="container">
     {#  The logo carries the name, so a visible headline would repeat it. An
         h1 is still needed for search engines and screen readers, so it is
