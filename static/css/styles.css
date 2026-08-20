@@ -139,6 +139,19 @@ p  { margin: 0 0 1em; }
 .mt-0 { margin-top: 0; } .mb-0 { margin-bottom: 0; }
 .mt-2 { margin-top: 24px; } .mt-3 { margin-top: 36px; }
 .hide { display: none !important; }
+/* Present for assistive tech and search engines, absent visually. Clip
+   rather than display:none, which would remove it from the accessibility
+   tree entirely. */
+.visually-hidden {
+  position: absolute;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
 
 .gradient-text {
   background: var(--gradient);
@@ -348,101 +361,56 @@ p  { margin: 0 0 1em; }
 .nav-links a:not(.btn):hover { color: var(--text); background: var(--surface-2); }
 .nav-toggle { display: none; background: none; border: 0; padding: 8px; cursor: pointer; color: var(--text); }
 
-/* --- Hero -------------------------------------------------------------- */
-/* The photograph sits under a white scrim that is near-opaque on the left,
-   where the headline and body copy live, and thins toward the right so the
-   image is actually visible behind the score panel. Every scrim stop is
-   chosen so text over it still clears AA; see the pixel-sampled check in
-   the contrast audit rather than eyeballing it if these values change. */
+/* --- Hero --------------------------------------------------------------
+   Logo, two buttons, nothing else. The photograph carries a dark mask
+   because the mark is white; every scrim value here is verified against the
+   real image pixels rather than chosen by eye, since a photo's dark and
+   light regions both sit under the same text.
+   ---------------------------------------------------------------------- */
 .hero {
   position: relative;
-  padding: clamp(60px, 9vw, 118px) 0 clamp(56px, 8vw, 96px);
   overflow: hidden;
-  /* The scrim holds its strength across the full width of the copy column,
-     then falls away hard once past it, so the photograph reads at close to
-     full strength on the right and in the margins instead of being washed
-     out everywhere. The hold point is tied to where the text actually ends;
-     move the copy wider and this has to move with it. */
+  min-height: min(74vh, 660px);
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: clamp(64px, 10vw, 120px) 0;
   background-image:
-    linear-gradient(100deg,
-      rgba(246, 249, 253, 0.86) 0%,
-      rgba(246, 249, 253, 0.84) 52%,
-      rgba(246, 249, 253, 0.74) 60%,
-      rgba(246, 249, 253, 0.16) 72%,
-      rgba(246, 249, 253, 0.02) 100%),
+    linear-gradient(180deg,
+      rgba(9, 18, 42, 0.72) 0%,
+      rgba(9, 18, 42, 0.64) 45%,
+      rgba(9, 18, 42, 0.76) 100%),
     url("../img/hero-home.jpg");
   background-size: auto, cover;
-  background-position: center, center 32%;
+  background-position: center, center 38%;
   background-repeat: no-repeat;
 }
 .hero .container { position: relative; z-index: 1; }
-/* Darker than the usual muted body colour. The hero copy sits over a
-   photograph rather than a flat surface, and the extra weight is what pays
-   for the thinner scrim. */
-.hero .lead,
-.hero-assurances { color: #1b2942; }
 
-.hero-grid {
-  display: grid;
-  grid-template-columns: 1.05fr .95fr;
-  gap: 56px;
-  align-items: center;
-}
-.hero h1 { margin-bottom: 22px; }
-.hero-cta { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 30px; }
-.hero-assurances {
-  display: flex; flex-wrap: wrap; gap: 10px 22px;
-  margin-top: 28px; font-size: .85rem; color: var(--text-muted);
-}
-.hero-assurances span { display: inline-flex; align-items: center; gap: 8px; }
-.tick { color: var(--success); font-weight: 700; }
-
-/* Score visual in the hero */
-.score-card { position: relative; }
-.score-card .card { padding: 30px; box-shadow: var(--shadow); }
-.score-row { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 4px; }
-.score-now { font-size: 3.1rem; font-weight: 800; letter-spacing: -.03em; line-height: 1; }
-.score-delta { color: var(--success); font-weight: 700; font-size: .95rem; }
-.score-track { height: 8px; border-radius: 0; background: var(--surface-3); overflow: hidden; margin: 18px 0 8px; }
-.score-fill { height: 100%; border-radius: 0; background: var(--gradient); width: 72%; }
-.score-scale { display: flex; justify-content: space-between; font-size: .72rem; color: var(--text-faint); }
-.score-items { margin-top: 24px; border-top: 1px solid var(--border); padding-top: 18px; }
-.score-item { display: flex; align-items: center; justify-content: space-between; padding: 9px 0; font-size: .88rem; gap: 12px; }
-.score-item + .score-item { border-top: 1px solid var(--border); }
-.score-item .label { color: var(--text-muted); transition: color .3s ease; }
-
-/* Animated hero panel.
-   The resolved outcome is what renders by default, so the panel is correct
-   with JS disabled. The script adds .is-animated, which reveals the pending
-   badge on rows that have not resolved yet. */
-.score-item .state-pending { display: none; }
-#score-demo.is-animated .score-item:not(.is-done) .state-pending { display: inline-flex; }
-#score-demo.is-animated .score-item:not(.is-done) .state-done { display: none; }
-#score-demo.is-animated .score-item:not(.is-done) .label { color: var(--text-faint); }
-#score-demo.is-animated .score-item.is-done .state-done { animation: state-settle .38s ease both; }
-#score-demo .score-fill { transition: width 2.2s cubic-bezier(.22, .8, .25, 1); }
-#score-demo .score-delta { transition: opacity .3s ease; }
-
-@keyframes state-settle {
-  from { opacity: 0; transform: translateY(-3px) scale(.94); }
-  to   { opacity: 1; transform: none; }
+.hero-logo {
+  width: min(560px, 84vw);
+  height: auto;
+  margin: 0 auto;
 }
 
-/* The score turns green once it clears the threshold on the element. */
-.score-now { transition: color .4s ease; }
-.score-now.is-good { color: var(--success); }
-
-/* --- Scroll reveal ------------------------------------------------------
-   .reveal-init is added by script, so with JS off nothing is ever hidden.
-   Skipped entirely under prefers-reduced-motion. */
-[data-reveal].reveal-init {
-  opacity: 0;
-  transform: translateY(16px);
+.hero-cta {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: clamp(32px, 5vw, 46px);
 }
-[data-reveal].reveal-init.is-visible {
-  opacity: 1;
-  transform: none;
-  transition: opacity .55s ease, transform .55s cubic-bezier(.22, .8, .25, 1);
+
+/* Outline button for use on the masked photograph. */
+.btn-on-dark {
+  background: rgba(255, 255, 255, .10);
+  border-color: rgba(255, 255, 255, .55);
+  color: #fff;
+  backdrop-filter: blur(4px);
+}
+.btn-on-dark:hover {
+  background: rgba(255, 255, 255, .2);
+  border-color: #fff;
 }
 
 /* --- How it works: connected flow ---------------------------------------
@@ -883,6 +851,15 @@ table.data tbody tr:hover { background: rgba(19, 100, 223, .04); }
 
 /* --- Order page --------------------------------------------------------- */
 .order-head { margin-bottom: 32px; max-width: 44ch; }
+
+/* Was borrowing .hero-grid, which the hero no longer needs now that it is
+   just a logo and two buttons. Its own class, so the two cannot drift. */
+.order-layout {
+  display: grid;
+  grid-template-columns: 1.05fr .95fr;
+  gap: 48px;
+  align-items: flex-start;
+}
 .order-summary-card { position: sticky; top: 96px; }
 
 .agreement-scroll {
@@ -980,16 +957,6 @@ table.data tbody tr:hover { background: rgba(19, 100, 223, .04); }
     transition: transform .6s cubic-bezier(.35, 0, .2, 1);
   }
 
-  .hero {
-    background-image:
-      linear-gradient(180deg,
-        rgba(246, 249, 253, 0.90) 0%,
-        rgba(246, 249, 253, 0.87) 46%,
-        rgba(246, 249, 253, 0.62) 78%,
-        rgba(246, 249, 253, 0.42) 100%),
-      url("../img/hero-home.jpg");
-  }
-  .hero-grid { grid-template-columns: 1fr; gap: 44px; }
   .grid-3, .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .challenge-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .footer-grid { grid-template-columns: 1fr 1fr; }
@@ -1053,8 +1020,6 @@ table.data tbody tr:hover { background: rgba(19, 100, 223, .04); }
     opacity: 1 !important;
     transform: none !important;
   }
-  #score-demo.is-animated .score-item .state-pending { display: none !important; }
-  #score-demo.is-animated .score-item .state-done { display: inline-flex !important; }
 }
 
 @media (prefers-reduced-motion: reduce) {

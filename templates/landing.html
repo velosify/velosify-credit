@@ -5,84 +5,25 @@
 {% block body %}
 
 <!-- ===================== Hero ===================== -->
-<section class="hero">
+<section class="hero hero-brand">
   <div class="container">
-    <div class="hero-grid">
-      <div>
-        <h1>
-          Get the errors off your report<br>
-          and <span class="gradient-text">your score back.</span>
-        </h1>
+    {#  The logo carries the name, so a visible headline would repeat it. An
+        h1 is still needed for search engines and screen readers, so it is
+        present and visually hidden rather than omitted. #}
+    <h1 class="visually-hidden">
+      {{ cfg.BRAND_NAME }}, credit restoration
+    </h1>
 
-        <p class="lead">
-          Most credit reports contain something that shouldn't be there: an
-          account that isn't yours, a balance that was paid, a collection
-          past its reporting window. We find those items, challenge them
-          with the bureaus and furnishers, and follow through until they're
-          resolved.
-        </p>
+    <img class="hero-logo"
+         src="{{ url_for('static', filename='img/logo-wordmark.png') }}"
+         alt="{{ cfg.BRAND_NAME }}, credit restoration"
+         width="1221" height="420" fetchpriority="high">
 
-        <div class="hero-cta">
-          <a class="btn btn-primary btn-lg" href="{{ url_for('order_page') }}">
-            Start my restoration for {{ cfg.PRICE_LABEL }}
-          </a>
-          <a class="btn btn-ghost btn-lg" href="#how">See how it works</a>
-        </div>
-
-        <div class="hero-assurances">
-          <span><span class="tick">✓</span> One-time fee, nothing recurring</span>
-          <span><span class="tick">✓</span> Track every dispute in your portal</span>
-          <span><span class="tick">✓</span> {{ cfg.CANCELLATION_DAYS }}-day cancellation right</span>
-        </div>
-      </div>
-
-      <!-- Illustrative score panel. Numbers are an example, and labelled
-           as one, and nothing here implies a guaranteed outcome. -->
-      <div class="score-card">
-        <div class="card card-glass" id="score-demo">
-          <div class="row-between" style="margin-bottom:18px">
-            <span class="badge badge-accent">Example client file</span>
-            <span class="tiny faint">Month 6</span>
-          </div>
-
-          <div class="score-row">
-            <span class="score-now is-good" data-score-now
-                  data-score-from="518" data-score-to="812"
-                  data-score-good="720">812</span>
-            <span class="score-delta" data-score-delta>&#9650; 294 pts</span>
-          </div>
-          <div class="tiny faint">Started at 518</div>
-
-          <div class="score-track"><div class="score-fill"></div></div>
-          <div class="score-scale"><span>300</span><span>850</span></div>
-
-          {#  Each row carries both outcomes. Without JS the resolved one is
-              what shows, so the panel still reads correctly; the script adds
-              .is-animated and steps the rows through the pending state. #}
-          <div class="score-items">
-            {% set disputed = [
-              ('Collection · unverified',           'badge-success', 'Removed'),
-              ('Late payment · reported in error',  'badge-success', 'Removed'),
-              ('Duplicate account',                 'badge-success', 'Removed'),
-              ('Charge-off · balance never updated','badge-success', 'Removed')
-            ] %}
-            {% for label, cls, outcome in disputed %}
-              <div class="score-item">
-                <span class="label">{{ label }}</span>
-                <span class="state">
-                  <span class="badge badge-warn state-pending">Disputing</span>
-                  <span class="badge {{ cls }} state-done">{{ outcome }}</span>
-                </span>
-              </div>
-            {% endfor %}
-          </div>
-          <p class="tiny faint" style="margin:18px 0 0;padding-top:14px;
-                    border-top:1px solid var(--border)">
-            Illustration only. Individual results vary and depend on what's
-            actually on your report.
-          </p>
-        </div>
-      </div>
+    <div class="hero-cta">
+      <a class="btn btn-primary btn-lg" href="{{ url_for('order_page') }}">
+        Start my restoration for {{ cfg.PRICE_LABEL }}
+      </a>
+      <a class="btn btn-on-dark btn-lg" href="#how">See how it works</a>
     </div>
   </div>
 </section>
