@@ -24,18 +24,24 @@ ENABLED = bool(config.RESEND_API_KEY)
 last_error: str = "" if ENABLED else "RESEND_API_KEY is not set"
 
 
+# Set by the application at import time so a send can be recorded without
+# mailer needing to know about the database or the request. Left as None in
+# tests and scripts, where nothing is watching.
+on_result = None
+
+
 def send_email(to: str, subject: str, text: str) -> bool:
     global last_error
     to = (to or "").strip()
     if not to:
         last_error = "no recipient"
-        return False
+        return _report(to, subject, False)
 
     if not config.RESEND_API_KEY:
         last_error = "RESEND_API_KEY is not set"
         print(f"\n--- email (not sent: no RESEND_API_KEY) ---\n"
               f"To: {to}\nSubject: {subject}\n\n{text}\n---\n", flush=True)
-        return False
+        return _report(to, subject, False)
 
     payload = json.dumps({
         "from": config.MAIL_FROM,
@@ -64,7 +70,7 @@ def send_email(to: str, subject: str, text: str) -> bool:
         with urllib.request.urlopen(req, timeout=10) as resp:
             if 200 <= resp.status < 300:
                 last_error = ""
-                return True
+                return _report(to, subject, True)
             last_error = f"Resend returned {resp.status}"
     except urllib.error.HTTPError as exc:
         # The body is where Resend explains itself: an unverified sending
@@ -77,7 +83,21 @@ def send_email(to: str, subject: str, text: str) -> bool:
     except (urllib.error.URLError, TimeoutError, OSError) as exc:
         last_error = f"could not reach Resend: {exc}"
     print(f"[mail] send to {to} failed: {last_error}", flush=True)
-    return False
+    return _report(to, subject, False)
+
+
+def _report(to: str, subject: str, ok: bool) -> bool:
+    """Hand the outcome to whoever is listening, then return it unchanged.
+
+    Wrapped in a try because a mail send must never fail because recording it
+    failed; that would be the tail wagging the dog.
+    """
+    if on_result:
+        try:
+            on_result(to, subject, ok, last_error)
+        except Exception:
+            pass
+    return ok
 
 
 def send_welcome(user: dict, order_amount_label: str) -> bool:

@@ -377,6 +377,28 @@ if config.SENTRY_DSN:
         app.logger.warning("SENTRY_DSN is set but sentry-sdk is not installed")
 
 
+# Every outbound message lands in the audit log, delivered or not. Without
+# this, "did Kevin ever get his invite?" had no answer inside the product: the
+# only record was a line in a log nobody keeps, and a failure to one recipient
+# looked identical to a success.
+def _record_mail(to: str, subject: str, ok: bool, error: str) -> None:
+    try:
+        with app.app_context():
+            conn = database.get_db()
+            conn.execute(
+                "INSERT INTO audit_log (created_at, actor_email, actor_role, "
+                "action, detail, ip) VALUES (?, '', 'system', ?, ?, '')",
+                (utcnow(), "mail.sent" if ok else "mail.failed",
+                 f"{to} — {subject}" + ("" if ok else f" — {error}")),
+            )
+            conn.commit()
+    except Exception:  # pragma: no cover - recording must never break a send
+        pass
+
+
+mailer.on_result = _record_mail
+
+
 @app.before_request
 def _request_id():
     """One short id per request, logged with any error and shown on the error
