@@ -128,30 +128,58 @@
 </section>
 
 <!-- ===================== What we challenge ===================== -->
-<section class="section-tight section-alt">
+<section class="section section-alt" id="challenge">
   <div class="container">
-    <div class="grid grid-4">
-      {% set challenges = [
-        ('Collections', 'Unverifiable, misreported, or past the reporting window'),
-        ('Late payments', 'Reported in error or against a paid-current account'),
-        ('Charge-offs', 'Duplicated, reaged, or inaccurately balanced'),
-        ('Hard inquiries', 'Made without your authorisation'),
-        ('Public records', 'Bankruptcies and judgments reported incorrectly'),
-        ('Identity theft', 'Accounts opened in your name that were never yours'),
-        ('Repossessions', 'Missing required notices or wrong figures'),
-        ('Mixed files', 'Someone else\'s history merged into yours')
-      ] %}
-      {% for title, note in challenges %}
-        <div class="card card-pad-sm card-hover">
-          <div class="card-title">{{ title }}</div>
+    <div class="text-center" style="margin-bottom:48px">
+      <h2>What typically comes off a report</h2>
+      <p class="lead lead-center">
+        Not every negative mark is disputable. These are the categories where
+        errors turn up most often, and where a challenge usually has something
+        real to work with.
+      </p>
+    </div>
+
+    {#  Icons are decorative, so each is aria-hidden and the heading carries
+        the meaning. Stroke glyphs rather than filled, to sit quietly next to
+        the squared cards. #}
+    {% set challenges = [
+      ('Collections', 'Unverifiable, misreported, or past the reporting window',
+       '<path d="M4 3h13l3 3v15l-3-2-3 2-3-2-3 2-3-2V3z"/><path d="M8 9h8M8 13h5"/>'),
+      ('Late payments', 'Reported in error or against a paid-current account',
+       '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/>'),
+      ('Charge-offs', 'Duplicated, reaged, or inaccurately balanced',
+       '<rect x="2" y="5" width="20" height="14"/><path d="M2 10h20M5 22 19 2"/>'),
+      ('Hard inquiries', 'Made without your authorization',
+       '<circle cx="10.5" cy="10.5" r="6.5"/><path d="m20 20-4.5-4.5"/>'),
+      ('Public records', 'Bankruptcies and judgments reported incorrectly',
+       '<path d="M3 9 12 4l9 5"/><path d="M5 9v10h14V9M3 21h18M9 19v-6h6v6"/>'),
+      ('Identity theft', 'Accounts opened in your name that were never yours',
+       '<path d="M12 2 4 5v6c0 5 3.5 9 8 11 4.5-2 8-6 8-11V5z"/><path d="M12 8v4M12 15h.01"/>'),
+      ('Repossessions', 'Missing required notices or wrong figures',
+       '<path d="M3 13h18M5 13l2-6h10l2 6M5 13v5h3v-5M16 13v5h3v-5"/><circle cx="7.5" cy="18" r="1.5"/><circle cx="16.5" cy="18" r="1.5"/>'),
+      ('Mixed files', 'Someone else\'s history merged into yours',
+       '<path d="M8 3h8l4 4v10H8z"/><path d="M4 7v14h12"/>')
+    ] %}
+
+    <div class="challenge-grid">
+      {% for title, note, glyph in challenges %}
+        <article class="challenge-card" data-reveal>
+          <span class="challenge-ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              {{ glyph | safe }}
+            </svg>
+          </span>
+          <h3>{{ title }}</h3>
           <p class="small muted mb-0">{{ note }}</p>
-        </div>
+        </article>
       {% endfor %}
     </div>
-    <p class="small faint text-center mt-2" style="max-width:64ch;margin-inline:auto">
+
+    <p class="challenge-note">
       We challenge what is inaccurate, incomplete, or unverifiable. Accurate,
-      current and verifiable information stays on your report. That's the
-      law, and anyone who tells you otherwise is selling you something else.
+      current and verifiable information stays on your report. That's the law,
+      and anyone who tells you otherwise is selling you something else.
     </p>
   </div>
 </section>

@@ -538,6 +538,70 @@ p  { margin: 0 0 1em; }
 }
 
 
+/* --- What we challenge -------------------------------------------------- */
+.challenge-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.challenge-card {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  padding: 24px 22px;
+  overflow: hidden;
+  transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease;
+}
+/* A rule that draws across the top on hover, rather than the whole card
+   changing colour. Keeps the grid calm when the pointer moves over it. */
+.challenge-card::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto auto 0;
+  height: 2px;
+  width: 0;
+  background: var(--gradient);
+  transition: width .3s cubic-bezier(.22, .8, .25, 1);
+}
+.challenge-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow);
+  border-color: rgba(19, 100, 223, .28);
+}
+.challenge-card:hover::after { width: 100%; }
+
+.challenge-ico {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  margin-bottom: 16px;
+  background: var(--gradient-soft);
+  border: 1px solid rgba(19, 100, 223, .16);
+  color: var(--accent-deep);
+  transition: background .22s ease, color .22s ease;
+}
+.challenge-ico svg { width: 21px; height: 21px; }
+.challenge-card:hover .challenge-ico {
+  background: var(--gradient);
+  color: #fff;
+  border-color: transparent;
+}
+
+.challenge-card h3 { font-size: 1.02rem; margin-bottom: 6px; }
+
+.challenge-note {
+  max-width: 66ch;
+  margin: 36px auto 0;
+  padding-left: 18px;
+  border-left: 2px solid rgba(19, 100, 223, .3);
+  font-size: .88rem;
+  color: var(--text-muted);
+  text-align: left;
+}
+
 /* --- Feature list ------------------------------------------------------ */
 .feature-list { list-style: none; margin: 0; padding: 0; }
 .feature-list li {
@@ -902,6 +966,7 @@ table.data tbody tr:hover { background: rgba(19, 100, 223, .04); }
   }
   .hero-grid { grid-template-columns: 1fr; gap: 44px; }
   .grid-3, .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .challenge-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .footer-grid { grid-template-columns: 1fr 1fr; }
   .app-shell { grid-template-columns: 1fr; background: none; }
   .sidebar {
@@ -914,6 +979,11 @@ table.data tbody tr:hover { background: rgba(19, 100, 223, .04); }
   .side-foot { margin-top: 0; padding-top: 0; border-top: 0; margin-left: auto; }
   .side-link { padding: 9px 12px; white-space: nowrap; }
   .app-main { padding: 26px 20px 60px; }
+}
+
+@media (max-width: 430px) {
+  /* Below this the two columns get too narrow to read. */
+  .challenge-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 420px) {
@@ -936,6 +1006,13 @@ table.data tbody tr:hover { background: rgba(19, 100, 223, .04); }
   .nav-links.open .btn { margin-top: 8px; }
   .nav-toggle { display: block; }
   .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+  /* These cards are a heading plus one line, so they stay two-up on a phone
+     rather than turning eight items into eight screens of scrolling. */
+  .challenge-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .challenge-card { padding: 18px 16px; }
+  .challenge-ico { width: 34px; height: 34px; margin-bottom: 12px; }
+  .challenge-ico svg { width: 18px; height: 18px; }
+  .challenge-card h3 { font-size: .95rem; }
   .field-row { grid-template-columns: 1fr; }
   .footer-grid { grid-template-columns: 1fr; gap: 28px; }
   .price-card { padding: 28px 22px; }
