@@ -445,20 +445,6 @@ p  { margin: 0 0 1em; }
   transition: opacity .55s ease, transform .55s cubic-bezier(.22, .8, .25, 1);
 }
 
-/* --- Portal panel replay ------------------------------------------------ */
-#portal-demo.is-animated .tracker-step .knob,
-#portal-demo.is-animated .tracker-step::before { transition: background .45s ease, box-shadow .45s ease; }
-#portal-demo.is-animated .tracker-step .name   { transition: color .45s ease; }
-#portal-demo.is-animated .timeline li {
-  opacity: 0;
-  transform: translateY(8px);
-}
-#portal-demo.is-animated .timeline li.is-in {
-  opacity: 1;
-  transform: none;
-  transition: opacity .5s ease, transform .5s cubic-bezier(.22, .8, .25, 1);
-}
-
 /* --- How it works: connected flow ---------------------------------------
    Four markers sitting on a single track, so the steps read as one process
    rather than four unrelated cards. The track is a static rule with a filled
@@ -1063,8 +1049,7 @@ table.data tbody tr:hover { background: rgba(19, 100, 223, .04); }
 /* Printing never scrolls, so anything waiting on an intersection would come
    out blank. Force every deferred element to its finished state on paper. */
 @media print {
-  [data-reveal].reveal-init,
-  #portal-demo.is-animated .timeline li {
+  [data-reveal].reveal-init {
     opacity: 1 !important;
     transform: none !important;
   }
