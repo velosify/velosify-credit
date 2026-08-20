@@ -501,11 +501,13 @@ p  { margin: 0 0 1em; }
 .gauge.is-good .gauge-halo   { fill:   #0f9f68; }
 .gauge.is-good .gauge-score  { fill:   #07734a; }
 
-.gauge-note {
-  margin: 28px 0 0;
-  text-align: center;
-  font-size: .84rem;
-  color: var(--text-faint);
+/* Held to one line at every width. The heading measures 14.6em wide, and the
+   container keeps 24px of padding each side, so the largest size that still
+   fits is (100vw - 48px) / 14.6. The vw term below sits under that with a
+   little slack for whatever font actually loads. */
+.bureau-head {
+  white-space: nowrap;
+  font-size: min(2.5rem, calc(6.2vw - 3px));
 }
 
 /* --- How it works: connected flow ---------------------------------------
@@ -1078,7 +1080,6 @@ table.data tbody tr:hover { background: rgba(19, 100, 223, .04); }
   .gauge { padding: 14px 8px 12px; }
   .gauge-dial { width: 100%; }
   .gauge-logo { margin-top: 10px; }
-  .gauge-note { margin-top: 20px; font-size: .78rem; }
 }
 
 @media (max-width: 400px) {

@@ -40,13 +40,8 @@
       t = (score - 300) / 550, angle = 180 - 180t #}
 <section class="section section-alt" id="bureaus">
   <div class="container">
-    <div class="text-center" style="margin-bottom:52px">
-      <h2>Three bureaus, working at the same time</h2>
-      <p class="lead lead-center">
-        TransUnion, Equifax and Experian each keep their own file on you, and
-        they rarely match. An item deleted at one can still be sitting at the
-        other two, so we dispute all three together.
-      </p>
+    <div class="text-center" style="margin-bottom:44px">
+      <h2 class="bureau-head mb-0">Three bureaus, at the same time</h2>
     </div>
 
     {#  The three logo files share one 377x128 canvas, each positioned so the
@@ -90,14 +85,6 @@
         </article>
       {% endfor %}
     </div>
-
-    <p class="gauge-note">
-      Illustration only. Score movement depends entirely on what is actually
-      on your file, and no honest company can promise you a number.
-      TransUnion, Equifax and Experian are trademarks of their respective
-      owners, shown here only to identify the bureaus we file disputes with.
-      {{ cfg.BRAND_NAME }} is not affiliated with or endorsed by any of them.
-    </p>
   </div>
 </section>
 
