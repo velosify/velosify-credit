@@ -620,8 +620,11 @@ p  { margin: 0 0 1em; }
 /* --- What we challenge -------------------------------------------------- */
 .challenge-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  /* Equal rows, so every card is the same height at every width. Without
+     this each row sizes to its own tallest card and the grid steps. */
+  grid-auto-rows: 1fr;
+  gap: 14px;
 }
 
 .challenge-card {
@@ -629,7 +632,7 @@ p  { margin: 0 0 1em; }
   background: var(--surface);
   border: 1px solid var(--border);
   box-shadow: var(--shadow-sm);
-  padding: 24px 22px;
+  padding: 20px 18px;
   overflow: hidden;
   transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease;
 }
@@ -669,22 +672,13 @@ p  { margin: 0 0 1em; }
   border-color: transparent;
 }
 
-.challenge-card h3 { font-size: 1.02rem; margin-bottom: 6px; }
-
-.challenge-callout {
-  max-width: 760px;
-  margin: 34px auto 0;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-left: 3px solid var(--accent);
-  box-shadow: var(--shadow-sm);
-  padding: 26px 28px;
-}
-.challenge-callout h3 { font-size: 1.05rem; margin-bottom: 10px; }
-.challenge-callout p {
-  font-size: .92rem;
-  color: var(--text-muted);
-  margin-bottom: 12px;
+.challenge-card h3 {
+  font-size: .98rem;
+  line-height: 1.25;
+  margin-bottom: 6px;
+  /* Two-word titles like "Credit card debt" have to be able to break, or a
+     narrow column pushes the whole grid wider than its container. */
+  overflow-wrap: break-word;
 }
 
 .challenge-note {
@@ -1232,7 +1226,7 @@ table.data tbody tr:hover { background: rgba(19, 100, 223, .04); }
   }
 
   .grid-3, .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .challenge-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .challenge-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
   .gauge-grid { gap: 14px; }
   .gauge { padding: 22px 14px 20px; }
   .footer-grid { grid-template-columns: 1fr 1fr; }
@@ -1273,11 +1267,6 @@ table.data tbody tr:hover { background: rgba(19, 100, 223, .04); }
 @media (max-width: 560px) {
   /* Side by side they get too narrow to hold their labels on one line. */
   .hero-cta { grid-auto-flow: row; width: min(340px, 100%); }
-}
-
-@media (max-width: 430px) {
-  /* Below this the two columns get too narrow to read. */
-  .challenge-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 420px) {
@@ -1330,4 +1319,16 @@ table.data tbody tr:hover { background: rgba(19, 100, 223, .04); }
     transition-duration: .001ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+@media (max-width: 350px) {
+  /* Measured, not guessed. Two columns leave (100vw - 48 - 12) / 2 minus the
+     card's own padding as usable width: about 113px at 350, which still fits
+     the longest title, and about 98px at 320, which does not, so
+     "Repossessions" breaks mid-word. One column below that.
+
+     This has to come after the 720px block: same selector, same specificity,
+     so the later one wins. */
+  .challenge-grid { grid-template-columns: 1fr; gap: 10px; }
+  .challenge-card { padding: 16px 18px; }
 }

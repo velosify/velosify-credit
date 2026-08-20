@@ -160,6 +160,10 @@
         the meaning. Stroke glyphs rather than filled, to sit quietly next to
         the squared cards. #}
     {% set challenges = [
+      ('Credit card debt', 'Wrong balances, reaged dates, or late marks that never happened',
+       '<rect x="2" y="5" width="20" height="14"/><path d="M2 10h20M6 15h4"/>'),
+      ('Medical bills', 'Paid, under $500, or under a year old and still on the report',
+       '<path d="M6 2h9l3 3v17H6z"/><path d="M12 10v7M8.5 13.5h7"/>'),
       ('Collections', 'Unverifiable, misreported, or past the reporting window',
        '<path d="M4 3h13l3 3v15l-3-2-3 2-3-2-3 2-3-2V3z"/><path d="M8 9h8M8 13h5"/>'),
       ('Late payments', 'Reported in error or against a paid-current account',
@@ -192,28 +196,6 @@
           <p class="small muted mb-0">{{ note }}</p>
         </article>
       {% endfor %}
-    </div>
-
-    {#  Facts checked against the CFPB and the bureaus' own announcements, and
-        against the July 2025 ruling. Dated deliberately: this paragraph goes
-        stale the moment any of it changes, and a stale claim here is worse
-        than no claim. #}
-    <div class="challenge-callout" data-reveal>
-      <h3>A word on medical bills</h3>
-      <p>
-        These are worth checking line by line. Paid medical collections,
-        anything under $500, and anything less than a year old should not be
-        on your report at all: the bureaus removed those between 2022 and
-        2023, and they still turn up. The broader rule that would have taken
-        medical debt off credit reports entirely was struck down in July 2025,
-        so everything else can still be reported.
-      </p>
-      <p class="mb-0">
-        Medical billing also produces more errors than any other category we
-        see. Balances that changed once insurance paid, the same bill listed
-        twice by a provider and its collection agency, and amounts that were
-        never the patient's to owe in the first place.
-      </p>
     </div>
 
     <p class="challenge-note" data-reveal>
