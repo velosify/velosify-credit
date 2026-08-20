@@ -36,9 +36,24 @@ APP_BASE_URL = _env("APP_BASE_URL", "http://127.0.0.1:5000").rstrip("/")
 BRAND_NAME = _env("BRAND_NAME", "VelosifyCredit")
 BRAND_DOMAIN = _env("BRAND_DOMAIN", "velosifycredit.com")
 SUPPORT_EMAIL = _env("SUPPORT_EMAIL", "support@velosifycredit.com")
-SUPPORT_PHONE = _env("SUPPORT_PHONE", "")
+SUPPORT_PHONE = _env("SUPPORT_PHONE", "(602) 772-8020")
 COMPANY_LEGAL_NAME = _env("COMPANY_LEGAL_NAME", "VelosifyCredit LLC")
-COMPANY_ADDRESS = _env("COMPANY_ADDRESS", "")
+# The Credit Repair Organizations Act requires the business address in the
+# contract itself, so this defaults to the real one rather than to an empty
+# string that would silently render a contract without it. Still overridable
+# per environment.
+COMPANY_ADDRESS = _env("COMPANY_ADDRESS", "901 Tower Dr, Troy, MI 48098")
+
+
+def _tel(number: str) -> str:
+    """A tel: href from whatever format the number is written in."""
+    digits = "".join(ch for ch in number if ch.isdigit())
+    if len(digits) == 10:
+        digits = "1" + digits
+    return f"+{digits}" if digits else ""
+
+
+SUPPORT_PHONE_TEL = _tel(SUPPORT_PHONE)
 
 # --- Storage --------------------------------------------------------------
 # DB and uploads sit under the same parent so a single mounted volume on

@@ -72,6 +72,10 @@
       <a href="mailto:{{ cfg.SUPPORT_EMAIL }}?subject=Accessibility">{{ cfg.SUPPORT_EMAIL }}</a>
       and tell us what happened, what you were trying to do, and what you use
       to browse. We aim to reply within 5 business days.
+      {% if cfg.SUPPORT_PHONE %}
+        You can also call
+        <a href="tel:{{ cfg.SUPPORT_PHONE_TEL }}">{{ cfg.SUPPORT_PHONE }}</a>.
+      {% endif %}
     </p>
     <p>
       If something on the site is blocking you from enrolling or from sending

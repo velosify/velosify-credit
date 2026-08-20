@@ -15,12 +15,24 @@ import urllib.request
 import config
 
 
+ENABLED = bool(config.RESEND_API_KEY)
+
+# Set by the most recent failed send, so the admin screens can say what went
+# wrong instead of "it didn't work". Resend puts the useful part in the body
+# of a 4xx (unverified domain, bad key), which is exactly the detail that
+# never used to be logged.
+last_error: str = "" if ENABLED else "RESEND_API_KEY is not set"
+
+
 def send_email(to: str, subject: str, text: str) -> bool:
+    global last_error
     to = (to or "").strip()
     if not to:
+        last_error = "no recipient"
         return False
 
     if not config.RESEND_API_KEY:
+        last_error = "RESEND_API_KEY is not set"
         print(f"\n--- email (not sent: no RESEND_API_KEY) ---\n"
               f"To: {to}\nSubject: {subject}\n\n{text}\n---\n", flush=True)
         return False
@@ -42,15 +54,27 @@ def send_email(to: str, subject: str, text: str) -> bool:
     )
     try:
         with urllib.request.urlopen(req, timeout=10) as resp:
-            return 200 <= resp.status < 300
+            if 200 <= resp.status < 300:
+                last_error = ""
+                return True
+            last_error = f"Resend returned {resp.status}"
+    except urllib.error.HTTPError as exc:
+        # The body is where Resend explains itself: an unverified sending
+        # domain and a revoked key both arrive as a bare 4xx otherwise.
+        try:
+            detail = exc.read().decode("utf-8", "replace")[:300]
+        except Exception:
+            detail = ""
+        last_error = f"Resend {exc.code}: {detail or exc.reason}"
     except (urllib.error.URLError, TimeoutError, OSError) as exc:
-        print(f"[mail] send to {to} failed: {exc}", flush=True)
-        return False
+        last_error = f"could not reach Resend: {exc}"
+    print(f"[mail] send to {to} failed: {last_error}", flush=True)
+    return False
 
 
-def send_welcome(user: dict, order_amount_label: str) -> None:
+def send_welcome(user: dict, order_amount_label: str) -> bool:
     first = user.get("first_name") or "there"
-    send_email(
+    return send_email(
         to=user["email"],
         subject=f"Welcome to {config.BRAND_NAME}, next steps inside",
         text=(
@@ -72,7 +96,7 @@ def send_welcome(user: dict, order_amount_label: str) -> None:
     )
 
 
-def send_password_reset(user: dict, link: str) -> None:
+def send_password_reset(user: dict, link: str) -> bool:
     """The reset link, and nothing else.
 
     No account details, no name beyond the first, and an explicit line telling
@@ -81,7 +105,7 @@ def send_password_reset(user: dict, link: str) -> None:
     little as it can.
     """
     first = user.get("first_name") or "there"
-    send_email(
+    return send_email(
         to=user["email"],
         subject=f"Reset your {config.BRAND_NAME} password",
         text=(
@@ -99,9 +123,9 @@ def send_password_reset(user: dict, link: str) -> None:
     )
 
 
-def send_email_verification(user: dict, link: str) -> None:
+def send_email_verification(user: dict, link: str) -> bool:
     first = user.get("first_name") or "there"
-    send_email(
+    return send_email(
         to=user["email"],
         subject=f"Confirm your email for {config.BRAND_NAME}",
         text=(
@@ -117,14 +141,14 @@ def send_email_verification(user: dict, link: str) -> None:
     )
 
 
-def send_admin_invite(user: dict, link: str, invited_by: str) -> None:
+def send_admin_invite(user: dict, link: str, invited_by: str) -> bool:
     """Invite to an admin account. Carries a link, never a password.
 
     Nobody should ever be sent a password they did not choose, least of all
     for an account that can open every client's Social Security proof. The
     recipient sets their own, and it is known only to them.
     """
-    send_email(
+    return send_email(
         to=user["email"],
         subject=f"You have been given admin access to {config.BRAND_NAME}",
         text=(
@@ -144,9 +168,9 @@ def send_admin_invite(user: dict, link: str, invited_by: str) -> None:
     )
 
 
-def send_admin_new_client(user: dict) -> None:
+def send_admin_new_client(user: dict) -> bool:
     name = f"{user.get('first_name','')} {user.get('last_name','')}".strip() or user["email"]
-    send_email(
+    return send_email(
         to=config.ADMIN_ALERT_EMAIL,
         subject=f"New {config.BRAND_NAME} client: {name}",
         text=(
@@ -158,9 +182,9 @@ def send_admin_new_client(user: dict) -> None:
     )
 
 
-def send_documents_complete(user: dict) -> None:
+def send_documents_complete(user: dict) -> bool:
     name = f"{user.get('first_name','')} {user.get('last_name','')}".strip() or user["email"]
-    send_email(
+    return send_email(
         to=config.ADMIN_ALERT_EMAIL,
         subject=f"{name} finished uploading documents",
         text=(

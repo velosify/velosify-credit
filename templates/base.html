@@ -77,6 +77,16 @@
           Credit restoration done properly. Real dispute work, honest timelines,
           and a portal that shows you exactly where things stand.
         </p>
+        {#  A real address and a phone number that a person answers. Several
+            state credit-services statutes want both published, and a company
+            that hides them is telling you something. #}
+        <address class="footer-contact">
+          {% if cfg.COMPANY_ADDRESS %}<span>{{ cfg.COMPANY_ADDRESS }}</span>{% endif %}
+          {% if cfg.SUPPORT_PHONE %}
+            <a href="tel:{{ cfg.SUPPORT_PHONE_TEL }}">{{ cfg.SUPPORT_PHONE }}</a>
+          {% endif %}
+          <a href="mailto:{{ cfg.SUPPORT_EMAIL }}">{{ cfg.SUPPORT_EMAIL }}</a>
+        </address>
       </div>
       <div data-reveal>
         <h4>Company</h4>

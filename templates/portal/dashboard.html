@@ -139,6 +139,12 @@
       <a class="btn btn-ghost btn-sm btn-block" href="mailto:{{ cfg.SUPPORT_EMAIL }}">
         Email your case team
       </a>
+      {% if cfg.SUPPORT_PHONE %}
+        <p class="small muted text-center" style="margin:12px 0 0">
+          Or call
+          <a href="tel:{{ cfg.SUPPORT_PHONE_TEL }}" style="text-decoration:underline">{{ cfg.SUPPORT_PHONE }}</a>
+        </p>
+      {% endif %}
     </div>
   </div>
 </div>

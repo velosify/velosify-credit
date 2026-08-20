@@ -1146,6 +1146,17 @@ table.data tbody tr:hover { background: rgba(19, 100, 223, .04); }
    that rather than getting a one-off colour of its own. */
 .centered-page .faint { color: var(--text-muted); }
 
+/* Address block in the footer. <address> is italic by default in every
+   browser, which is not what anyone wants for a postal address. */
+.footer-contact {
+  font-style: normal;
+  display: grid;
+  gap: 4px;
+  margin-top: 16px;
+  font-size: .85rem;
+}
+.footer-contact a:hover { color: var(--accent); }
+
 /* --- Scroll reveal ------------------------------------------------------
    Markup ships in its finished state. Script adds .reveal-init only once it
    has established that it can animate, then .is-visible as each element

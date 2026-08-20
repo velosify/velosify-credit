@@ -64,13 +64,59 @@
   </table>
 </div>
 
+{% if invite_link %}
+  {#  Shown once and never again: only the SHA-256 of the token is stored, so
+      this link cannot be recovered from the database afterwards. If it is
+      lost, the fix is a fresh invite, not a lookup. #}
+  <div class="card" style="margin-bottom:26px;border-left:3px solid var(--warn)">
+    <div class="card-title">The email didn't go out. Send this link yourself.</div>
+    <p class="small muted">
+      The invite for <strong>{{ invite_email }}</strong> exists and is valid for
+      72 hours, but we could not deliver it{% if mail_error %}
+      ({{ mail_error }}){% endif %}. Copy the link below and send it to them
+      however you like. It works exactly like the emailed one, and it lets
+      them set their own password.
+    </p>
+    <p class="small muted">
+      <strong>Treat it like a password.</strong> Anyone holding it can become
+      an administrator on this account. Don't post it anywhere public.
+    </p>
+    <input class="input" readonly onclick="this.select()"
+           value="{{ invite_link }}"
+           style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.82rem">
+    <p class="tiny faint" style="margin:10px 0 0">
+      This is the only time it is shown. Close this page and you will need to
+      send a new invite.
+    </p>
+  </div>
+{% endif %}
+
+{% if not mail_enabled %}
+  <div class="alert alert-warn" style="margin-bottom:26px">
+    <strong>Email is not configured, so nothing is being sent.</strong>
+    Invites, password resets, welcome messages and case updates are all
+    written to the server log instead of a mailbox. Set <code>RESEND_API_KEY</code>
+    in the deployment environment, with a verified sending domain for
+    <code>{{ cfg.MAIL_FROM }}</code>, and this notice disappears.
+  </div>
+{% endif %}
+
 {% if pending %}
   <div class="card card-pad-sm" style="margin-bottom:26px">
     <div class="card-title" style="font-size:.95rem">Invites not yet used</div>
     <ul class="feature-list">
       {% for p in pending %}
-        <li><span class="tick">›</span> {{ p.email }} &mdash;
-          <span class="small muted">expires {{ p.expires_at | datetime }}</span></li>
+        <li>
+          <span class="tick">›</span> {{ p.email }} &mdash;
+          <span class="small muted">expires {{ p.expires_at | datetime }}</span>
+          <form method="post"
+                action="{{ url_for('admin_team_resend', user_id=p.user_id) }}"
+                style="display:inline">
+            {{ csrf_field() }}
+            <button class="btn btn-quiet btn-sm" type="submit"
+                    style="text-decoration:underline">Send a new link</button>
+          </form>
+        </li>
       {% endfor %}
     </ul>
   </div>

@@ -1398,23 +1398,31 @@ def admin_audit():
 # question later.
 # ---------------------------------------------------------------------------
 
-@app.get("/admin/team")
-@require_admin
-def admin_team():
+def _team_page(**extra):
     conn = get_db()
     admins = [dict(r) for r in conn.execute(
         "SELECT id, email, first_name, last_name, created_at, last_login_at, "
         "password_changed_at FROM users WHERE role = 'admin' ORDER BY created_at"
     ).fetchall()]
     pending = [dict(r) for r in conn.execute(
-        "SELECT t.expires_at, u.email FROM auth_tokens t "
+        "SELECT t.user_id, t.expires_at, u.email FROM auth_tokens t "
         "JOIN users u ON u.id = t.user_id "
         "WHERE t.kind = ? AND t.used_at IS NULL AND t.expires_at > ? "
         "ORDER BY t.created_at DESC",
         (security.ADMIN_INVITE, utcnow()),
     ).fetchall()]
-    return render_template("admin/team.html", admins=admins, pending=pending,
-                           error=None)
+    context = {"admins": admins, "pending": pending, "error": None,
+               "invite_link": None, "invite_email": None,
+               "mail_enabled": mailer.ENABLED,
+               "mail_error": mailer.last_error}
+    context.update(extra)
+    return render_template("admin/team.html", **context)
+
+
+@app.get("/admin/team")
+@require_admin
+def admin_team():
+    return _team_page()
 
 
 @app.post("/admin/team/invite")
@@ -1426,12 +1434,7 @@ def admin_team_invite():
     conn = get_db()
 
     def fail(message: str):
-        admins = [dict(r) for r in conn.execute(
-            "SELECT id, email, first_name, last_name, created_at, last_login_at, "
-            "password_changed_at FROM users WHERE role = 'admin' ORDER BY created_at"
-        ).fetchall()]
-        return render_template("admin/team.html", admins=admins, pending=[],
-                               error=message), 400
+        return _team_page(error=message), 400
 
     if not valid_email(email):
         return fail("That email address doesn't look right.")
@@ -1467,13 +1470,56 @@ def admin_team_invite():
 
     invited = row_to_dict(conn.execute("SELECT * FROM users WHERE id = ?",
                                        (user_id,)).fetchone())
-    mailer.send_admin_invite(
-        invited,
-        absolute_url(url_for("accept_invite", token=token)),
+    link = absolute_url(url_for("accept_invite", token=token))
+    sent = mailer.send_admin_invite(
+        invited, link,
         f"{actor.get('first_name') or 'An administrator'} ({actor['email']})",
     )
-    flash(f"Invite sent to {email}. It expires in 72 hours.", "success")
-    return redirect(url_for("admin_team"))
+    if sent:
+        flash(f"Invite sent to {email}. It expires in 72 hours.", "success")
+        return redirect(url_for("admin_team"))
+
+    # The mail did not go. Saying "invite sent" here would be a lie the
+    # invitee discovers by waiting, so the link is handed over instead: it is
+    # the same thing the email would have contained, and this is the only
+    # moment it can be shown, because only its hash is stored.
+    return _team_page(invite_link=link, invite_email=email)
+
+
+@app.post("/admin/team/<int:user_id>/resend")
+@require_admin
+def admin_team_resend(user_id: int):
+    """Issue a fresh invite for someone who never got the first one.
+
+    Not literally a resend: the original token was stored as a hash and
+    cannot be recovered, so this mints a new one and retires the old.
+    """
+    actor = current_user()
+    conn = get_db()
+    row = conn.execute(
+        "SELECT * FROM users WHERE id = ? AND role = 'admin'", (user_id,)
+    ).fetchone()
+    if not row:
+        abort(404)
+    if row["last_login_at"]:
+        flash(f"{row['email']} has already signed in and does not need an "
+              f"invite. Send them to the password reset page instead.", "error")
+        return redirect(url_for("admin_team"))
+
+    token = issue_token(conn, user_id, security.ADMIN_INVITE)
+    audit("admin.invite_resent", actor=actor, target_user_id=user_id,
+          detail=row["email"], conn=conn)
+    conn.commit()
+
+    link = absolute_url(url_for("accept_invite", token=token))
+    sent = mailer.send_admin_invite(
+        row_to_dict(row), link,
+        f"{actor.get('first_name') or 'An administrator'} ({actor['email']})",
+    )
+    if sent:
+        flash(f"A fresh invite is on its way to {row['email']}.", "success")
+        return redirect(url_for("admin_team"))
+    return _team_page(invite_link=link, invite_email=row["email"])
 
 
 @app.post("/admin/team/<int:user_id>/revoke")
