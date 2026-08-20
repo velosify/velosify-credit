@@ -255,23 +255,26 @@
     </div>
 
     <div class="price-card">
-      <div class="row-between" style="align-items:flex-start">
-        <div>
-          <span class="badge badge-accent">Complete program</span>
-          <div class="price-amount">
-            <span class="num">{{ cfg.PRICE_LABEL }}</span>
-            <span class="per">one time</span>
-          </div>
-          <p class="small muted mb-0">No monthly fees. No per-deletion charges.</p>
+      <div class="price-head">
+        <span class="badge badge-accent">Complete program</span>
+        <div class="price-figure" data-reveal>
+          <span class="price-num">{{ cfg.PRICE_LABEL }}</span>
+          <span class="price-once">one time</span>
         </div>
+        <p class="small muted mb-0">No monthly fees. No per-deletion charges.</p>
       </div>
 
-      <ul class="feature-list" style="margin:26px 0">
-        <li><span class="tick">✓</span> Three-bureau audit and dispute strategy</li>
-        <li><span class="tick">✓</span> Unlimited rounds until the case closes</li>
-        <li><span class="tick">✓</span> Furnisher and collector challenges included</li>
-        <li><span class="tick">✓</span> Secure document portal and case timeline</li>
-        <li><span class="tick">✓</span> {{ cfg.CANCELLATION_DAYS }} business days to cancel without penalty</li>
+      {% set includes = [
+        'Three-bureau audit and dispute strategy',
+        'Unlimited rounds until the case closes',
+        'Furnisher and collector challenges included',
+        'Secure document portal and case timeline',
+        cfg.CANCELLATION_DAYS ~ ' business days to cancel without penalty'
+      ] %}
+      <ul class="feature-list price-includes">
+        {% for item in includes %}
+          <li data-reveal><span class="tick">✓</span> {{ item }}</li>
+        {% endfor %}
       </ul>
 
       <a class="btn btn-primary btn-lg btn-block" href="{{ url_for('order_page') }}">

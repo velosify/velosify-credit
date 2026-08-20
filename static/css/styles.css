@@ -625,13 +625,52 @@ p  { margin: 0 0 1em; }
 .price-card::before {
   content: "";
   position: absolute; inset: 0;
-  background: radial-gradient(700px 240px at 50% -40px, rgba(19,100,223,.08), transparent 70%);
+  background: radial-gradient(520px 300px at 50% -60px, rgba(19,100,223,.13), transparent 68%);
   pointer-events: none;
 }
+/* A rule across the top so the card announces itself rather than sitting
+   there as one more white rectangle. */
+.price-card::after {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--gradient);
+}
 .price-card > * { position: relative; }
-.price-amount { display: flex; align-items: baseline; gap: 10px; margin: 6px 0 4px; }
-.price-amount .num { font-size: 3.5rem; font-weight: 800; letter-spacing: -.035em; line-height: 1; }
-.price-amount .per { color: var(--text-muted); font-size: .95rem; }
+
+.price-head {
+  text-align: center;
+  padding-bottom: 28px;
+  margin-bottom: 26px;
+  border-bottom: 1px solid var(--border);
+}
+.price-head .badge { margin-bottom: 20px; }
+
+.price-figure { display: block; margin-bottom: 12px; }
+.price-num {
+  display: block;
+  font-size: clamp(3.6rem, 8vw, 5rem);
+  font-weight: 800;
+  letter-spacing: -.045em;
+  line-height: .95;
+  background: var(--gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.price-once {
+  display: inline-block;
+  margin-top: 12px;
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.price-includes { margin: 0 0 28px; }
+.price-includes li { padding: 12px 0; }
 
 /* --- FAQ --------------------------------------------------------------- */
 .faq-item {
