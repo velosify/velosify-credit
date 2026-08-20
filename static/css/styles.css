@@ -418,6 +418,101 @@ p  { margin: 0 0 1em; }
   border-color: #fff;
 }
 
+/* --- Three-bureau gauges -------------------------------------------------
+   A semicircular dial per bureau, spanning 300 to 850. Script animates the
+   arc, the bubble and the number together; the band class on .gauge drives
+   the colour so all three stay in step through one transition.
+
+   Colours here are the vivid pair of the semantic tokens: the arc is a
+   graphic (needs 3:1) and the number is large text, and every value clears
+   its threshold on the white card with room to spare.
+   ------------------------------------------------------------------------ */
+.gauge-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 22px;
+}
+
+.gauge {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  padding: 26px 20px 24px;
+  text-align: center;
+  /* Set by script during the reset beat so the dial can fade out and back
+     in rather than snapping from 806 to 512 in one frame. */
+  --gauge-fade: 1;
+}
+
+.gauge-dial {
+  width: min(280px, 100%);
+  margin: 0 auto;
+  opacity: var(--gauge-fade);
+}
+
+.gauge-track,
+.gauge-arc {
+  fill: none;
+  stroke-width: 13;
+  stroke-linecap: round;
+}
+.gauge-track { stroke: var(--surface-3); }
+.gauge-arc   { transition: stroke .45s ease; }
+
+.gauge-bubble {
+  fill: var(--surface);
+  stroke-width: 4.5;
+  transition: stroke .45s ease;
+}
+.gauge-halo { opacity: .16; transition: fill .45s ease; }
+
+.gauge-readout {
+  display: block;
+  margin-top: 4px;
+  opacity: var(--gauge-fade);
+}
+.gauge-score {
+  display: block;
+  font-size: clamp(2.4rem, 4.4vw, 3.1rem);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -.02em;
+  font-variant-numeric: tabular-nums;
+  transition: color .45s ease;
+}
+.gauge-name {
+  display: block;
+  margin-top: 10px;
+  font-size: .82rem;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* Bands. Under 620 poor, 620 to 739 fair, 740 and up good. */
+.gauge.is-poor .gauge-arc,
+.gauge.is-poor .gauge-bubble { stroke: #d92d4e; }
+.gauge.is-poor .gauge-halo   { fill:   #d92d4e; }
+.gauge.is-poor .gauge-score  { color:  #c11f3c; }
+
+.gauge.is-fair .gauge-arc,
+.gauge.is-fair .gauge-bubble { stroke: #c07600; }
+.gauge.is-fair .gauge-halo   { fill:   #c07600; }
+.gauge.is-fair .gauge-score  { color:  #9a5a00; }
+
+.gauge.is-good .gauge-arc,
+.gauge.is-good .gauge-bubble { stroke: #0f9f68; }
+.gauge.is-good .gauge-halo   { fill:   #0f9f68; }
+.gauge.is-good .gauge-score  { color:  #07734a; }
+
+.gauge-note {
+  margin: 28px 0 0;
+  text-align: center;
+  font-size: .84rem;
+  color: var(--text-faint);
+}
+
 /* --- How it works: connected flow ---------------------------------------
    Four markers sitting on a single track, so the steps read as one process
    rather than four unrelated cards. The track is a static rule with a filled
@@ -964,6 +1059,8 @@ table.data tbody tr:hover { background: rgba(19, 100, 223, .04); }
 
   .grid-3, .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .challenge-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .gauge-grid { gap: 14px; }
+  .gauge { padding: 22px 14px 20px; }
   .footer-grid { grid-template-columns: 1fr 1fr; }
   .app-shell { grid-template-columns: 1fr; background: none; }
   .sidebar {
@@ -976,6 +1073,14 @@ table.data tbody tr:hover { background: rgba(19, 100, 223, .04); }
   .side-foot { margin-top: 0; padding-top: 0; border-top: 0; margin-left: auto; }
   .side-link { padding: 9px 12px; white-space: nowrap; }
   .app-main { padding: 26px 20px 60px; }
+}
+
+@media (max-width: 620px) {
+  /* Three dials across a phone leaves each one too small to read. Stacked,
+     each keeps a legible number and the climb is still obvious. */
+  .gauge-grid { grid-template-columns: 1fr; gap: 16px; }
+  .gauge { padding: 20px 18px 18px; }
+  .gauge-dial { width: min(240px, 100%); }
 }
 
 @media (max-width: 560px) {

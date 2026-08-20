@@ -167,6 +167,141 @@
     io.observe(flow);
   })();
 
+  /* ---- Three-bureau gauges ------------------------------------------------
+     Each dial spans 300 to 850 across a semicircle. One rAF loop drives all
+     three, staggered, through: climb, hold, fade out, fade back in at the
+     start, repeat. It only runs while the section is on screen.
+
+     The markup ships finished, so this rewinds nothing until it has proved
+     it can animate: reduce-motion or no rAF leaves three complete dials. */
+  (function bureauGauges() {
+    var gauges = Array.prototype.slice.call(document.querySelectorAll("[data-gauge]"));
+    if (!gauges.length) return;
+    if (!window.requestAnimationFrame) return;
+    if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    var MIN = 300, MAX = 850;          // the range the arc represents
+    var CX = 100, CY = 102, R = 80;    // dial geometry, matches the SVG path
+    var LEN = Math.PI * R;             // arc length, for stroke-dashoffset
+
+    var RUN_MS = 2600;                 // the climb
+    var HOLD_MS = 1900;                // the pause at the top
+    var OUT_MS = 340;                  // fade the finished dial away
+    var GAP_MS = 120;                  // beat at zero opacity, mid-reset
+    var IN_MS = 340;                   // fade back in at the starting score
+    var CYCLE = RUN_MS + HOLD_MS + OUT_MS + GAP_MS + IN_MS;
+
+    var dials = gauges.map(function (el) {
+      return {
+        el: el,
+        from: parseInt(el.getAttribute("data-from"), 10),
+        to: parseInt(el.getAttribute("data-to"), 10),
+        delay: parseInt(el.getAttribute("data-delay"), 10) || 0,
+        arc: el.querySelector(".gauge-arc"),
+        halo: el.querySelector(".gauge-halo"),
+        bubble: el.querySelector(".gauge-bubble"),
+        score: el.querySelector("[data-gauge-score]"),
+        band: ""
+      };
+    }).filter(function (d) {
+      return d.arc && d.bubble && d.score && isFinite(d.from) && isFinite(d.to);
+    });
+    if (!dials.length) return;
+
+    function bandFor(score) {
+      if (score < 620) return "is-poor";
+      if (score < 740) return "is-fair";
+      return "is-good";
+    }
+
+    // Ease-out so the climb starts briskly and settles, the way a needle does.
+    function ease(p) { return 1 - Math.pow(1 - p, 3); }
+
+    function paint(d, score, fade) {
+      var t = (score - MIN) / (MAX - MIN);
+      if (t < 0) t = 0; else if (t > 1) t = 1;
+
+      var a = (180 - 180 * t) * Math.PI / 180;
+      d.arc.setAttribute("stroke-dashoffset", (LEN * (1 - t)).toFixed(2));
+      var x = (CX + R * Math.cos(a)).toFixed(2);
+      var y = (CY - R * Math.sin(a)).toFixed(2);
+      d.bubble.setAttribute("cx", x);
+      d.bubble.setAttribute("cy", y);
+      if (d.halo) { d.halo.setAttribute("cx", x); d.halo.setAttribute("cy", y); }
+
+      d.score.textContent = Math.round(score);
+
+      var band = bandFor(score);
+      if (band !== d.band) {
+        d.el.classList.remove("is-poor", "is-fair", "is-good");
+        d.el.classList.add(band);
+        d.band = band;
+      }
+      d.el.style.setProperty("--gauge-fade", fade);
+    }
+
+    // Where a dial sits at a given point in its own cycle.
+    function frame(d, ms) {
+      var p = ((ms % CYCLE) + CYCLE) % CYCLE;
+      if (p < RUN_MS) return paint(d, d.from + (d.to - d.from) * ease(p / RUN_MS), 1);
+      p -= RUN_MS;
+      if (p < HOLD_MS) return paint(d, d.to, 1);
+      p -= HOLD_MS;
+      if (p < OUT_MS) return paint(d, d.to, 1 - p / OUT_MS);
+      p -= OUT_MS;
+      if (p < GAP_MS) return paint(d, d.from, 0);
+      p -= GAP_MS;
+      return paint(d, d.from, p / IN_MS);
+    }
+
+    var start = 0, running = false, raf = 0;
+
+    function tick(now) {
+      if (!running) return;
+      if (!start) start = now;
+      var ms = now - start;
+      for (var i = 0; i < dials.length; i++) frame(dials[i], ms - dials[i].delay);
+      raf = window.requestAnimationFrame(tick);
+    }
+
+    function play() {
+      if (running) return;
+      running = true;
+      start = 0;
+      raf = window.requestAnimationFrame(tick);
+    }
+    function pause() {
+      running = false;
+      if (raf) window.cancelAnimationFrame(raf);
+      raf = 0;
+    }
+
+    // Rewind now that we know we can drive it.
+    dials.forEach(function (d) { paint(d, d.from, 1); });
+
+    // Play only when the section is both on screen and in a foreground tab.
+    var onScreen = true;
+
+    function sync() {
+      if (onScreen && !document.hidden) play();
+      else pause();
+    }
+
+    var section = dials[0].el.parentNode;
+    if ("IntersectionObserver" in window) {
+      onScreen = false;
+      new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) { onScreen = e.isIntersecting; });
+        sync();
+      }, { threshold: 0.15 }).observe(section);
+    }
+
+    // A backgrounded tab throttles rAF, which would strand the dials mid-climb
+    // and then jump when it resumes. Stop, and restart the cycle on return.
+    document.addEventListener("visibilitychange", sync);
+    sync();
+  })();
+
   function escapeHtml(str) {
     return String(str).replace(/[&<>"']/g, function (c) {
       return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];

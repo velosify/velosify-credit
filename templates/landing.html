@@ -28,6 +28,64 @@
   </div>
 </section>
 
+<!-- ===================== Three bureaus ===================== -->
+{#  Each dial ships in its finished state: full arc, bubble parked at the
+    end, and the final number rendered. Script rewinds it and runs the climb
+    only once it knows it is alive, so a JS failure or reduce-motion leaves
+    three complete, readable gauges rather than three empty ones.
+
+    The bubble/arc coordinates below are the geometry for the end value of
+    each bureau, computed off the same arc the script uses:
+      centre (100, 102), r 80, path length pi*80 = 251.33
+      t = (score - 300) / 550, angle = 180 - 180t #}
+<section class="section section-alt" id="bureaus">
+  <div class="container">
+    <div class="text-center" style="margin-bottom:52px">
+      <h2>Three bureaus, worked at the same time</h2>
+      <p class="lead lead-center">
+        TransUnion, Equifax and Experian each keep their own file on you, and
+        they rarely match. An item deleted at one can still be sitting at the
+        other two, so we dispute all three together.
+      </p>
+    </div>
+
+    {% set bureaus = [
+      ('TransUnion', 512, 806, 0,   177.49, 82.10, 20.11),
+      ('Equifax',    527, 818, 180, 178.67, 87.46, 14.62),
+      ('Experian',   504, 801, 360, 176.89, 79.90, 22.39)
+    ] %}
+
+    <div class="gauge-grid">
+      {% for name, from_score, to_score, delay, bx, by, dashoff in bureaus %}
+        <article class="gauge is-good"
+                 data-gauge
+                 data-from="{{ from_score }}"
+                 data-to="{{ to_score }}"
+                 data-delay="{{ delay }}">
+          <svg class="gauge-dial" viewBox="0 0 200 118" role="img"
+               aria-label="{{ name }} score rising from {{ from_score }} to {{ to_score }} in this illustration">
+            <path class="gauge-track" d="M 20 102 A 80 80 0 0 1 180 102"/>
+            <path class="gauge-arc" d="M 20 102 A 80 80 0 0 1 180 102"
+                  stroke-dasharray="251.33" stroke-dashoffset="{{ dashoff }}"/>
+            <circle class="gauge-halo" cx="{{ bx }}" cy="{{ by }}" r="15"/>
+            <circle class="gauge-bubble" cx="{{ bx }}" cy="{{ by }}" r="8.5"/>
+          </svg>
+
+          <div class="gauge-readout">
+            <span class="gauge-score" data-gauge-score aria-hidden="true">{{ to_score }}</span>
+            <span class="gauge-name">{{ name }}</span>
+          </div>
+        </article>
+      {% endfor %}
+    </div>
+
+    <p class="gauge-note">
+      Illustration only. Score movement depends entirely on what is actually
+      on your file, and no honest company can promise you a number.
+    </p>
+  </div>
+</section>
+
 <!-- ===================== How it works ===================== -->
 <section class="section" id="how">
   <div class="container">
