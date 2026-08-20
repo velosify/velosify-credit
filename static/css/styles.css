@@ -985,14 +985,55 @@ p  { margin: 0 0 1em; }
 .tracker-caption strong { color: var(--text); }
 
 /* --- Checklist / documents -------------------------------------------- */
+/* Two up on a wide screen. Six full-width rows was a page you scrolled
+   rather than a page you scanned, and each row was mostly empty to its
+   right. */
+.doc-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+  margin-bottom: 30px;
+}
+.doc-group-head { margin: 0 0 14px; }
+.doc-group-head h2 { font-size: 1.08rem; margin-bottom: 2px; }
+
 .doc-item {
+  position: relative;
   border: 1px solid var(--border);
   border-radius: 0;
   background: var(--surface);
   padding: 22px 24px;
-  margin-bottom: 14px;
+  overflow: hidden;
+  transition: transform .22s cubic-bezier(.22, .8, .25, 1),
+              box-shadow .22s ease, border-color .22s ease;
 }
-.doc-item.satisfied { border-color: rgba(52,211,153,.28); }
+/* The same rule-sweep the landing page cards use, so the portal and the
+   marketing site behave like one product. */
+.doc-item::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto auto 0;
+  height: 2px;
+  width: 0;
+  background: var(--gradient);
+  transition: width .35s cubic-bezier(.22, .8, .25, 1);
+}
+.doc-item:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow);
+  border-color: rgba(19, 100, 223, .28);
+}
+.doc-item:hover::after { width: 100%; }
+/* Keyboard users get the same signal as the pointer does. */
+.doc-item:focus-within {
+  border-color: rgba(19, 100, 223, .28);
+  box-shadow: var(--shadow-sm);
+}
+.doc-item:focus-within::after { width: 100%; }
+
+.doc-item.satisfied { border-color: rgba(6, 92, 59, .30); }
+.doc-item.satisfied::after { background: var(--success); }
 .doc-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
 .doc-check {
   width: 26px; height: 26px; border-radius: 0; flex: none;
@@ -1001,6 +1042,12 @@ p  { margin: 0 0 1em; }
   color: transparent;
   font-size: .8rem; font-weight: 800;
   margin-right: 4px;
+  transition: transform .22s cubic-bezier(.34, 1.56, .64, 1),
+              background .22s ease, border-color .22s ease;
+}
+.doc-item:hover .doc-check { transform: scale(1.08); }
+.doc-item:hover .doc-check:not(.doc-item.satisfied .doc-check) {
+  border-color: var(--accent);
 }
 .doc-item.satisfied .doc-check { background: var(--success); border-color: var(--success); color: #ffffff; }
 .doc-title-wrap { display: flex; gap: 12px; align-items: flex-start; }
@@ -1031,18 +1078,45 @@ p  { margin: 0 0 1em; }
 .file-ico { width: 30px; height: 30px; border-radius: 0; background: var(--surface-3); display: grid; place-items: center; font-size: .68rem; font-weight: 700; color: var(--text-muted); flex: none; }
 
 .dropzone {
-  display: block;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
   border: 1.5px dashed var(--border-strong);
   border-radius: 0;
-  padding: 22px;
+  padding: 20px 18px;
   text-align: center;
   color: var(--text-muted);
   font-size: .88rem;
   cursor: pointer;
-  transition: border-color .15s ease, background .15s ease;
   background: var(--bg-soft);
+  transition: border-color .2s ease, background .2s ease,
+              transform .2s cubic-bezier(.22, .8, .25, 1);
 }
-.dropzone:hover, .dropzone.dragover { border-color: var(--accent); background: rgba(19,100,223,.05); }
+.dropzone-ico {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  color: var(--accent);
+  opacity: .55;
+  transition: transform .28s cubic-bezier(.34, 1.4, .64, 1), opacity .2s ease;
+}
+.dropzone-ico svg { width: 20px; height: 20px; }
+.dropzone:hover, .dropzone:focus-visible {
+  border-color: var(--accent);
+  background: rgba(19, 100, 223, .05);
+}
+/* The arrow lifts on hover and further while a file is actually over the
+   target, so the zone reads as somewhere to drop rather than a grey box. */
+.dropzone:hover .dropzone-ico,
+.dropzone:focus-visible .dropzone-ico { transform: translateY(-3px); opacity: 1; }
+.dropzone.dragover {
+  border-style: solid;
+  border-color: var(--accent);
+  background: rgba(19, 100, 223, .09);
+  transform: scale(1.01);
+}
+.dropzone.dragover .dropzone-ico { transform: translateY(-6px); opacity: 1; }
 .dropzone input { display: none; }
 .dropzone .picked { color: var(--accent-deep); font-weight: 600; }
 
@@ -1356,6 +1430,10 @@ table.data tbody tr:hover { background: rgba(19, 100, 223, .04); }
     padding: 20px 16px calc(78px + env(safe-area-inset-bottom));
   }
   .portal-split { grid-template-columns: 1fr; gap: 16px; }
+  .doc-grid { grid-template-columns: 1fr; gap: 12px; margin-bottom: 24px; }
+  /* Hover lift is meaningless on a touch screen and only causes a stuck
+     hover state after a tap. */
+  .doc-item:hover { transform: none; box-shadow: none; }
 
   /* Six labels across a phone is about 50px each, which turned "Collecting
      documents" into four broken lines. The dots still show progress; the

@@ -32,7 +32,19 @@
   </div>
 </div>
 
-{% for item in checklist['items'] %}
+{% set required = checklist['items'] | selectattr('required') | list %}
+{% set optional = checklist['items'] | rejectattr('required') | list %}
+
+{% for group, heading, note in [
+     (required, 'What we need from you', 'All four before we can file on your behalf.'),
+     (optional, 'Helpful, but not required', 'Only if they apply to you.')] %}
+  {% if group %}
+    <div class="doc-group-head">
+      <h2>{{ heading }}</h2>
+      <p class="small muted mb-0">{{ note }}</p>
+    </div>
+    <div class="doc-grid">
+    {% for item in group %}
   <div class="doc-item {{ 'satisfied' if item.satisfied }}">
     <div class="doc-head">
       <div class="doc-title-wrap">
@@ -42,7 +54,7 @@
             {{ item.label }}
             {% if not item.required %}<span class="badge" style="margin-left:6px">Optional</span>{% endif %}
           </div>
-          <p class="small muted mb-0" style="max-width:60ch">{{ item.help }}</p>
+          <p class="small muted mb-0">{{ item.help }}</p>
         </div>
       </div>
     </div>
@@ -87,6 +99,13 @@
       <label class="dropzone" tabindex="0">
         <input type="file" name="files" multiple
                accept=".pdf,.png,.jpg,.jpeg,.heic,.webp,.doc,.docx">
+        <span class="dropzone-ico" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 16V4"/><path d="m7 9 5-5 5 5"/>
+            <path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/>
+          </svg>
+        </span>
         <span data-zone-label>
           <strong style="color:var(--text)">Choose files</strong> or drag them here
         </span>
@@ -96,6 +115,9 @@
       </button>
     </form>
   </div>
+    {% endfor %}
+    </div>
+  {% endif %}
 {% endfor %}
 
 <p class="tiny faint text-center mt-2" style="max-width:60ch;margin-inline:auto">
