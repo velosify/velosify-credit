@@ -199,6 +199,15 @@ def create(conn: sqlite3.Connection, with_files: bool, index: int = 0) -> str:
         )
         user_id = int(cur.lastrowid)
 
+    # Clear any lockout on this address. Six failed sign-ins bar an account
+    # for fifteen minutes, and mistyping a freshly generated password two or
+    # three times is easy, so handing back a new password without lifting the
+    # bar would look exactly like the new password not working either.
+    conn.execute(
+        "DELETE FROM auth_failures WHERE scope = 'login:email' AND key = ?",
+        (email.lower(),),
+    )
+
     # Upload is gated on a paid order, so the demo needs one. Marked with an
     # obviously fake Stripe id: nothing here ever touched Stripe, and a real
     # looking session id in the orders table would be misleading later.
