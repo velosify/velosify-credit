@@ -28,6 +28,11 @@ def _env_int(name: str, default: int) -> int:
 
 
 # --- Core -----------------------------------------------------------------
+# Whether a key was actually supplied. Without one we generate a random key
+# per process, which works but silently signs everyone out on every deploy and
+# breaks sessions outright across more than one worker. Worth being able to
+# report on rather than leaving as a mystery.
+SECRET_KEY_PROVIDED = bool(_env("SECRET_KEY"))
 SECRET_KEY = _env("SECRET_KEY") or secrets.token_urlsafe(48)
 DEBUG = _env("FLASK_DEBUG", "0") == "1"
 APP_BASE_URL = _env("APP_BASE_URL", "http://127.0.0.1:5000").rstrip("/")

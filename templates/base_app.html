@@ -29,6 +29,8 @@
          href="{{ url_for('admin_audit') }}"><span class="ico">⧉</span> Audit log</a>
       <a class="side-link {{ 'active' if request.path.startswith('/admin/team') }}"
          href="{{ url_for('admin_team') }}"><span class="ico">◎</span> Team</a>
+      <a class="side-link {{ 'active' if request.path.startswith('/admin/system') }}"
+         href="{{ url_for('admin_system') }}"><span class="ico">◇</span> System check</a>
       <a class="side-link" href="{{ url_for('landing') }}"><span class="ico">↗</span> Public site</a>
     {% else %}
       <a class="side-link {{ 'active' if request.path == '/portal' }}"

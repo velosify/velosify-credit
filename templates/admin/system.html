@@ -1,0 +1,64 @@
+{% extends "base_app.html" %}
+{% block title %}System check | {{ cfg.BRAND_NAME }}{% endblock %}
+
+{% block body %}
+<div class="page-head">
+  <h1>System check</h1>
+  <p class="muted mb-0">
+    Whether this deployment is actually configured, rather than whether it
+    starts. No secret values are shown, so this page is safe to screenshot.
+  </p>
+</div>
+
+{% if counts.fail %}
+  <div class="alert alert-error">
+    <strong>{{ counts.fail }} thing{{ '' if counts.fail == 1 else 's' }}
+    need{{ 's' if counts.fail == 1 else '' }} fixing.</strong>
+    Each one below says what breaks and what to set.
+  </div>
+{% elif counts.warn %}
+  <div class="alert alert-warn">
+    <strong>Nothing is broken.</strong>
+    {{ counts.warn }} item{{ '' if counts.warn == 1 else 's' }} worth a look.
+  </div>
+{% else %}
+  <div class="alert alert-success">
+    <strong>All clear.</strong> Everything checked here is configured.
+  </div>
+{% endif %}
+
+<div class="table-wrap">
+  <table class="data">
+    <thead>
+      <tr><th>Check</th><th>State</th><th>Detail</th></tr>
+    </thead>
+    <tbody>
+      {% for c in checks %}
+        <tr>
+          <td class="strong nowrap">{{ c.name }}</td>
+          <td class="nowrap">
+            {% if c.state == 'ok' %}
+              <span class="badge badge-success">OK</span>
+            {% elif c.state == 'warn' %}
+              <span class="badge badge-warn">Check</span>
+            {% else %}
+              <span class="badge badge-danger">Fix</span>
+            {% endif %}
+          </td>
+          <td class="small">
+            {{ c.detail }}
+            {% if c.fix %}
+              <div class="small strong" style="margin-top:6px">{{ c.fix }}</div>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<p class="small faint mt-2">
+  Values are read at boot, so a change in the deployment environment shows up
+  here only after a restart.
+</p>
+{% endblock %}

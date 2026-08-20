@@ -1425,6 +1425,127 @@ def admin_team():
     return _team_page()
 
 
+@app.get("/admin/system")
+@require_admin
+def admin_system():
+    """A read-only look at whether this deployment is actually configured.
+
+    Written because a missing setting had been failing silently: invites were
+    reported as sent with no mail provider behind them. Every check here
+    reports whether a value is present and whether it is sane. It never prints
+    a secret, so the page is safe to screenshot.
+    """
+    checks: list[dict] = []
+
+    def add(name, state, detail, fix=""):
+        checks.append({"name": name, "state": state, "detail": detail, "fix": fix})
+
+    live = not config.APP_BASE_URL.startswith(("http://127.0.0.1", "http://localhost"))
+
+    # --- The ones that lose money or leak data ---------------------------
+    if config.DEV_FAKE_CHECKOUT and live:
+        add("Simulated checkout", "fail",
+            "Enrollment is being handed out without payment.",
+            "Remove DEV_FAKE_CHECKOUT, or set it to 0.")
+    elif config.DEV_FAKE_CHECKOUT:
+        add("Simulated checkout", "warn", "On, but this is not a live URL.", "")
+    else:
+        add("Simulated checkout", "ok", "Off. Payment is required to enroll.")
+
+    if config.DEBUG and live:
+        add("Flask debug", "fail",
+            "Debug mode exposes an interactive console and full stack traces "
+            "to anyone who triggers an error.",
+            "Set FLASK_DEBUG=0 and redeploy.")
+    else:
+        add("Flask debug", "ok", "Off.")
+
+    if not config.SECRET_KEY_PROVIDED:
+        add("Session secret", "fail",
+            "No SECRET_KEY is set, so one is generated per process. Everyone "
+            "is signed out on every deploy, and sessions break entirely "
+            "across more than one worker.",
+            "Set SECRET_KEY to a long random string.")
+    else:
+        add("Session secret", "ok", "Set.")
+
+    if live and not config.APP_BASE_URL.startswith("https://"):
+        add("HTTPS", "fail",
+            "APP_BASE_URL is not https, so session cookies are not marked "
+            "Secure and HSTS is not sent.",
+            "Set APP_BASE_URL to the https address.")
+    else:
+        add("HTTPS", "ok", config.APP_BASE_URL)
+
+    # --- Payments ---------------------------------------------------------
+    if not config.STRIPE_SECRET_KEY:
+        add("Stripe key", "fail", "Not set, so the order page cannot take money.",
+            "Set STRIPE_SECRET_KEY.")
+    else:
+        add("Stripe key", "ok", "Set.")
+
+    if not config.STRIPE_WEBHOOK_SECRET:
+        add("Stripe webhook", "fail",
+            "Not set. The webhook refuses every call, so an order is only "
+            "marked paid if the client returns to the success page. Close the "
+            "tab after paying and the payment is never recorded.",
+            "Add an endpoint at /webhook/stripe in the Stripe dashboard and "
+            "put its signing secret in STRIPE_WEBHOOK_SECRET.")
+    else:
+        add("Stripe webhook", "ok", "Signing secret set.")
+
+    # --- Email ------------------------------------------------------------
+    if not mailer.ENABLED:
+        add("Email", "fail",
+            "No provider configured. Invites, password resets and case "
+            "updates are written to the log instead of being sent.",
+            "Set RESEND_API_KEY.")
+    else:
+        detail = "Provider configured."
+        if mailer.last_error:
+            detail += f" Last send failed: {mailer.last_error}"
+        add("Email", "warn" if mailer.last_error else "ok", detail,
+            "Verify the sending domain in Resend if sends are being rejected."
+            if mailer.last_error else "")
+
+    sender = config.MAIL_FROM.split("<")[-1].strip(">").strip()
+    if "@" in sender and not sender.endswith("@" + config.BRAND_DOMAIN):
+        add("Sending address", "warn",
+            f"{config.MAIL_FROM} is not on {config.BRAND_DOMAIN}, which "
+            f"usually means it cannot be authenticated for that domain.",
+            "Send from your own domain and verify it with your provider.")
+    else:
+        add("Sending address", "ok", config.MAIL_FROM)
+
+    # --- Compliance and storage ------------------------------------------
+    add("Company address", "ok" if config.COMPANY_ADDRESS else "fail",
+        config.COMPANY_ADDRESS or "Not set, and the contract has to carry it.",
+        "" if config.COMPANY_ADDRESS else "Set COMPANY_ADDRESS.")
+
+    writable = os.access(config.UPLOAD_DIR, os.W_OK)
+    add("Upload directory", "ok" if writable else "fail",
+        f"{config.UPLOAD_DIR} ({'writable' if writable else 'NOT writable'})",
+        "" if writable else "Check the mounted volume.")
+
+    on_volume = str(config.DB_PATH).startswith(("/data", "/mnt", "/var/lib"))
+    add("Database location", "ok" if on_volume else "warn",
+        str(config.DB_PATH) + ("" if on_volume else
+        " — this does not look like a mounted volume, so it may be wiped on "
+        "each deploy"),
+        "" if on_volume else "Point DB_PATH at the volume.")
+
+    add("Error reporting", "ok" if config.SENTRY_DSN else "warn",
+        "Sentry configured." if config.SENTRY_DSN else
+        "Not configured, so failures only appear in the server log.",
+        "" if config.SENTRY_DSN else "Optional: set SENTRY_DSN.")
+
+    counts = {
+        "fail": sum(1 for c in checks if c["state"] == "fail"),
+        "warn": sum(1 for c in checks if c["state"] == "warn"),
+    }
+    return render_template("admin/system.html", checks=checks, counts=counts)
+
+
 @app.post("/admin/team/invite")
 @require_admin
 def admin_team_invite():
