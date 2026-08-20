@@ -18,14 +18,17 @@ clickable offline. See config.py for every setting.
 from __future__ import annotations
 
 import hashlib
+import logging
 import os
 import re
 import secrets
+import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from flask import (Flask, abort, flash, g, jsonify, redirect, render_template,
-                   request, send_file, session, url_for)
+from flask import (Flask, Response, abort, flash, g, jsonify, redirect,
+                   render_template, request, send_file, session, url_for)
+from markupsafe import Markup, escape
 
 import config
 import db as database
@@ -33,6 +36,10 @@ import mailer
 from auth import (current_user, hash_password, is_admin, login_user,
                   logout_user, normalize_email, password_problem,
                   require_admin, require_login, valid_email, verify_password)
+import security
+from security import (audit, client_ip, clear_failures, consume_token,
+                      csrf_ok, csrf_token, issue_token, record_failure,
+                      retry_after_minutes, sweep_failures, throttled)
 from db import (CASE_STAGE_KEYS, CASE_STAGE_LABELS, CASE_STAGES, DOC_STATUSES,
                 DOCUMENT_TYPE_KEYS, DOCUMENT_TYPES, add_event,
                 document_status_for, get_db, row_to_dict, utcnow)
@@ -337,6 +344,81 @@ def site_webmanifest():
     })
 
 
+# ---------------------------------------------------------------------------
+# Logging and error reporting
+#
+# Stdout is where the platform collects logs from, so that is where these go.
+# Sentry is wired only if both the DSN and the package are present, so the
+# app boots identically with neither.
+# ---------------------------------------------------------------------------
+logging.basicConfig(
+    level=getattr(logging, config.LOG_LEVEL, logging.INFO),
+    format="%(asctime)s %(levelname)s %(name)s %(message)s",
+    stream=sys.stdout,
+)
+
+if config.SENTRY_DSN:
+    try:
+        import sentry_sdk
+        from sentry_sdk.integrations.flask import FlaskIntegration
+
+        sentry_sdk.init(
+            dsn=config.SENTRY_DSN,
+            integrations=[FlaskIntegration()],
+            # This application handles credit reports and Social Security
+            # proofs. Never let the reporter attach request bodies, headers or
+            # anything that could carry one.
+            send_default_pii=False,
+            max_request_body_size="never",
+            traces_sample_rate=0.0,
+        )
+        app.logger.info("sentry enabled")
+    except ImportError:
+        app.logger.warning("SENTRY_DSN is set but sentry-sdk is not installed")
+
+
+@app.before_request
+def _request_id():
+    """One short id per request, logged with any error and shown on the error
+    page, so a client can quote it and it can actually be found."""
+    g.request_id = secrets.token_hex(6)
+
+
+@app.before_request
+def _csrf_gate():
+    """Reject any unsafe request that does not carry this session's token.
+
+    Runs before every view, so a new form cannot be added without protection
+    by forgetting to decorate it: the default is to refuse.
+    """
+    if request.method in security.SAFE_METHODS:
+        return None
+    if request.endpoint in security.CSRF_EXEMPT_ENDPOINTS:
+        return None
+    if csrf_ok():
+        return None
+    app.logger.warning("csrf rejected: endpoint=%s ip=%s",
+                       request.endpoint, client_ip())
+    if request.accept_mimetypes.best == "application/json":
+        return jsonify({"error": "Session expired. Reload and try again."}), 400
+    return render_template("error.html", code=400,
+                           message="Your session expired while that form was "
+                                   "open. Go back, reload the page and try "
+                                   "again."), 400
+
+
+@app.context_processor
+def _csrf_field():
+    """`{{ csrf_field() }}` in any form. A helper rather than a raw token so a
+    template cannot half-implement it."""
+    def field():
+        return Markup(
+            '<input type="hidden" name="csrf_token" value="%s">'
+            % escape(csrf_token())
+        )
+    return {"csrf_field": field, "csrf_token": csrf_token}
+
+
 @app.after_request
 def _security_headers(resp):
     """Baseline headers on every response.
@@ -369,6 +451,48 @@ def _security_headers(resp):
         resp.headers.setdefault("Strict-Transport-Security",
                                 "max-age=31536000; includeSubDomains")
     return resp
+
+
+@app.get("/robots.txt")
+def robots():
+    """Marketing pages are fair game. Anything behind a login, and anything
+    that identifies a client, is not."""
+    lines = [
+        "User-agent: *",
+        "Disallow: /portal",
+        "Disallow: /admin",
+        "Disallow: /files",
+        "Disallow: /order/success",
+        "Disallow: /forgot-password",
+        "Disallow: /reset-password",
+        "Allow: /",
+        "",
+        f"Sitemap: {absolute_url(url_for('sitemap'))}",
+        "",
+    ]
+    return Response("\n".join(lines), mimetype="text/plain")
+
+
+@app.get("/sitemap.xml")
+def sitemap():
+    """Only pages a stranger can actually open, so search engines are never
+    pointed at something that will bounce them to a login."""
+    endpoints = [
+        ("landing", "1.0"), ("order_page", "0.9"), ("legal_index", "0.4"),
+        ("credit_file_rights", "0.5"), ("notice_of_cancellation", "0.5"),
+        ("agreement_preview", "0.4"), ("terms", "0.3"), ("privacy", "0.3"),
+        ("refunds", "0.3"), ("disclaimer", "0.3"), ("esign", "0.2"),
+        ("cookies", "0.2"), ("accessibility", "0.3"), ("state_disclosures", "0.3"),
+    ]
+    urls = "".join(
+        f"<url><loc>{escape(absolute_url(url_for(name)))}</loc>"
+        f"<priority>{pri}</priority></url>"
+        for name, pri in endpoints
+    )
+    xml = ('<?xml version="1.0" encoding="UTF-8"?>'
+           '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+           f"{urls}</urlset>")
+    return Response(xml, mimetype="application/xml")
 
 
 @app.get("/healthz")
@@ -622,6 +746,13 @@ def _mark_order_paid(order_id: int, payment_intent: str = "") -> dict | None:
     if user:
         mailer.send_welcome(user, money_filter(order["amount_cents"]))
         mailer.send_admin_new_client(user)
+        # Sent once, on the way in. Not a gate: a paying client is never
+        # locked out of their own file over an unread confirmation email.
+        if not user.get("email_verified_at"):
+            token = issue_token(conn, int(user["id"]), security.EMAIL_VERIFY)
+            conn.commit()
+            mailer.send_email_verification(
+                user, absolute_url(url_for("verify_email", token=token)))
     return row_to_dict(
         conn.execute("SELECT * FROM orders WHERE id = ?", (order_id,)).fetchone()
     )
@@ -739,21 +870,196 @@ def login():
 def login_submit():
     email = normalize_email(request.form.get("email"))
     password = request.form.get("password") or ""
-    row = get_db().execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+    conn = get_db()
+    ip = client_ip()
+
+    # Two counters, checked before the password is even looked at. The account
+    # counter stops someone grinding one inbox; the address counter stops
+    # someone spraying one password across many. Both are in the database, so
+    # a container restart does not hand an attacker a fresh budget.
+    for scope, key in (("login:email", email), ("login:ip", ip)):
+        if throttled(conn, scope, key):
+            sweep_failures(conn)
+            conn.commit()
+            audit("login.throttled", detail=f"{scope} {key}")
+            conn.commit()
+            wait = retry_after_minutes(scope)
+            resp = render_template(
+                "login.html", email=email,
+                error=f"Too many sign-in attempts. Try again in {wait} minutes, "
+                      f"or reset your password.",
+            )
+            return resp, 429
+
+    row = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
 
     if not row or not verify_password(password, row["password_hash"]):
+        record_failure(conn, "login:email", email)
+        record_failure(conn, "login:ip", ip)
+        audit("login.failed", detail=email, conn=conn)
+        sweep_failures(conn)
+        conn.commit()
         # Same message either way, so we don't confirm which emails have accounts.
         return render_template(
             "login.html", email=email,
             error="That email and password don't match an account.",
         ), 401
 
+    clear_failures(conn, "login:email", email)
     login_user(row["id"], row["email"], row["role"])
+    # A fresh CSRF token on privilege change, so a token captured before
+    # sign-in cannot be replayed against the session it becomes.
+    session.pop("_csrf", None)
+    audit("login.ok", actor=row_to_dict(row), conn=conn)
+    conn.commit()
+
     nxt = request.form.get("next") or request.args.get("next") or ""
     # Only ever redirect within this site.
     if nxt.startswith("/") and not nxt.startswith("//"):
         return redirect(nxt)
     return redirect(url_for("admin_clients") if row["role"] == "admin" else url_for("portal"))
+
+
+# ---------------------------------------------------------------------------
+# Password reset
+#
+# Before this existed there was no recovery path at all: a client who forgot
+# their password could not reach the documents they had already uploaded, and
+# no admin tool could help them.
+#
+# The responses are deliberately identical whether or not the address has an
+# account. A reset form that says "no such user" is an account enumerator, and
+# on a credit repair site the mere fact that an address has an account is
+# sensitive.
+# ---------------------------------------------------------------------------
+
+@app.get("/forgot-password")
+def forgot_password():
+    if current_user():
+        return redirect(url_for("portal"))
+    return render_template("forgot_password.html", sent=False, error=None, email="")
+
+
+@app.post("/forgot-password")
+def forgot_password_submit():
+    email = normalize_email(request.form.get("email"))
+    conn = get_db()
+    ip = client_ip()
+
+    def sent():
+        # Identical page whatever happened, including on throttle, so timing
+        # and content both stay uninformative.
+        return render_template("forgot_password.html", sent=True, error=None,
+                               email=email)
+
+    if not valid_email(email):
+        return render_template("forgot_password.html", sent=False, email=email,
+                               error="That email address doesn't look right."), 400
+
+    if throttled(conn, "reset:email", email) or throttled(conn, "reset:ip", ip):
+        audit("reset.throttled", detail=email, conn=conn)
+        conn.commit()
+        return sent()
+
+    record_failure(conn, "reset:email", email)
+    record_failure(conn, "reset:ip", ip)
+
+    row = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+    if row:
+        token = issue_token(conn, int(row["id"]), security.PASSWORD_RESET)
+        link = absolute_url(url_for("reset_password", token=token))
+        audit("reset.requested", target_user_id=int(row["id"]), conn=conn)
+        conn.commit()
+        mailer.send_password_reset(row_to_dict(row), link)
+    else:
+        conn.commit()
+    return sent()
+
+
+@app.get("/verify-email/<token>")
+def verify_email(token: str):
+    """Confirm the address is real and reachable.
+
+    Deliberately not a gate. Someone who has paid must never be locked out of
+    their own documents because a confirmation email went to spam; the point
+    is to catch a typo early, and to know which addresses we can trust for
+    case correspondence.
+    """
+    conn = get_db()
+    user_id = consume_token(conn, token, security.EMAIL_VERIFY)
+    if not user_id:
+        flash("That confirmation link has expired or has already been used.", "error")
+        return redirect(url_for("portal") if current_user() else url_for("login"))
+    conn.execute("UPDATE users SET email_verified_at = ? WHERE id = ?",
+                 (utcnow(), user_id))
+    audit("email.verified", target_user_id=user_id, conn=conn)
+    conn.commit()
+    flash("Thanks, your email address is confirmed.", "success")
+    return redirect(url_for("portal") if current_user() else url_for("login"))
+
+
+@app.post("/portal/verify-email/resend")
+@require_login
+def resend_verification():
+    user = current_user()
+    conn = get_db()
+    if not user.get("email_verified_at"):
+        token = issue_token(conn, int(user["id"]), security.EMAIL_VERIFY)
+        conn.commit()
+        mailer.send_email_verification(
+            user, absolute_url(url_for("verify_email", token=token)))
+    flash("Confirmation email sent. Check your inbox.", "success")
+    return redirect(url_for("portal"))
+
+
+@app.get("/reset-password/<token>")
+def reset_password(token: str):
+    # Validity is not checked here, only on submit. Checking on GET would burn
+    # the token when a mail client prefetches the link, which several do.
+    return render_template("reset_password.html", token=token, error=None)
+
+
+@app.post("/reset-password/<token>")
+def reset_password_submit(token: str):
+    password = request.form.get("password") or ""
+    confirm = request.form.get("password_confirm") or ""
+    conn = get_db()
+
+    def fail(message: str, code: int = 400):
+        return render_template("reset_password.html", token=token,
+                               error=message), code
+
+    if password != confirm:
+        return fail("Those two passwords don't match.")
+    problem = password_problem(password)
+    if problem:
+        return fail(problem)
+
+    user_id = consume_token(conn, token, security.PASSWORD_RESET)
+    if not user_id:
+        return fail("That reset link has expired or has already been used. "
+                    "Request a new one.", 410)
+
+    conn.execute(
+        "UPDATE users SET password_hash = ?, password_changed_at = ? WHERE id = ?",
+        (hash_password(password), utcnow(), user_id),
+    )
+    # Anyone holding an old session for this account loses it, which is the
+    # point of a reset when the reason for it is that someone else got in.
+    add_event(conn, user_id, title="Password changed",
+              body="Your portal password was reset from the emailed link.",
+              created_by="client")
+    audit("reset.completed", target_user_id=user_id, conn=conn)
+    clear_failures(conn, "login:email", "")
+    conn.commit()
+
+    row = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+    if row:
+        clear_failures(conn, "login:email", row["email"])
+        conn.commit()
+    session.clear()
+    flash("Your password has been changed. Sign in with it now.", "success")
+    return redirect(url_for("login"))
 
 
 @app.get("/logout")
@@ -888,6 +1194,10 @@ def portal_delete_document(doc_id: int):
 
     (config.UPLOAD_DIR / row["stored_name"]).unlink(missing_ok=True)
     conn.execute("DELETE FROM documents WHERE id = ?", (doc_id,))
+    # The row is gone, so the audit line is the only remaining evidence the
+    # file ever existed. That is exactly why it is written.
+    audit("document.deleted", actor=user, target_user_id=int(user["id"]),
+          target_doc_id=doc_id, detail=row["original_name"], conn=conn)
     conn.commit()
     flash("Document removed.", "success")
     return redirect(url_for("portal_documents"))
@@ -926,6 +1236,11 @@ def download_document(doc_id: int):
     # a proxy, and it must never be framed by another site.
     resp.headers["Cache-Control"] = "private, no-store"
     resp.headers["Content-Security-Policy"] = "sandbox; default-src 'none'"
+    # These files are government IDs, Social Security proofs and full credit
+    # reports. Who opened whose, and when, has to have an answer.
+    audit("document.viewed", actor=user, target_user_id=int(row["user_id"]),
+          target_doc_id=doc_id, detail=row["original_name"])
+    get_db().commit()
     return resp
 
 
@@ -1036,6 +1351,9 @@ def admin_client_detail(user_id: int):
         "SELECT * FROM case_events WHERE user_id = ? ORDER BY created_at DESC, id DESC",
         (user_id,),
     ).fetchall()]
+    audit("admin.client_opened", actor=current_user(), target_user_id=user_id,
+          conn=conn)
+    conn.commit()
     return render_template(
         "admin/client_detail.html",
         client=client,
@@ -1043,6 +1361,27 @@ def admin_client_detail(user_id: int):
         events=events,
         checklist=document_status_for(conn, user_id),
     )
+
+
+@app.get("/admin/audit")
+@require_admin
+def admin_audit():
+    """The access trail, newest first.
+
+    Read-only on purpose: there is no route that edits or deletes a row here,
+    so an admin cannot quietly tidy up after themselves through the app.
+    """
+    conn = get_db()
+    who = (request.args.get("client") or "").strip()
+    sql = ("SELECT a.*, u.first_name, u.last_name, u.email AS target_email "
+           "FROM audit_log a LEFT JOIN users u ON u.id = a.target_user_id ")
+    params: list = []
+    if who.isdigit():
+        sql += "WHERE a.target_user_id = ? "
+        params.append(int(who))
+    sql += "ORDER BY a.created_at DESC, a.id DESC LIMIT 300"
+    entries = [dict(r) for r in conn.execute(sql, params).fetchall()]
+    return render_template("admin/audit.html", entries=entries, who=who)
 
 
 @app.post("/admin/clients/<int:user_id>/stage")
@@ -1057,6 +1396,8 @@ def admin_set_stage(user_id: int):
               title=f"Case moved to {CASE_STAGE_LABELS[stage]}",
               stage=stage,
               created_by=current_user()["email"])
+    audit("admin.stage_changed", actor=current_user(), target_user_id=user_id,
+          detail=stage, conn=conn)
     conn.commit()
     flash("Stage updated.", "success")
     return redirect(url_for("admin_client_detail", user_id=user_id))
@@ -1073,6 +1414,8 @@ def admin_add_event(user_id: int):
     conn = get_db()
     add_event(conn, user_id, title=title, body=body,
               created_by=current_user()["email"])
+    audit("admin.event_posted", actor=current_user(), target_user_id=user_id,
+          detail=title, conn=conn)
     conn.commit()
     flash("Update posted to the client's timeline.", "success")
     return redirect(url_for("admin_client_detail", user_id=user_id))
@@ -1093,6 +1436,9 @@ def admin_document_status(doc_id: int):
         "UPDATE documents SET status = ?, review_note = ?, reviewed_at = ? WHERE id = ?",
         (status, note, utcnow(), doc_id),
     )
+    audit("admin.document_reviewed", actor=current_user(),
+          target_user_id=int(row["user_id"]), target_doc_id=doc_id,
+          detail=status, conn=conn)
     if status == "rejected":
         label = next((d["label"] for d in DOCUMENT_TYPES
                       if d["key"] == row["doc_type"]), row["doc_type"])
@@ -1126,9 +1472,14 @@ def too_large(_e):
 
 @app.errorhandler(500)
 def server_error(_e):  # pragma: no cover
-    app.logger.exception("unhandled error")
+    # request_id is attached by the logging setup below, so the line the
+    # operator finds in the logs and the line shown to the visitor can be
+    # matched up without guessing.
+    app.logger.exception("unhandled error rid=%s path=%s",
+                         getattr(g, "request_id", "-"), request.path)
     return render_template("error.html", code=500,
-                           message="Something went wrong on our end."), 500
+                           message="Something went wrong on our end.",
+                           request_id=getattr(g, "request_id", None)), 500
 
 
 # ---------------------------------------------------------------------------

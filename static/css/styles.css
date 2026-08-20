@@ -1130,6 +1130,11 @@ table.data tbody tr:hover { background: rgba(19, 100, 223, .04); }
     var(--bg);
 }
 .centered-card { width: 100%; max-width: 440px; }
+/* The radial wash behind these pages is darker than --bg, which is what
+   --text-faint was validated against: on this background it lands at 4.47:1,
+   just under AA. The muted tone clears it at 5.6:1, so small print here uses
+   that rather than getting a one-off colour of its own. */
+.centered-page .faint { color: var(--text-muted); }
 
 /* --- Scroll reveal ------------------------------------------------------
    Markup ships in its finished state. Script adds .reveal-init only once it

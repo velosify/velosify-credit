@@ -27,6 +27,7 @@
         {% endif %}
 
         <form method="post" action="{{ url_for('order_submit') }}" data-guard class="card" data-reveal>
+          {{ csrf_field() }}
           <div class="field-row">
             <div class="field">
               <label for="first_name">First name</label>

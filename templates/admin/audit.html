@@ -1,0 +1,58 @@
+{% extends "base_app.html" %}
+{% block title %}Audit log | {{ cfg.BRAND_NAME }}{% endblock %}
+
+{% block body %}
+<div class="row-between" style="margin-bottom:20px">
+  <div>
+    <h1 style="font-size:1.5rem;margin-bottom:4px">Audit log</h1>
+    <p class="small muted mb-0">
+      Who signed in, who opened which client's documents, and every change an
+      admin made. Newest first, last 300 entries.
+    </p>
+  </div>
+  {% if who %}
+    <a class="btn btn-ghost btn-sm" href="{{ url_for('admin_audit') }}">Show everything</a>
+  {% endif %}
+</div>
+
+{#  There is deliberately no way to edit or delete from here. An access trail
+    an admin can tidy up is not a trail. #}
+{% if not entries %}
+  <div class="card"><p class="small muted mb-0">Nothing recorded yet.</p></div>
+{% else %}
+  <div class="table-wrap">
+    <table class="data">
+      <thead>
+        <tr>
+          <th>When</th><th>Who</th><th>Did what</th><th>To whom</th><th>Detail</th><th>From</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in entries %}
+          <tr>
+            <td class="nowrap">{{ e.created_at | datetime }}</td>
+            <td>
+              {% if e.actor_email %}
+                {{ e.actor_email }}
+                {% if e.actor_role == 'admin' %}<span class="badge badge-accent">admin</span>{% endif %}
+              {% else %}
+                <span class="faint">anonymous</span>
+              {% endif %}
+            </td>
+            <td class="nowrap"><code>{{ e.action }}</code></td>
+            <td>
+              {% if e.target_user_id %}
+                <a href="{{ url_for('admin_client_detail', user_id=e.target_user_id) }}">
+                  {{ (e.first_name ~ ' ' ~ e.last_name) | trim or e.target_email or ('#' ~ e.target_user_id) }}
+                </a>
+              {% else %}—{% endif %}
+            </td>
+            <td class="small">{{ e.detail or '—' }}</td>
+            <td class="small faint nowrap">{{ e.ip or '—' }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endif %}
+{% endblock %}

@@ -32,6 +32,7 @@
       {% endif %}
 
       <form method="post" action="{{ url_for('login_submit') }}" data-guard>
+        {{ csrf_field() }}
         <input type="hidden" name="next" value="{{ request.args.get('next', '') }}">
 
         <div class="field">
@@ -56,9 +57,7 @@
         <a href="{{ url_for('order_page') }}" style="text-decoration:underline">Start here</a>
       </p>
       <p class="tiny faint text-center" style="margin:8px 0 0">
-        Forgotten your password? Email
-        <a href="mailto:{{ cfg.SUPPORT_EMAIL }}" style="text-decoration:underline">{{ cfg.SUPPORT_EMAIL }}</a>
-        and we'll reset it.
+        <a href="{{ url_for('forgot_password') }}" style="text-decoration:underline">Forgotten your password?</a>
       </p>
     </div>
   </div>

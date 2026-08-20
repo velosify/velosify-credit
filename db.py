@@ -127,6 +127,8 @@ CREATE TABLE IF NOT EXISTS users (
     case_stage          TEXT    NOT NULL DEFAULT 'intake',
     created_at          TEXT    NOT NULL,
     last_login_at       TEXT,
+    email_verified_at   TEXT,
+    password_changed_at TEXT,
     -- Agreement acceptance is recorded at order time and never edited.
     -- These three columns together are the audit trail.
     agreement_signed_at TEXT,
@@ -178,6 +180,53 @@ CREATE TABLE IF NOT EXISTS case_events (
     created_by TEXT    NOT NULL DEFAULT 'system'
 );
 CREATE INDEX IF NOT EXISTS idx_events_user ON case_events(user_id, created_at);
+
+-- Single-use, expiring tokens for password reset and email confirmation.
+-- Only the SHA-256 of the token is stored: a stolen database backup must not
+-- hand anyone a working reset link.
+CREATE TABLE IF NOT EXISTS auth_tokens (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    kind       TEXT    NOT NULL,          -- 'password_reset' | 'email_verify'
+    token_hash TEXT    NOT NULL UNIQUE,
+    created_at TEXT    NOT NULL,
+    expires_at TEXT    NOT NULL,
+    used_at    TEXT,
+    request_ip TEXT    NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_tokens_user ON auth_tokens(user_id, kind);
+
+-- Failure counting for throttling. Rows are written for failures only, and
+-- swept once they age out, so this stays small. It lives in the database
+-- rather than in memory because a process restart must not reset a
+-- brute-force counter to zero.
+CREATE TABLE IF NOT EXISTS auth_failures (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    scope      TEXT    NOT NULL,          -- 'login:email' | 'login:ip' | 'reset:email' | 'reset:ip'
+    key        TEXT    NOT NULL,
+    created_at TEXT    NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_failures ON auth_failures(scope, key, created_at);
+
+-- Who did what, to whose file. Documents here are government IDs, Social
+-- Security proofs and full credit reports, so "which admin opened this and
+-- when" is a question that has to have an answer.
+CREATE TABLE IF NOT EXISTS audit_log (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_at     TEXT    NOT NULL,
+    actor_user_id  INTEGER,              -- null for anonymous or system
+    actor_email    TEXT    NOT NULL DEFAULT '',
+    actor_role     TEXT    NOT NULL DEFAULT '',
+    action         TEXT    NOT NULL,
+    target_user_id INTEGER,
+    target_doc_id  INTEGER,
+    detail         TEXT    NOT NULL DEFAULT '',
+    ip             TEXT    NOT NULL DEFAULT '',
+    user_agent     TEXT    NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_log(created_at);
+CREATE INDEX IF NOT EXISTS idx_audit_target ON audit_log(target_user_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_audit_actor ON audit_log(actor_user_id, created_at);
 """
 
 
@@ -187,6 +236,8 @@ CREATE INDEX IF NOT EXISTS idx_events_user ON case_events(user_id, created_at);
 # column needs; the guard makes it a no-op on a database that already has it.
 _ADDED_COLUMNS = [
     ("users", "disclosure_ack_at", "TEXT"),
+    ("users", "email_verified_at", "TEXT"),
+    ("users", "password_changed_at", "TEXT"),
 ]
 
 

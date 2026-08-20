@@ -14,6 +14,13 @@
           <a class="btn btn-ghost" href="{{ url_for('portal') }}">My portal</a>
         {% endif %}
       </div>
+      {% if request_id %}
+        {#  Quotable. Support can find the exact log line from this rather
+            than asking the client to describe what happened. #}
+        <p class="tiny faint" style="margin:20px 0 0">
+          Reference <code>{{ request_id }}</code> &mdash; quote it if you write to us.
+        </p>
+      {% endif %}
     </div>
   </div>
 </section>

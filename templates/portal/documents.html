@@ -68,6 +68,7 @@
             {% if f.status != 'accepted' %}
               <form method="post" action="{{ url_for('portal_delete_document', doc_id=f.id) }}"
                     data-confirm="Remove {{ f.original_name }}?" style="margin:0">
+          {{ csrf_field() }}
                 <button class="btn btn-quiet btn-sm" type="submit" title="Remove">✕</button>
               </form>
             {% endif %}
@@ -81,6 +82,7 @@
 
     <form method="post" action="{{ url_for('portal_upload') }}"
           enctype="multipart/form-data" data-guard style="margin-top:16px">
+          {{ csrf_field() }}
       <input type="hidden" name="doc_type" value="{{ item.key }}">
       <label class="dropzone" tabindex="0">
         <input type="file" name="files" multiple

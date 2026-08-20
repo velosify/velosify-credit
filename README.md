@@ -126,6 +126,22 @@ everywhere automatically.
   `MAX_UPLOAD_MB` at the WSGI layer, before anything is written to disk.
 - Session cookies are HttpOnly, SameSite=Lax, and Secure when
   `APP_BASE_URL` is https.
+- Every unsafe request must carry this session's CSRF token. The check runs
+  in `before_request`, so a new form is protected by default rather than by
+  remembering to decorate it. The Stripe webhook is the one exemption; it
+  carries its own signature, which is stronger.
+- The Content-Type of an uploaded file is derived from its extension and
+  never read from the browser, and anything we would not render in place is
+  forced to download. Trusting the browser's header let a file named
+  `report.pdf` be served back as `text/html` and run as script on this
+  origin, in whatever session opened it.
+- Every response carries a CSP with no `unsafe-inline` for scripts,
+  `frame-ancestors 'none'`, nosniff, a referrer policy, and HSTS when
+  `APP_BASE_URL` is https.
+- Password reset tokens are single use, expire in an hour, supersede any
+  earlier one, and only their SHA-256 is stored, so a leaked backup contains
+  no working links. The reset page answers identically whether or not the
+  address has an account.
 - The Stripe webhook verifies the signature and refuses to run at all if
   `STRIPE_WEBHOOK_SECRET` isn't configured.
 - Simulated checkout can't switch itself on in production. It requires an
@@ -136,6 +152,45 @@ everywhere automatically.
   set `APP_BASE_URL` yet fails closed instead of giving the program away.
 
 ---
+
+## Backups
+
+Everything a client hands over lives in two places: rows in SQLite and files
+in the upload directory. A backup of one without the other restores nothing,
+so `backup.py` takes both into a single archive and then opens it to check.
+
+```bash
+python backup.py                  # write into ./backups, keep the last 14
+python backup.py --out /data/bk   # somewhere that survives a redeploy
+python backup.py --verify FILE    # open an old archive and count what is in it
+```
+
+The database is copied with SQLite's online backup API, not with `cp`. Copying
+a live SQLite file can capture a half-written transaction, and you find out
+when you try to restore, which is the worst possible moment.
+
+Run it on a schedule, and keep at least one copy somewhere that is not the
+same disk as the app. A backup that dies with the volume is not a backup.
+
+## Operations
+
+**Audit log.** `/admin/audit` records who signed in, who opened which client's
+documents, and every admin change. There is no route that edits or deletes an
+entry, so an admin cannot tidy up after themselves through the app. Given
+these files are government IDs and Social Security proofs, "who looked at
+this" needs an answer.
+
+**Error reporting.** Set `SENTRY_DSN` and install `sentry-sdk[flask]` to get
+unhandled errors reported. It is configured with `send_default_pii=False` and
+request bodies off, so a crash report can never carry a client's data. Without
+the DSN, errors log to stdout and nothing else changes. Every request gets a
+short id, printed with any error and shown on the error page, so a client can
+quote it.
+
+**Throttling.** Failed sign-ins and password reset requests are counted per
+account and per IP address, in the database rather than in memory, because a
+counter that resets when the container restarts is not a counter. Limits are
+in `security.py`.
 
 ## Before you take a real payment
 

@@ -25,6 +25,8 @@
     {% if is_admin %}
       <a class="side-link {{ 'active' if request.path.startswith('/admin/clients') }}"
          href="{{ url_for('admin_clients') }}"><span class="ico">◫</span> Clients</a>
+      <a class="side-link {{ 'active' if request.path.startswith('/admin/audit') }}"
+         href="{{ url_for('admin_audit') }}"><span class="ico">⧉</span> Audit log</a>
       <a class="side-link" href="{{ url_for('landing') }}"><span class="ico">↗</span> Public site</a>
     {% else %}
       <a class="side-link {{ 'active' if request.path == '/portal' }}"

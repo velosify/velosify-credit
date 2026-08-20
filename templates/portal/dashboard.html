@@ -14,6 +14,23 @@
   </p>
 </div>
 
+{#  A nudge, not a wall. Everything below stays usable whether or not the
+    address has been confirmed. #}
+{% if not user.email_verified_at %}
+  <div class="alert alert-warn" style="margin-bottom:24px">
+    <strong>Confirm your email.</strong> Case updates, dispute results and
+    your agreement all go to
+    <strong>{{ user.email }}</strong>. Click the link in the confirmation
+    message so we know it reaches you.
+    <form method="post" action="{{ url_for('resend_verification') }}"
+          style="display:inline">
+      {{ csrf_field() }}
+      <button class="btn btn-quiet btn-sm" type="submit"
+              style="padding:2px 6px;text-decoration:underline">Send it again</button>
+    </form>
+  </div>
+{% endif %}
+
 <!-- ---------- Case progress ---------- -->
 <div class="card" style="margin-bottom:24px">
   <div class="row-between" style="margin-bottom:20px">
@@ -105,8 +122,10 @@
         <p class="small muted mb-0">
           You may cancel without penalty until
           <strong style="color:var(--text)">{{ cancel_by | date }}</strong>.
-          Email <a href="mailto:{{ cfg.SUPPORT_EMAIL }}" style="text-decoration:underline">{{ cfg.SUPPORT_EMAIL }}</a>
-          and we'll refund you in full.
+          Email <a href="mailto:{{ cfg.SUPPORT_EMAIL }}?subject=Cancellation" style="text-decoration:underline">{{ cfg.SUPPORT_EMAIL }}</a>,
+          or use the
+          <a href="{{ url_for('notice_of_cancellation') }}" style="text-decoration:underline">cancellation form</a>.
+          Either way you get a full refund, and you do not have to tell us why.
         </p>
       </div>
     {% endif %}

@@ -72,6 +72,51 @@ def send_welcome(user: dict, order_amount_label: str) -> None:
     )
 
 
+def send_password_reset(user: dict, link: str) -> None:
+    """The reset link, and nothing else.
+
+    No account details, no name beyond the first, and an explicit line telling
+    someone who did not ask for it that they need do nothing. Reset mail is
+    the message most likely to land in the wrong inbox, so it carries as
+    little as it can.
+    """
+    first = user.get("first_name") or "there"
+    send_email(
+        to=user["email"],
+        subject=f"Reset your {config.BRAND_NAME} password",
+        text=(
+            f"Hi {first},\n\n"
+            "Someone asked to reset the password on this account. If that was "
+            "you, use the link below. It works once and expires in one hour.\n\n"
+            f"{link}\n\n"
+            "If it wasn't you, you don't need to do anything: your password "
+            "has not changed and this link will expire on its own. If you get "
+            f"several of these, tell us at {config.SUPPORT_EMAIL}.\n\n"
+            "We will never ask you for your password, and we will never ask "
+            "you to send it by email.\n\n"
+            f"The {config.BRAND_NAME} team"
+        ),
+    )
+
+
+def send_email_verification(user: dict, link: str) -> None:
+    first = user.get("first_name") or "there"
+    send_email(
+        to=user["email"],
+        subject=f"Confirm your email for {config.BRAND_NAME}",
+        text=(
+            f"Hi {first},\n\n"
+            "Please confirm this is the right address for your case updates. "
+            "Everything about your file is sent here, so a typo means you "
+            "would miss it.\n\n"
+            f"{link}\n\n"
+            "If you did not enroll with us, ignore this message and nothing "
+            "further will be sent.\n\n"
+            f"The {config.BRAND_NAME} team"
+        ),
+    )
+
+
 def send_admin_new_client(user: dict) -> None:
     name = f"{user.get('first_name','')} {user.get('last_name','')}".strip() or user["email"]
     send_email(

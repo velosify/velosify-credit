@@ -141,3 +141,10 @@ def _env_json_list(name: str) -> list:
 
 
 STATE_REGISTRATIONS = _env_json_list("STATE_REGISTRATIONS")
+
+# --- Observability --------------------------------------------------------
+# Optional. With SENTRY_DSN set and sentry-sdk installed, unhandled errors are
+# reported; without either, the app logs to stdout exactly as before. Nothing
+# here is required to boot.
+SENTRY_DSN = _env("SENTRY_DSN")
+LOG_LEVEL = _env("LOG_LEVEL", "INFO").upper()
