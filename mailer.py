@@ -196,6 +196,31 @@ def send_admin_invite(user: dict, link: str, invited_by: str) -> bool:
     )
 
 
+def send_client_activation(user: dict, link: str) -> bool:
+    """For a client enrolled by an administrator rather than through checkout.
+
+    Says plainly that no payment is being asked for, because an unexpected
+    email about a credit account is exactly the shape of a scam, and a client
+    who suspects one is right to.
+    """
+    first = user.get("first_name") or "there"
+    return send_email(
+        to=user["email"],
+        subject=f"Your {config.BRAND_NAME} account is ready",
+        text=(
+            f"Hi {first},\n\n"
+            f"We have set up your {config.BRAND_NAME} account. Use the link "
+            "below to choose a password, read your credit file rights and "
+            "sign the service agreement. It takes about five minutes.\n\n"
+            f"{link}\n\n"
+            "You will not be asked to pay anything on that page. If you were "
+            "not expecting this email, ignore it and nothing further will "
+            f"happen, or tell us at {config.SUPPORT_EMAIL}.\n\n"
+            f"The {config.BRAND_NAME} team"
+        ),
+    )
+
+
 def send_admin_new_client(user: dict) -> bool:
     name = f"{user.get('first_name','')} {user.get('last_name','')}".strip() or user["email"]
     return send_email(

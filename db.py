@@ -150,7 +150,12 @@ CREATE TABLE IF NOT EXISTS orders (
     stripe_payment_intent TEXT,
     created_at           TEXT    NOT NULL,
     paid_at              TEXT,
-    refunded_at          TEXT
+    refunded_at          TEXT,
+    -- 'stripe' for a real checkout, 'admin' for an enrollment created by
+    -- hand. Kept because an order marked paid with no Stripe session behind
+    -- it is a question somebody will eventually have to answer.
+    source               TEXT    NOT NULL DEFAULT 'stripe',
+    note                 TEXT    NOT NULL DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS idx_orders_user ON orders(user_id);
 CREATE INDEX IF NOT EXISTS idx_orders_session ON orders(stripe_session_id);
@@ -238,6 +243,8 @@ _ADDED_COLUMNS = [
     ("users", "disclosure_ack_at", "TEXT"),
     ("users", "email_verified_at", "TEXT"),
     ("users", "password_changed_at", "TEXT"),
+    ("orders", "source", "TEXT NOT NULL DEFAULT 'stripe'"),
+    ("orders", "note", "TEXT NOT NULL DEFAULT ''"),
 ]
 
 

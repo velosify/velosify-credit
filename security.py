@@ -72,10 +72,14 @@ def client_ip() -> str:
 PASSWORD_RESET = "password_reset"
 EMAIL_VERIFY = "email_verify"
 ADMIN_INVITE = "admin_invite"
+CLIENT_ACTIVATE = "client_activate"
 
 # The invite window is long enough to survive a weekend and short enough that
 # a forgotten invite in an old mailbox is not a standing back door.
-_TOKEN_TTL_HOURS = {PASSWORD_RESET: 1, EMAIL_VERIFY: 168, ADMIN_INVITE: 72}
+_TOKEN_TTL_HOURS = {PASSWORD_RESET: 1, EMAIL_VERIFY: 168, ADMIN_INVITE: 72,
+                    # A client has to read a contract before signing it, so
+                    # this one is measured in days rather than hours.
+                    CLIENT_ACTIVATE: 336}
 
 
 def _hash_token(token: str) -> str:
@@ -102,6 +106,25 @@ def issue_token(conn: sqlite3.Connection, user_id: int, kind: str) -> str:
          _ahead(hours=_TOKEN_TTL_HOURS.get(kind, 1)), client_ip()),
     )
     return token
+
+
+def peek_token(conn: sqlite3.Connection, token: str, kind: str) -> int | None:
+    """Who a token belongs to, without spending it.
+
+    Needed when a form has to be validated against the account before the
+    token is burned: checking a typed signature against the right name, for
+    instance. A failed validation must leave the link usable.
+    """
+    if not token:
+        return None
+    row = conn.execute(
+        "SELECT user_id, expires_at, used_at FROM auth_tokens "
+        "WHERE token_hash = ? AND kind = ?",
+        (_hash_token(token), kind),
+    ).fetchone()
+    if not row or row["used_at"] or row["expires_at"] < utcnow():
+        return None
+    return int(row["user_id"])
 
 
 def consume_token(conn: sqlite3.Connection, token: str, kind: str) -> int | None:

@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}Activate your account | {{ cfg.BRAND_NAME }}{% endblock %}
+{% block head %}<meta name="robots" content="noindex">{% endblock %}
+
+{% block body %}
+{#  The counterpart to an admin-created enrollment. Payment has been handled
+    elsewhere, but the Credit Repair Organizations Act still wants the credit
+    file rights disclosure delivered before signing, a written contract, and
+    the cancellation notice, so all three are here in the same order the paid
+    checkout puts them. #}
+<section class="section-tight">
+  <div class="container container-form">
+    <div class="text-center" style="margin-bottom:26px">
+      <h1 style="font-size:clamp(1.7rem,3.4vw,2.3rem)">Activate your account</h1>
+      <p class="lead lead-center mb-0">
+        Choose a password and sign your agreement. Nothing to pay here.
+      </p>
+    </div>
+
+    {% if error %}
+      <div class="alert alert-error">
+        {{ error }}
+        {% if '410' in error or 'expired' in error %}
+          <div style="margin-top:10px">
+            Email <a href="mailto:{{ cfg.SUPPORT_EMAIL }}" style="text-decoration:underline">{{ cfg.SUPPORT_EMAIL }}</a>
+            and we'll send a new one.
+          </div>
+        {% endif %}
+      </div>
+    {% endif %}
+
+    <form method="post" action="{{ url_for('activate_client', token=token) }}"
+          data-guard class="card">
+      {{ csrf_field() }}
+
+      <div class="field">
+        <label for="password">Choose a password</label>
+        <input class="input" id="password" name="password" type="password"
+               required minlength="10" autocomplete="new-password" autofocus>
+        <div class="hint">At least 10 characters.</div>
+      </div>
+      <div class="field">
+        <label for="password_confirm">Type it again</label>
+        <input class="input" id="password_confirm" name="password_confirm"
+               type="password" required minlength="10" autocomplete="new-password">
+      </div>
+
+      <hr style="border:0;border-top:1px solid var(--border);margin:26px 0">
+
+      <div class="field">
+        <label>Before you sign: your credit file rights</label>
+        <div class="alert alert-info" style="margin-bottom:12px">
+          Federal law requires us to give you a written statement of your
+          credit file rights before you sign anything. It is short, and it is
+          the honest version of what any company in this industry can and
+          cannot do for you.
+          <a href="{{ url_for('credit_file_rights') }}" target="_blank"
+             style="text-decoration:underline">Read it now, in a new tab</a>.
+        </div>
+        <label class="check">
+          <input type="checkbox" name="accept_disclosure" value="yes" required>
+          <span>
+            I have received and read the
+            <a href="{{ url_for('credit_file_rights') }}" target="_blank"
+               style="text-decoration:underline">Consumer Credit File Rights</a>
+            disclosure.
+          </span>
+        </label>
+      </div>
+
+      <hr style="border:0;border-top:1px solid var(--border);margin:26px 0">
+
+      <div class="field">
+        <label>Service agreement</label>
+        <div class="agreement-scroll">
+          {% include "legal/_agreement_body.html" %}
+        </div>
+        <div class="hint">
+          <a href="{{ url_for('agreement_preview') }}" target="_blank"
+             style="text-decoration:underline">Open the full agreement in a new tab</a>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="check">
+          <input type="checkbox" name="accept_agreement" value="yes" required>
+          <span>
+            I have read and agree to the service agreement, the
+            <a href="{{ url_for('terms') }}" target="_blank" style="text-decoration:underline">terms of service</a>,
+            the
+            <a href="{{ url_for('privacy') }}" target="_blank" style="text-decoration:underline">privacy policy</a>
+            and the
+            <a href="{{ url_for('esign') }}" target="_blank" style="text-decoration:underline">consent to electronic records and signatures</a>.
+            I understand I may cancel within {{ cfg.CANCELLATION_DAYS }} business days for a full refund.
+          </span>
+        </label>
+      </div>
+
+      {#  15 U.S.C. 1679d(b)(4): this wording, in bold, next to the signature. #}
+      <p class="croa-bold sign-notice">
+        You may cancel this contract without penalty or obligation at any time
+        before midnight of the 3rd business day after the date on which you
+        signed the contract. See the attached
+        <a href="{{ url_for('notice_of_cancellation') }}" target="_blank">notice
+        of cancellation form</a> for an explanation of this right.
+      </p>
+
+      <div class="field">
+        <label for="signature">Electronic signature</label>
+        <input class="input" id="signature" name="signature" required
+               placeholder="Type your full name" autocomplete="off">
+        <div class="hint">Type your full name exactly as we have it on file.</div>
+      </div>
+
+      <button class="btn btn-primary btn-lg btn-block" type="submit"
+              data-busy="Activating…">Activate my account</button>
+    </form>
+  </div>
+</section>
+{% endblock %}

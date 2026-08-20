@@ -13,6 +13,47 @@
   </p>
 </div>
 
+{% if activation_link %}
+  <div class="notice-strong">
+    <h3>A fresh link, but the email didn't go out</h3>
+    <p>
+      We could not deliver it to <strong>{{ client.email }}</strong>
+      {% if mail_error %}({{ mail_error }}){% endif %}. Send them this instead.
+    </p>
+    <p class="strong">
+      Treat it like a password. Whoever opens it sets the password on this
+      account.
+    </p>
+    <div class="token-box">{{ activation_link }}</div>
+    <p class="small faint mb-0">
+      Shown once. Leave this page and you will need to send another.
+    </p>
+  </div>
+{% endif %}
+
+{#  An account that exists but has never been signed for is a client sitting
+    on a link they may never have received. It should be visible on the file
+    rather than deduced from an empty document list. #}
+{% if not client.agreement_signed_at %}
+  <div class="card" style="margin-bottom:18px;border-left:3px solid var(--warn)">
+    <div class="row-between" style="gap:14px;flex-wrap:wrap">
+      <div>
+        <div class="card-title mb-0">Waiting on activation</div>
+        <p class="small muted mb-0" style="margin-top:4px">
+          They have not set a password or signed the agreement yet, so they
+          cannot sign in. Sending again issues a new link and retires the old.
+        </p>
+      </div>
+      <form method="post"
+            action="{{ url_for('admin_client_resend_activation', user_id=client.id) }}">
+        {{ csrf_field() }}
+        <button class="btn btn-quiet btn-sm" type="submit"
+                data-busy="Sending…">Send their link again</button>
+      </form>
+    </div>
+  </div>
+{% endif %}
+
 <div class="grid portal-split" id="admin-grid">
 
   <!-- ---------- Left: documents ---------- -->
@@ -152,6 +193,13 @@
               <span class="badge badge-warn">Pending</span>
             {% endif %}
           </div>
+          {#  An order marked paid with no Stripe session behind it needs to
+              say so on the file, not only in the audit log. #}
+          {% if o.source == 'admin' %}
+            <p class="tiny faint" style="margin:0 0 8px">
+              Enrolled by an administrator{% if o.note %} &mdash; {{ o.note }}{% endif %}
+            </p>
+          {% endif %}
         {% endfor %}
       {% else %}
         <p class="small muted mb-0">No orders on file.</p>

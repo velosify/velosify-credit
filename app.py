@@ -1072,13 +1072,15 @@ def reset_password_submit(token: str):
               body="Your portal password was reset from the emailed link.",
               created_by="client")
     audit("reset.completed", target_user_id=user_id, conn=conn)
-    clear_failures(conn, "login:email", "")
-    conn.commit()
-
-    row = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+    # Lift any lockout on the way out. Six wrong guesses bars the address for
+    # fifteen minutes, and forgetting a password is exactly what produces
+    # those guesses, so a reset that left the bar in place would look to the
+    # client like the new password not working either.
+    row = conn.execute("SELECT email FROM users WHERE id = ?",
+                       (user_id,)).fetchone()
     if row:
         clear_failures(conn, "login:email", row["email"])
-        conn.commit()
+    conn.commit()
     session.clear()
     flash("Your password has been changed. Sign in with it now.", "success")
     return redirect(url_for("login"))
@@ -1359,6 +1361,17 @@ def admin_clients():
 @app.get("/admin/clients/<int:user_id>")
 @require_admin
 def admin_client_detail(user_id: int):
+    return _client_detail_page(user_id)
+
+
+def _client_detail_page(user_id: int, activation_link: str | None = None,
+                        mail_error: str = ""):
+    """One renderer for the client file.
+
+    Takes the activation link as an argument for the same reason the team page
+    does: when the email cannot be delivered the operator still needs the link,
+    and it only exists in memory for the length of this request.
+    """
     conn = get_db()
     client = row_to_dict(
         conn.execute("SELECT * FROM users WHERE id = ? AND role = 'client'",
@@ -1382,7 +1395,242 @@ def admin_client_detail(user_id: int):
         orders=orders,
         events=events,
         checklist=document_status_for(conn, user_id),
+        activation_link=activation_link,
+        mail_error=mail_error,
     )
+
+
+@app.post("/admin/clients/<int:user_id>/resend-activation")
+@require_admin
+def admin_client_resend_activation(user_id: int):
+    """A fresh activation link for a client who never used the first one.
+
+    Not literally a resend: only the hash of the original is stored, so this
+    mints a new link and retires the old one.
+    """
+    actor = current_user()
+    conn = get_db()
+    row = conn.execute("SELECT * FROM users WHERE id = ? AND role = 'client'",
+                       (user_id,)).fetchone()
+    if not row:
+        abort(404)
+    if row["agreement_signed_at"]:
+        flash(f"{row['email']} has already signed and activated. If they can't "
+              f"get in, send them to the password reset page instead.", "error")
+        return redirect(url_for("admin_client_detail", user_id=user_id))
+
+    token = issue_token(conn, user_id, security.CLIENT_ACTIVATE)
+    audit("client.activation_resent", actor=actor, target_user_id=user_id,
+          detail=row["email"], conn=conn)
+    conn.commit()
+
+    link = absolute_url(url_for("activate_client", token=token))
+    if mailer.send_client_activation(row_to_dict(row), link):
+        flash(f"A fresh activation link is on its way to {row['email']}.",
+              "success")
+        return redirect(url_for("admin_client_detail", user_id=user_id))
+    return _client_detail_page(user_id, activation_link=link,
+                               mail_error=mailer.last_error)
+
+
+# ---------------------------------------------------------------------------
+# Enrolling a client by hand
+#
+# For someone who paid by cheque, transfer or in person, for a comped account,
+# and for staff testing. The paywall is skipped; the law is not. A client
+# enrolled this way still has to be given the credit file rights disclosure
+# and still has to sign the agreement, because neither obligation is about how
+# the money arrived. They do that on the activation link, which is also where
+# they choose their own password.
+# ---------------------------------------------------------------------------
+
+ENROLL_REASONS = [
+    ("paid_other", "Paid by another method"),
+    ("comped",     "Complimentary"),
+    ("reenroll",   "Re-enrolling an earlier client"),
+    ("staff_test", "Staff or testing account"),
+]
+ENROLL_REASON_LABELS = dict(ENROLL_REASONS)
+
+
+@app.get("/admin/clients/new")
+@require_admin
+def admin_client_new():
+    return render_template("admin/client_new.html", reasons=ENROLL_REASONS,
+                           form={}, error=None, link=None)
+
+
+@app.post("/admin/clients/new")
+@require_admin
+def admin_client_create():
+    actor = current_user()
+    form = {
+        "first_name": (request.form.get("first_name") or "").strip()[:60],
+        "last_name": (request.form.get("last_name") or "").strip()[:60],
+        "email": normalize_email(request.form.get("email")),
+        "phone": (request.form.get("phone") or "").strip()[:40],
+        "reason": (request.form.get("reason") or "").strip(),
+        "amount": (request.form.get("amount") or "").strip(),
+        "note": (request.form.get("note") or "").strip()[:300],
+    }
+    conn = get_db()
+
+    def fail(message: str):
+        return render_template("admin/client_new.html", reasons=ENROLL_REASONS,
+                               form=form, error=message, link=None), 400
+
+    if not form["first_name"] or not form["last_name"]:
+        return fail("Enter the client's first and last name.")
+    if not valid_email(form["email"]):
+        return fail("That email address doesn't look right.")
+    if form["reason"] not in ENROLL_REASON_LABELS:
+        return fail("Pick a reason. It goes in the record, and the record is "
+                    "the point.")
+
+    existing = conn.execute("SELECT * FROM users WHERE email = ?",
+                            (form["email"],)).fetchone()
+    if existing:
+        if existing["role"] == "admin":
+            return fail(f"{form['email']} is an administrator. Use a separate "
+                        f"address so the two roles stay apart.")
+        if _paid_order(existing["id"]):
+            return fail(f"{form['email']} is already enrolled.")
+
+    # Amount is recorded, not charged. Zero is a legitimate answer for a
+    # comped account and is stored as such rather than as the list price.
+    try:
+        amount_cents = int(round(float(form["amount"] or 0) * 100))
+    except ValueError:
+        return fail("Enter the amount as a number, or 0 if nothing was paid.")
+    if amount_cents < 0:
+        return fail("The amount can't be negative.")
+
+    if existing:
+        user_id = int(existing["id"])
+        conn.execute(
+            "UPDATE users SET first_name = ?, last_name = ?, phone = ? WHERE id = ?",
+            (form["first_name"], form["last_name"], form["phone"], user_id),
+        )
+    else:
+        # Unknown to everyone, including us. The account cannot be signed into
+        # until the client sets a password through the link.
+        cur = conn.execute(
+            "INSERT INTO users (email, password_hash, first_name, last_name, "
+            "phone, role, case_stage, created_at) "
+            "VALUES (?, ?, ?, ?, ?, 'client', 'intake', ?)",
+            (form["email"], hash_password(secrets.token_urlsafe(48)),
+             form["first_name"], form["last_name"], form["phone"], utcnow()),
+        )
+        user_id = int(cur.lastrowid)
+
+    detail = ENROLL_REASON_LABELS[form["reason"]]
+    if form["note"]:
+        detail += f" — {form['note']}"
+    conn.execute(
+        "INSERT INTO orders (user_id, amount_cents, currency, status, "
+        "created_at, paid_at, source, note) "
+        "VALUES (?, ?, ?, 'paid', ?, ?, 'admin', ?)",
+        (user_id, amount_cents, config.CURRENCY, utcnow(), utcnow(), detail),
+    )
+    add_event(conn, user_id,
+              title="Enrollment created",
+              body=f"Enrolled by {actor['email']}. {detail}",
+              stage="intake", created_by=actor["email"])
+    token = issue_token(conn, user_id, security.CLIENT_ACTIVATE)
+    audit("client.enrolled_by_admin", actor=actor, target_user_id=user_id,
+          detail=f"{form['email']} — {detail} — "
+                 f"{money_filter(amount_cents)} recorded", conn=conn)
+    conn.commit()
+
+    client = row_to_dict(conn.execute("SELECT * FROM users WHERE id = ?",
+                                      (user_id,)).fetchone())
+    link = absolute_url(url_for("activate_client", token=token))
+    sent = mailer.send_client_activation(client, link)
+    if sent:
+        flash(f"{form['email']} is enrolled. They have been emailed a link to "
+              f"set a password and sign the agreement.", "success")
+        return redirect(url_for("admin_client_detail", user_id=user_id))
+
+    # Same fallback as an admin invite: the account exists either way, so give
+    # the operator the link rather than leaving them to guess.
+    return render_template("admin/client_new.html", reasons=ENROLL_REASONS,
+                           form={}, error=None, link=link,
+                           link_email=form["email"],
+                           mail_error=mailer.last_error)
+
+
+@app.get("/activate/<token>")
+def activate_client(token: str):
+    """Set a password, read the disclosure, sign the agreement.
+
+    Validity is not checked on GET, so a mail client prefetching the link
+    cannot burn it before the client has read anything.
+    """
+    return render_template("activate.html", token=token, error=None)
+
+
+@app.post("/activate/<token>")
+def activate_client_submit(token: str):
+    password = request.form.get("password") or ""
+    confirm = request.form.get("password_confirm") or ""
+    signature = (request.form.get("signature") or "").strip()
+    conn = get_db()
+
+    def fail(message: str, code: int = 400):
+        return render_template("activate.html", token=token,
+                               error=message), code
+
+    if request.form.get("accept_disclosure") != "yes":
+        return fail("Please confirm you have read your credit file rights. "
+                    "Federal law requires that disclosure before you sign.")
+    if request.form.get("accept_agreement") != "yes":
+        return fail("You'll need to accept the service agreement to continue.")
+    if password != confirm:
+        return fail("Those two passwords don't match.")
+    problem = password_problem(password)
+    if problem:
+        return fail(problem)
+
+    # Check the signature against THIS token's account before burning it, so a
+    # typo does not cost the client their only link.
+    pending = security.peek_token(conn, token, security.CLIENT_ACTIVATE)
+    if pending:
+        who = conn.execute("SELECT first_name, last_name FROM users WHERE id = ?",
+                           (pending,)).fetchone()
+        expected = f"{who['first_name']} {who['last_name']}".strip()
+        if signature.lower() != expected.lower():
+            return fail(f"Type your full name exactly as “{expected}” to sign.")
+
+    user_id = consume_token(conn, token, security.CLIENT_ACTIVATE)
+    if not user_id:
+        return fail("That link has expired or has already been used. Ask us "
+                    "for a new one.", 410)
+
+    conn.execute(
+        "UPDATE users SET password_hash = ?, password_changed_at = ?, "
+        "agreement_signed_at = ?, agreement_name = ?, agreement_ip = ?, "
+        "disclosure_ack_at = ?, email_verified_at = ?, case_stage = 'documents' "
+        "WHERE id = ?",
+        (hash_password(password), utcnow(), utcnow(), signature, client_ip(),
+         utcnow(), utcnow(), user_id),
+    )
+    add_event(conn, user_id, title="Agreement signed",
+              body="Signed electronically when the account was activated.",
+              stage="documents", created_by="client")
+    audit("client.activated", target_user_id=user_id, detail=signature, conn=conn)
+    # A client who was told their account was ready may well have tried to
+    # sign in before opening the link, and six failures bars the address for
+    # fifteen minutes. Clear that here, or activating would appear to have
+    # done nothing.
+    row = conn.execute("SELECT email FROM users WHERE id = ?",
+                       (user_id,)).fetchone()
+    if row:
+        clear_failures(conn, "login:email", row["email"])
+    conn.commit()
+
+    session.clear()
+    flash("You're all set. Sign in and upload your documents.", "success")
+    return redirect(url_for("login"))
 
 
 @app.get("/admin/audit")

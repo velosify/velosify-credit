@@ -866,6 +866,31 @@ p  { margin: 0 0 1em; }
   gap: 24px;
 }
 
+/* Used where an operation half-succeeded and the operator has to act: the
+   account exists, the email did not go. Loud enough not to be scrolled past.
+   ------------------------------------------------------------------------ */
+.notice-strong {
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--warn);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  padding: 22px 24px;
+  margin-bottom: 22px;
+}
+.notice-strong h3 { font-size: 1.05rem; margin-bottom: 10px; }
+.notice-strong p { font-size: .9rem; color: var(--text-muted); }
+.token-box {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  padding: 12px 14px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: .82rem;
+  /* A URL is one unbreakable token; without this it widens the page. */
+  overflow-wrap: anywhere;
+  user-select: all;
+  margin-bottom: 10px;
+}
+
 /* --- Portal chrome on a phone -------------------------------------------
    Both of these are display:none until the mobile breakpoint switches them
    on, so a wide screen keeps the sidebar and never renders either.

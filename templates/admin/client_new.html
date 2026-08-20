@@ -1,0 +1,116 @@
+{% extends "base_app.html" %}
+{% block title %}Add a client | {{ cfg.BRAND_NAME }} admin{% endblock %}
+
+{% block body %}
+<div class="page-head">
+  <h1>Add a client</h1>
+  <p class="muted mb-0">
+    For someone who paid another way, a comped account, or a test. Skips
+    checkout, not the paperwork.
+  </p>
+</div>
+
+{% if link %}
+  {#  Same fallback as an admin invite. The account exists whether or not the
+      email went out, so hand over the link rather than leaving the operator
+      to wonder. #}
+  <div class="notice-strong">
+    <h3>Enrolled, but the email didn't go out</h3>
+    <p>
+      <strong>{{ link_email }}</strong> is set up and the enrollment is
+      recorded. We could not deliver their activation email
+      {% if mail_error %}({{ mail_error }}){% endif %}.
+      Send them this link instead. It works exactly like the emailed one.
+    </p>
+    <p class="strong">
+      Treat it like a password. Whoever opens it sets the password on that
+      account.
+    </p>
+    <div class="token-box">{{ link }}</div>
+    <p class="small faint mb-0">
+      This is the only time it is shown. Leave this page and you will need to
+      resend from their file.
+    </p>
+  </div>
+{% endif %}
+
+{% if error %}<div class="alert alert-error">{{ error }}</div>{% endif %}
+
+<div class="alert alert-info">
+  <strong>They still have to sign.</strong> The link they receive walks them
+  through the credit file rights disclosure and the service agreement before
+  it lets them in. Federal law requires both regardless of how the fee was
+  handled, so this creates the account without creating a compliance gap.
+</div>
+
+<form method="post" action="{{ url_for('admin_client_create') }}"
+      data-guard class="card" style="max-width:640px">
+  {{ csrf_field() }}
+
+  <div class="field-row">
+    <div class="field">
+      <label for="first_name">First name</label>
+      <input class="input" id="first_name" name="first_name" required
+             value="{{ form.first_name or '' }}">
+    </div>
+    <div class="field">
+      <label for="last_name">Last name</label>
+      <input class="input" id="last_name" name="last_name" required
+             value="{{ form.last_name or '' }}">
+    </div>
+  </div>
+
+  <div class="field">
+    <label for="email">Email address</label>
+    <input class="input" id="email" name="email" type="email" required
+           value="{{ form.email or '' }}">
+    <div class="hint">Their sign-in, and where the activation link goes.</div>
+  </div>
+
+  <div class="field">
+    <label for="phone">Phone number <span class="faint">(optional)</span></label>
+    <input class="input" id="phone" name="phone" type="tel"
+           value="{{ form.phone or '' }}">
+  </div>
+
+  <hr style="border:0;border-top:1px solid var(--border);margin:26px 0">
+
+  <div class="field">
+    <label for="reason">Why is this account being created?</label>
+    <select class="select" id="reason" name="reason" required>
+      <option value="">Choose one…</option>
+      {% for key, label in reasons %}
+        <option value="{{ key }}" {{ 'selected' if form.reason == key }}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    <div class="hint">
+      Recorded against the account and in the audit log. An order marked paid
+      with no payment behind it is a question somebody will eventually ask.
+    </div>
+  </div>
+
+  <div class="field">
+    <label for="amount">Amount actually collected</label>
+    <input class="input" id="amount" name="amount" type="number" step="0.01"
+           min="0" placeholder="0.00" value="{{ form.amount or '' }}">
+    <div class="hint">
+      In dollars. Enter 0 for a complimentary or test account. This records
+      what was taken; it does not charge anything.
+    </div>
+  </div>
+
+  <div class="field">
+    <label for="note">Note <span class="faint">(optional)</span></label>
+    <input class="input" id="note" name="note" maxlength="300"
+           placeholder="Cheque #1042, received 18 Aug"
+           value="{{ form.note or '' }}">
+  </div>
+
+  <button class="btn btn-primary btn-block" type="submit"
+          data-busy="Creating…">Create the account and send their link</button>
+</form>
+
+<p class="small faint mt-2" style="max-width:640px">
+  <a href="{{ url_for('admin_clients') }}" style="text-decoration:underline">Back to clients</a>
+</p>
+{% endblock %}

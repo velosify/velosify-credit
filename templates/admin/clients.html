@@ -2,10 +2,13 @@
 {% block title %}Clients | {{ cfg.BRAND_NAME }} admin{% endblock %}
 
 {% block body %}
-<div class="page-head">
-  <h1>Clients</h1>
-  <p class="muted mb-0">{{ clients | length }} client{{ '' if clients|length == 1 else 's' }}
-    {%- if q %} matching &ldquo;{{ q }}&rdquo;{% endif %}.</p>
+<div class="page-head row-between">
+  <div>
+    <h1>Clients</h1>
+    <p class="muted mb-0">{{ clients | length }} client{{ '' if clients|length == 1 else 's' }}
+      {%- if q %} matching &ldquo;{{ q }}&rdquo;{% endif %}.</p>
+  </div>
+  <a class="btn btn-primary btn-sm" href="{{ url_for('admin_client_new') }}">Add a client</a>
 </div>
 
 {% set unreviewed = clients | sum(attribute='unreviewed_count') %}
