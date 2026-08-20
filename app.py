@@ -1384,6 +1384,177 @@ def admin_audit():
     return render_template("admin/audit.html", entries=entries, who=who)
 
 
+# ---------------------------------------------------------------------------
+# Admin team
+#
+# Until now the only way to create an admin was a pair of environment
+# variables read at boot, which meant a second admin could not be added
+# without a redeploy, and meant somebody had to choose and transmit another
+# person's password.
+#
+# Nobody is ever sent a password here. An invite carries a single-use link,
+# the recipient chooses their own, and it is known only to them. That is both
+# safer and the only version that survives a "who knew this credential"
+# question later.
+# ---------------------------------------------------------------------------
+
+@app.get("/admin/team")
+@require_admin
+def admin_team():
+    conn = get_db()
+    admins = [dict(r) for r in conn.execute(
+        "SELECT id, email, first_name, last_name, created_at, last_login_at, "
+        "password_changed_at FROM users WHERE role = 'admin' ORDER BY created_at"
+    ).fetchall()]
+    pending = [dict(r) for r in conn.execute(
+        "SELECT t.expires_at, u.email FROM auth_tokens t "
+        "JOIN users u ON u.id = t.user_id "
+        "WHERE t.kind = ? AND t.used_at IS NULL AND t.expires_at > ? "
+        "ORDER BY t.created_at DESC",
+        (security.ADMIN_INVITE, utcnow()),
+    ).fetchall()]
+    return render_template("admin/team.html", admins=admins, pending=pending,
+                           error=None)
+
+
+@app.post("/admin/team/invite")
+@require_admin
+def admin_team_invite():
+    actor = current_user()
+    email = normalize_email(request.form.get("email"))
+    first = (request.form.get("first_name") or "").strip()[:60]
+    conn = get_db()
+
+    def fail(message: str):
+        admins = [dict(r) for r in conn.execute(
+            "SELECT id, email, first_name, last_name, created_at, last_login_at, "
+            "password_changed_at FROM users WHERE role = 'admin' ORDER BY created_at"
+        ).fetchall()]
+        return render_template("admin/team.html", admins=admins, pending=[],
+                               error=message), 400
+
+    if not valid_email(email):
+        return fail("That email address doesn't look right.")
+
+    row = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+    if row and row["role"] == "admin":
+        return fail(f"{email} is already an administrator.")
+    if row and _paid_order(row["id"]):
+        # Promoting a paying client would let them read every other client's
+        # file. If that is genuinely wanted it needs a separate account.
+        return fail(f"{email} is an enrolled client. Use a separate address "
+                    f"for an admin account so the two roles stay apart.")
+
+    if row:
+        user_id = int(row["id"])
+        conn.execute("UPDATE users SET role = 'admin' WHERE id = ?", (user_id,))
+    else:
+        # A password nobody knows, including us. The account cannot be signed
+        # into until the invitee sets one through the link.
+        unusable = hash_password(secrets.token_urlsafe(48))
+        cur = conn.execute(
+            "INSERT INTO users (email, password_hash, first_name, last_name, "
+            "role, case_stage, created_at) "
+            "VALUES (?, ?, ?, '', 'admin', 'intake', ?)",
+            (email, unusable, first or "Admin", utcnow()),
+        )
+        user_id = int(cur.lastrowid)
+
+    token = issue_token(conn, user_id, security.ADMIN_INVITE)
+    audit("admin.invited", actor=actor, target_user_id=user_id, detail=email,
+          conn=conn)
+    conn.commit()
+
+    invited = row_to_dict(conn.execute("SELECT * FROM users WHERE id = ?",
+                                       (user_id,)).fetchone())
+    mailer.send_admin_invite(
+        invited,
+        absolute_url(url_for("accept_invite", token=token)),
+        f"{actor.get('first_name') or 'An administrator'} ({actor['email']})",
+    )
+    flash(f"Invite sent to {email}. It expires in 72 hours.", "success")
+    return redirect(url_for("admin_team"))
+
+
+@app.post("/admin/team/<int:user_id>/revoke")
+@require_admin
+def admin_team_revoke(user_id: int):
+    actor = current_user()
+    conn = get_db()
+
+    if user_id == int(actor["id"]):
+        flash("You can't remove your own admin access.", "error")
+        return redirect(url_for("admin_team"))
+
+    remaining = conn.execute(
+        "SELECT COUNT(*) AS n FROM users WHERE role = 'admin'"
+    ).fetchone()["n"]
+    if remaining <= 1:
+        # Locking everyone out of the admin panel would need a redeploy to
+        # undo, so it is refused rather than confirmed.
+        flash("That's the last administrator. Add another before removing "
+              "this one.", "error")
+        return redirect(url_for("admin_team"))
+
+    row = conn.execute("SELECT * FROM users WHERE id = ? AND role = 'admin'",
+                       (user_id,)).fetchone()
+    if not row:
+        abort(404)
+
+    conn.execute("UPDATE users SET role = 'client' WHERE id = ?", (user_id,))
+    # Any invite they have not used yet dies with the access it was for.
+    conn.execute(
+        "UPDATE auth_tokens SET used_at = ? WHERE user_id = ? AND used_at IS NULL",
+        (utcnow(), user_id),
+    )
+    audit("admin.revoked", actor=actor, target_user_id=user_id,
+          detail=row["email"], conn=conn)
+    conn.commit()
+    flash(f"Admin access removed from {row['email']}.", "success")
+    return redirect(url_for("admin_team"))
+
+
+@app.get("/accept-invite/<token>")
+def accept_invite(token: str):
+    # Validity is checked on submit, not here: mail clients prefetch links,
+    # and burning the token on a prefetch would strand the invitee.
+    return render_template("accept_invite.html", token=token, error=None)
+
+
+@app.post("/accept-invite/<token>")
+def accept_invite_submit(token: str):
+    password = request.form.get("password") or ""
+    confirm = request.form.get("password_confirm") or ""
+    conn = get_db()
+
+    def fail(message: str, code: int = 400):
+        return render_template("accept_invite.html", token=token,
+                               error=message), code
+
+    if password != confirm:
+        return fail("Those two passwords don't match.")
+    problem = password_problem(password, admin=True)
+    if problem:
+        return fail(problem)
+
+    user_id = consume_token(conn, token, security.ADMIN_INVITE)
+    if not user_id:
+        return fail("That invite has expired or has already been used. Ask "
+                    "whoever invited you to send another.", 410)
+
+    conn.execute(
+        "UPDATE users SET password_hash = ?, password_changed_at = ?, "
+        "email_verified_at = ? WHERE id = ?",
+        (hash_password(password), utcnow(), utcnow(), user_id),
+    )
+    audit("admin.invite_accepted", target_user_id=user_id, conn=conn)
+    conn.commit()
+    session.clear()
+    flash("Your admin account is ready. Sign in with the password you just "
+          "chose.", "success")
+    return redirect(url_for("login"))
+
+
 @app.post("/admin/clients/<int:user_id>/stage")
 @require_admin
 def admin_set_stage(user_id: int):

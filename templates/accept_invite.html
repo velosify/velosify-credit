@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Set up your admin account | {{ cfg.BRAND_NAME }}{% endblock %}
+{% block head %}<meta name="robots" content="noindex">{% endblock %}
+
+{% block body %}
+<section class="centered-page">
+  <div class="centered-card">
+    <div class="text-center" style="margin-bottom:26px">
+      <h1 style="font-size:1.6rem">Set up your admin account</h1>
+      <p class="small muted mb-0">
+        Choose a password. Nobody else will know it, including whoever invited
+        you.
+      </p>
+    </div>
+
+    {% if error %}
+      <div class="alert alert-error">{{ error }}</div>
+    {% endif %}
+
+    <div class="alert alert-warn">
+      <strong>This account can read every client's file.</strong> That includes
+      government IDs, Social Security proofs and full credit reports, and every
+      document you open is logged against your name. Use a long, unique
+      password from a password manager, not one you use anywhere else.
+    </div>
+
+    <form method="post" action="{{ url_for('accept_invite', token=token) }}"
+          data-guard class="card">
+      {{ csrf_field() }}
+      <div class="field">
+        <label for="password">Password</label>
+        <input class="input" id="password" name="password" type="password"
+               required minlength="14" autocomplete="new-password" autofocus>
+        <div class="hint">
+          At least 14 characters. A passphrase of three or four unrelated
+          words beats anything short with symbols in it.
+        </div>
+      </div>
+      <div class="field">
+        <label for="password_confirm">Type it again</label>
+        <input class="input" id="password_confirm" name="password_confirm"
+               type="password" required minlength="14" autocomplete="new-password">
+      </div>
+      <button class="btn btn-primary btn-block" type="submit"
+              data-busy="Setting up…">Set my password</button>
+    </form>
+
+    <p class="tiny faint text-center mt-2">
+      Weren't expecting this? Don't use the link, and tell
+      <a href="mailto:{{ cfg.SUPPORT_EMAIL }}" style="text-decoration:underline">{{ cfg.SUPPORT_EMAIL }}</a>.
+    </p>
+  </div>
+</section>
+{% endblock %}

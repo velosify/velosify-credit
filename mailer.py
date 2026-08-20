@@ -117,6 +117,33 @@ def send_email_verification(user: dict, link: str) -> None:
     )
 
 
+def send_admin_invite(user: dict, link: str, invited_by: str) -> None:
+    """Invite to an admin account. Carries a link, never a password.
+
+    Nobody should ever be sent a password they did not choose, least of all
+    for an account that can open every client's Social Security proof. The
+    recipient sets their own, and it is known only to them.
+    """
+    send_email(
+        to=user["email"],
+        subject=f"You have been given admin access to {config.BRAND_NAME}",
+        text=(
+            f"{invited_by} has set up an administrator account for you on "
+            f"{config.BRAND_NAME}.\n\n"
+            "Set your password here. The link works once and expires in 72 "
+            "hours:\n\n"
+            f"{link}\n\n"
+            "This account can read every client's file, including government "
+            "IDs, Social Security proofs and full credit reports. Every "
+            "document you open is logged against your name. Please use a long, "
+            "unique password and a password manager.\n\n"
+            "If you were not expecting this, do not use the link, and tell "
+            f"{config.SUPPORT_EMAIL} straight away.\n\n"
+            f"The {config.BRAND_NAME} team"
+        ),
+    )
+
+
 def send_admin_new_client(user: dict) -> None:
     name = f"{user.get('first_name','')} {user.get('last_name','')}".strip() or user["email"]
     send_email(

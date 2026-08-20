@@ -71,8 +71,11 @@ def client_ip() -> str:
 
 PASSWORD_RESET = "password_reset"
 EMAIL_VERIFY = "email_verify"
+ADMIN_INVITE = "admin_invite"
 
-_TOKEN_TTL_HOURS = {PASSWORD_RESET: 1, EMAIL_VERIFY: 168}
+# The invite window is long enough to survive a weekend and short enough that
+# a forgotten invite in an old mailbox is not a standing back door.
+_TOKEN_TTL_HOURS = {PASSWORD_RESET: 1, EMAIL_VERIFY: 168, ADMIN_INVITE: 72}
 
 
 def _hash_token(token: str) -> str:

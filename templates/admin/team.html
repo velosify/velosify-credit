@@ -1,0 +1,104 @@
+{% extends "base_app.html" %}
+{% block title %}Team | {{ cfg.BRAND_NAME }} admin{% endblock %}
+
+{% block body %}
+<div class="page-head">
+  <h1>Team</h1>
+  <p class="muted mb-0">
+    Everyone who can open a client's file. Keep this list short.
+  </p>
+</div>
+
+{% if error %}
+  <div class="alert alert-error">{{ error }}</div>
+{% endif %}
+
+<div class="alert alert-info">
+  <strong>Admin accounts see everything.</strong> Government IDs, Social
+  Security proofs and full credit reports, for every client. Every document
+  opened is recorded in the <a href="{{ url_for('admin_audit') }}">audit log</a>
+  against the name that opened it.
+</div>
+
+<div class="table-wrap" style="margin-bottom:26px">
+  <table class="data">
+    <thead>
+      <tr><th>Administrator</th><th>Added</th><th>Last signed in</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for a in admins %}
+        <tr>
+          <td>
+            <div class="strong">{{ (a.first_name ~ ' ' ~ a.last_name) | trim or 'Admin' }}</div>
+            <div class="small muted">{{ a.email }}</div>
+          </td>
+          <td class="small nowrap">{{ a.created_at | date }}</td>
+          <td class="small nowrap">
+            {% if a.last_login_at %}
+              {{ a.last_login_at | datetime }}
+            {% else %}
+              <span class="faint">never</span>
+              {% if not a.password_changed_at %}
+                <span class="badge">invite pending</span>
+              {% endif %}
+            {% endif %}
+          </td>
+          <td style="text-align:right">
+            {% if a.id != user.id %}
+              {#  Confirmed, because this is not undoable from the other
+                  person's side: they lose access immediately. #}
+              <form method="post"
+                    action="{{ url_for('admin_team_revoke', user_id=a.id) }}"
+                    data-confirm="Remove admin access from {{ a.email }}?"
+                    style="display:inline">
+                {{ csrf_field() }}
+                <button class="btn btn-danger btn-sm" type="submit">Remove access</button>
+              </form>
+            {% else %}
+              <span class="small faint">you</span>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if pending %}
+  <div class="card card-pad-sm" style="margin-bottom:26px">
+    <div class="card-title" style="font-size:.95rem">Invites not yet used</div>
+    <ul class="feature-list">
+      {% for p in pending %}
+        <li><span class="tick">›</span> {{ p.email }} &mdash;
+          <span class="small muted">expires {{ p.expires_at | datetime }}</span></li>
+      {% endfor %}
+    </ul>
+  </div>
+{% endif %}
+
+<div class="card" style="max-width:560px">
+  <div class="card-title">Invite an administrator</div>
+  <p class="small muted">
+    They get a link and choose their own password. We never set one for them,
+    and no password is ever sent by email.
+  </p>
+  <form method="post" action="{{ url_for('admin_team_invite') }}" data-guard>
+    {{ csrf_field() }}
+    <div class="field">
+      <label for="first_name">First name</label>
+      <input class="input" id="first_name" name="first_name" autocomplete="off">
+    </div>
+    <div class="field">
+      <label for="email">Email address</label>
+      <input class="input" id="email" name="email" type="email" required
+             autocomplete="off">
+      <div class="hint">
+        Use a work address they control. The invite expires in 72 hours.
+      </div>
+    </div>
+    <button class="btn btn-primary" type="submit" data-busy="Sending…">
+      Send invite
+    </button>
+  </form>
+</div>
+{% endblock %}

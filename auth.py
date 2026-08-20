@@ -48,16 +48,58 @@ def verify_password(password: str, stored: str) -> bool:
         return False
 
 
-def password_problem(password: str) -> str | None:
+# Patterns that keep turning up at the top of every breach corpus. Matched
+# after stripping the decoration people add to satisfy a composition rule,
+# because "Password1!" and "password" are the same guess to anyone running a
+# wordlist. This is not a substitute for a real breach-corpus check; it is the
+# floor.
+_WEAK_ROOTS = {
+    "password", "passw0rd", "letmein", "welcome", "qwerty", "qwertyuiop",
+    "iloveyou", "admin", "administrator", "changeme", "monkey", "dragon",
+    "sunshine", "princess", "football", "baseball", "trustno", "abc",
+    "test", "temp", "secret", "master", "login", "starwars", "superman",
+    "velosify", "velosifycredit", "credit", "creditrepair",
+}
+
+
+def _weak_root(password: str) -> bool:
+    """Strip the theatre and see what is actually left.
+
+    Order matters here. The decoration people bolt on to satisfy a
+    composition rule comes off FIRST, and only then are leetspeak swaps undone
+    inside what remains. Doing it the other way round turns the trailing "1!"
+    of "Password1!" into letters and the root stops matching, which is exactly
+    the case this is for.
+    """
+    cleaned = password.lower().strip("0123456789!@#$%^&*()_+-=.,?/\\|~`'\"[]{}<>: ")
+    for a, b in (("@", "a"), ("0", "o"), ("1", "l"), ("3", "e"),
+                 ("4", "a"), ("$", "s"), ("5", "s"), ("7", "t")):
+        cleaned = cleaned.replace(a, b)
+    cleaned = cleaned.strip("0123456789!@#$%^&*()_+-=.,?")
+    return cleaned in _WEAK_ROOTS
+
+
+def password_problem(password: str, *, admin: bool = False) -> str | None:
     """Return a human-readable reason the password is unacceptable, or None.
 
-    Deliberately minimal: length is the rule that actually correlates with
-    strength, and composition rules mostly push people toward Passw0rd!.
+    Length does most of the work; composition rules mostly push people toward
+    Passw0rd!, which is why the weak-root check exists instead.
+
+    Admin accounts are held to a longer minimum. One admin password is the
+    single credential standing in front of every client's government ID,
+    Social Security proof and full credit file, so it should not be the same
+    bar as a personal login.
     """
-    if len(password) < 10:
-        return "Password must be at least 10 characters."
-    if password.lower() in {"password12", "1234567890", "velosify12"}:
-        return "That password is too easy to guess."
+    floor = 14 if admin else 10
+    if len(password) < floor:
+        return (f"Admin passwords must be at least {floor} characters."
+                if admin else
+                f"Password must be at least {floor} characters.")
+    if _weak_root(password):
+        return ("That is one of the most commonly guessed passwords, even "
+                "with the numbers and symbols. Please choose another.")
+    if len(set(password)) < 5:
+        return "That password repeats too few characters to be worth much."
     return None
 
 
