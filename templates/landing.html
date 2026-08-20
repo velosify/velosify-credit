@@ -41,7 +41,7 @@
 <section class="section section-alt" id="bureaus">
   <div class="container">
     <div class="text-center" style="margin-bottom:52px">
-      <h2>Three bureaus, worked at the same time</h2>
+      <h2>Three bureaus, working at the same time</h2>
       <p class="lead lead-center">
         TransUnion, Equifax and Experian each keep their own file on you, and
         they rarely match. An item deleted at one can still be sitting at the
@@ -49,34 +49,44 @@
       </p>
     </div>
 
+    {#  The three logo files share one 377x128 canvas, each positioned so the
+        lettering sits on a common baseline at a common x-height. That is why
+        they can carry identical dimensions here: the alignment is baked into
+        the images, so the row reads level without per-logo nudging. #}
     {% set bureaus = [
-      ('TransUnion', 'transunion', 392, 102, 512, 806, 0,   177.49, 82.10, 20.11),
-      ('Equifax',    'equifax',    450,  81, 527, 818, 180, 178.67, 87.46, 14.62),
-      ('Experian',   'experian',   315, 102, 504, 801, 360, 176.89, 79.90, 22.39)
+      ('TransUnion', 'transunion', 512, 806, 0,   177.49, 82.10, 20.11),
+      ('Equifax',    'equifax',    527, 818, 180, 178.67, 87.46, 14.62),
+      ('Experian',   'experian',   504, 801, 360, 176.89, 79.90, 22.39)
     ] %}
 
     <div class="gauge-grid">
-      {% for name, slug, lw, lh, from_score, to_score, delay, bx, by, dashoff in bureaus %}
+      {% for name, slug, from_score, to_score, delay, bx, by, dashoff in bureaus %}
         <article class="gauge is-good"
                  data-gauge
                  data-from="{{ from_score }}"
                  data-to="{{ to_score }}"
                  data-delay="{{ delay }}">
-          <svg class="gauge-dial" viewBox="0 0 200 118" role="img"
-               aria-label="{{ name }} score rising from {{ from_score }} to {{ to_score }} in this illustration">
-            <path class="gauge-track" d="M 20 102 A 80 80 0 0 1 180 102"/>
-            <path class="gauge-arc" d="M 20 102 A 80 80 0 0 1 180 102"
-                  stroke-dasharray="251.33" stroke-dashoffset="{{ dashoff }}"/>
-            <circle class="gauge-halo" cx="{{ bx }}" cy="{{ by }}" r="15"/>
-            <circle class="gauge-bubble" cx="{{ bx }}" cy="{{ by }}" r="8.5"/>
-          </svg>
-
-          <div class="gauge-readout">
-            <span class="gauge-score" data-gauge-score aria-hidden="true">{{ to_score }}</span>
-            <img class="gauge-logo gauge-logo-{{ slug }}"
-                 src="{{ url_for('static', filename='img/bureaus/' ~ slug ~ '.png') }}"
-                 alt="{{ name }}" width="{{ lw }}" height="{{ lh }}" loading="lazy">
+          <div class="gauge-dial">
+            <svg viewBox="0 0 200 118" role="img"
+                 aria-label="{{ name }} score rising from {{ from_score }} to {{ to_score }} in this illustration">
+              <path class="gauge-track" d="M 20 102 A 80 80 0 0 1 180 102"/>
+              <path class="gauge-arc" d="M 20 102 A 80 80 0 0 1 180 102"
+                    stroke-dasharray="251.33" stroke-dashoffset="{{ dashoff }}"/>
+              <circle class="gauge-halo" cx="{{ bx }}" cy="{{ by }}" r="15"/>
+              <circle class="gauge-bubble" cx="{{ bx }}" cy="{{ by }}" r="8.5"/>
+              {#  The reading lives inside the SVG so it scales with the dial
+                  at every card width, and sits exactly on the arc's centre
+                  line. role="img" above already hides it from assistive
+                  tech, which is what we want for a number that never stops
+                  changing. #}
+              <text class="gauge-score" data-gauge-score
+                    x="100" y="82" text-anchor="middle" font-size="40">{{ to_score }}</text>
+            </svg>
           </div>
+
+          <img class="gauge-logo"
+               src="{{ url_for('static', filename='img/bureaus/' ~ slug ~ '.png') }}"
+               alt="{{ name }}" width="377" height="128" loading="lazy">
         </article>
       {% endfor %}
     </div>

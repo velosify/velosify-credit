@@ -449,6 +449,7 @@ p  { margin: 0 0 1em; }
   margin: 0 auto;
   opacity: var(--gauge-fade);
 }
+.gauge-dial > svg { display: block; width: 100%; height: auto; }
 
 .gauge-track,
 .gauge-arc {
@@ -466,51 +467,39 @@ p  { margin: 0 0 1em; }
 }
 .gauge-halo { opacity: .16; transition: fill .45s ease; }
 
-.gauge-readout {
-  display: block;
-  margin-top: 4px;
-  opacity: var(--gauge-fade);
-}
+/* An SVG <text> node, so the reading scales with the dial and stays centred
+   in the arc at any card width. Size and placement are in the viewBox. */
 .gauge-score {
-  display: block;
-  font-size: clamp(2.4rem, 4.4vw, 3.1rem);
   font-weight: 800;
-  line-height: 1;
-  letter-spacing: -.02em;
+  letter-spacing: -.6px;
   font-variant-numeric: tabular-nums;
-  transition: color .45s ease;
+  transition: fill .45s ease;
 }
-/* The three wordmarks have very different proportions, so each is fitted
-   inside one shared box rather than given a shared height. Equifax is the
-   widest and lands width-limited; the other two land height-limited. */
+
+/* All three files share one canvas with the lettering already sat on a
+   common baseline at a common x-height, so one width lines the row up. */
 .gauge-logo {
-  width: auto;
+  display: block;
+  width: min(170px, 100%);
   height: auto;
-  max-width: 152px;
-  max-height: 34px;
-  margin: 14px auto 0;
-  object-fit: contain;
+  margin: 16px auto 0;
 }
-/* Experian's mark includes decorative squares above and below the word, so
-   fitting it to the same box leaves the lettering visibly smaller than the
-   other two. Given a little more room, all three read at the same weight. */
-.gauge-logo-experian { max-height: 42px; }
 
 /* Bands. Under 620 poor, 620 to 739 fair, 740 and up good. */
 .gauge.is-poor .gauge-arc,
 .gauge.is-poor .gauge-bubble { stroke: #d92d4e; }
 .gauge.is-poor .gauge-halo   { fill:   #d92d4e; }
-.gauge.is-poor .gauge-score  { color:  #c11f3c; }
+.gauge.is-poor .gauge-score  { fill:   #c11f3c; }
 
 .gauge.is-fair .gauge-arc,
 .gauge.is-fair .gauge-bubble { stroke: #c07600; }
 .gauge.is-fair .gauge-halo   { fill:   #c07600; }
-.gauge.is-fair .gauge-score  { color:  #9a5a00; }
+.gauge.is-fair .gauge-score  { fill:   #9a5a00; }
 
 .gauge.is-good .gauge-arc,
 .gauge.is-good .gauge-bubble { stroke: #0f9f68; }
 .gauge.is-good .gauge-halo   { fill:   #0f9f68; }
-.gauge.is-good .gauge-score  { color:  #07734a; }
+.gauge.is-good .gauge-score  { fill:   #07734a; }
 
 .gauge-note {
   margin: 28px 0 0;
@@ -1082,11 +1071,20 @@ table.data tbody tr:hover { background: rgba(19, 100, 223, .04); }
 }
 
 @media (max-width: 620px) {
-  /* Three dials across a phone leaves each one too small to read. Stacked,
-     each keeps a legible number and the climb is still obvious. */
-  .gauge-grid { grid-template-columns: 1fr; gap: 16px; }
-  .gauge { padding: 20px 18px 18px; }
-  .gauge-dial { width: min(240px, 100%); }
+  /* The three stay side by side on a phone, so the comparison still reads as
+     one row. Everything inside sizes off the card, so tightening the padding
+     and the gap is all that is needed to keep them legible. */
+  .gauge-grid { gap: 8px; }
+  .gauge { padding: 14px 8px 12px; }
+  .gauge-dial { width: 100%; }
+  .gauge-logo { margin-top: 10px; }
+  .gauge-note { margin-top: 20px; font-size: .78rem; }
+}
+
+@media (max-width: 400px) {
+  /* Buy the cards back a few pixels each rather than shrinking the dials. */
+  .gauge-grid { gap: 6px; }
+  .gauge { padding: 12px 6px 10px; }
 }
 
 @media (max-width: 560px) {
