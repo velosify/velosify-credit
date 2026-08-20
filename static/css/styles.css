@@ -480,15 +480,21 @@ p  { margin: 0 0 1em; }
   font-variant-numeric: tabular-nums;
   transition: color .45s ease;
 }
-.gauge-name {
-  display: block;
-  margin-top: 10px;
-  font-size: .82rem;
-  font-weight: 700;
-  letter-spacing: .12em;
-  text-transform: uppercase;
-  color: var(--text-muted);
+/* The three wordmarks have very different proportions, so each is fitted
+   inside one shared box rather than given a shared height. Equifax is the
+   widest and lands width-limited; the other two land height-limited. */
+.gauge-logo {
+  width: auto;
+  height: auto;
+  max-width: 152px;
+  max-height: 34px;
+  margin: 14px auto 0;
+  object-fit: contain;
 }
+/* Experian's mark includes decorative squares above and below the word, so
+   fitting it to the same box leaves the lettering visibly smaller than the
+   other two. Given a little more room, all three read at the same weight. */
+.gauge-logo-experian { max-height: 42px; }
 
 /* Bands. Under 620 poor, 620 to 739 fair, 740 and up good. */
 .gauge.is-poor .gauge-arc,

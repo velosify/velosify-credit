@@ -217,7 +217,10 @@
     // Ease-out so the climb starts briskly and settles, the way a needle does.
     function ease(p) { return 1 - Math.pow(1 - p, 3); }
 
-    function paint(d, score, fade) {
+    function paint(d, raw, fade) {
+      // Band off the number the visitor can actually read, not the raw value.
+      // Rounding first stops a frame at 619.6 from showing "620" in red.
+      var score = Math.round(raw);
       var t = (score - MIN) / (MAX - MIN);
       if (t < 0) t = 0; else if (t > 1) t = 1;
 
@@ -229,7 +232,7 @@
       d.bubble.setAttribute("cy", y);
       if (d.halo) { d.halo.setAttribute("cx", x); d.halo.setAttribute("cy", y); }
 
-      d.score.textContent = Math.round(score);
+      d.score.textContent = score;
 
       var band = bandFor(score);
       if (band !== d.band) {

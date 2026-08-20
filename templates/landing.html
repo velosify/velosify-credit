@@ -50,13 +50,13 @@
     </div>
 
     {% set bureaus = [
-      ('TransUnion', 512, 806, 0,   177.49, 82.10, 20.11),
-      ('Equifax',    527, 818, 180, 178.67, 87.46, 14.62),
-      ('Experian',   504, 801, 360, 176.89, 79.90, 22.39)
+      ('TransUnion', 'transunion', 392, 102, 512, 806, 0,   177.49, 82.10, 20.11),
+      ('Equifax',    'equifax',    450,  81, 527, 818, 180, 178.67, 87.46, 14.62),
+      ('Experian',   'experian',   315, 102, 504, 801, 360, 176.89, 79.90, 22.39)
     ] %}
 
     <div class="gauge-grid">
-      {% for name, from_score, to_score, delay, bx, by, dashoff in bureaus %}
+      {% for name, slug, lw, lh, from_score, to_score, delay, bx, by, dashoff in bureaus %}
         <article class="gauge is-good"
                  data-gauge
                  data-from="{{ from_score }}"
@@ -73,7 +73,9 @@
 
           <div class="gauge-readout">
             <span class="gauge-score" data-gauge-score aria-hidden="true">{{ to_score }}</span>
-            <span class="gauge-name">{{ name }}</span>
+            <img class="gauge-logo gauge-logo-{{ slug }}"
+                 src="{{ url_for('static', filename='img/bureaus/' ~ slug ~ '.png') }}"
+                 alt="{{ name }}" width="{{ lw }}" height="{{ lh }}" loading="lazy">
           </div>
         </article>
       {% endfor %}
@@ -82,6 +84,9 @@
     <p class="gauge-note">
       Illustration only. Score movement depends entirely on what is actually
       on your file, and no honest company can promise you a number.
+      TransUnion, Equifax and Experian are trademarks of their respective
+      owners, shown here only to identify the bureaus we file disputes with.
+      {{ cfg.BRAND_NAME }} is not affiliated with or endorsed by any of them.
     </p>
   </div>
 </section>
