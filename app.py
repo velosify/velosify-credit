@@ -18,7 +18,6 @@ clickable offline. See config.py for every setting.
 from __future__ import annotations
 
 import hashlib
-import mimetypes
 import os
 import re
 import secrets
@@ -251,8 +250,35 @@ def _store_upload(file_storage, user_id: int) -> tuple[str, int, str]:
     dest = config.UPLOAD_DIR / stored_name
     file_storage.save(str(dest))
     size = dest.stat().st_size
-    mime = file_storage.mimetype or mimetypes.guess_type(stored_name)[0] or "application/octet-stream"
+    # Derived from the extension we already allow-listed, never from the
+    # browser's Content-Type. That header is set by whoever is uploading, and
+    # storing it meant a file called report.pdf could be handed back as
+    # text/html and run as script on our own origin.
+    mime = mime_for_ext(ext)
     return stored_name, size, mime
+
+
+# The only Content-Type any stored document is ever served with. Keyed on the
+# extension allow-list in config, so adding an extension there without adding
+# it here degrades to a download rather than to a guess.
+_EXT_MIME = {
+    ".pdf":  "application/pdf",
+    ".png":  "image/png",
+    ".jpg":  "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".heic": "image/heic",
+    ".webp": "image/webp",
+    ".doc":  "application/msword",
+    ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+}
+
+# Types a browser may render in place. Anything else is sent as a download, so
+# an unexpected type can never execute in our origin.
+_INLINE_SAFE = {"application/pdf", "image/png", "image/jpeg", "image/webp"}
+
+
+def mime_for_ext(ext: str) -> str:
+    return _EXT_MIME.get((ext or "").lower(), "application/octet-stream")
 
 
 def _cancellation_deadline(order: dict | None) -> str | None:
@@ -309,6 +335,40 @@ def site_webmanifest():
              "sizes": "512x512", "type": "image/png"},
         ],
     })
+
+
+@app.after_request
+def _security_headers(resp):
+    """Baseline headers on every response.
+
+    The CSP is tight because it can be: there is not a single inline <script>
+    in the templates, every script is a file under /static, and the only third
+    party the pages touch is Google Fonts. Inline STYLE is allowed because a
+    handful of templates use style attributes; inline script is not, which is
+    the half that matters.
+    """
+    resp.headers.setdefault("X-Content-Type-Options", "nosniff")
+    resp.headers.setdefault("X-Frame-Options", "DENY")
+    resp.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    resp.headers.setdefault("Permissions-Policy",
+                            "geolocation=(), microphone=(), camera=(), payment=()")
+    resp.headers.setdefault("Content-Security-Policy", "; ".join([
+        "default-src 'self'",
+        "script-src 'self'",
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+        "font-src 'self' https://fonts.gstatic.com",
+        "img-src 'self' data:",
+        "form-action 'self'",
+        "frame-ancestors 'none'",
+        "base-uri 'none'",
+        "object-src 'none'",
+    ]))
+    # Only meaningful over TLS, and only correct once the site really is
+    # HTTPS-only, which APP_BASE_URL tells us.
+    if config.APP_BASE_URL.startswith("https://"):
+        resp.headers.setdefault("Strict-Transport-Security",
+                                "max-age=31536000; includeSubDomains")
+    return resp
 
 
 @app.get("/healthz")
@@ -848,13 +908,25 @@ def download_document(doc_id: int):
     path = config.UPLOAD_DIR / row["stored_name"]
     if not path.exists():
         abort(404)
-    return send_file(
+
+    # Recomputed here rather than read from the row, so documents stored
+    # before the upload path stopped trusting the browser are served safely
+    # too. Anything we would not render in place is forced to download.
+    mime = mime_for_ext(os.path.splitext(row["stored_name"])[1])
+    resp = send_file(
         str(path),
-        mimetype=row["mime_type"] or "application/octet-stream",
-        as_attachment=request.args.get("download") == "1",
+        mimetype=mime,
+        as_attachment=(request.args.get("download") == "1"
+                       or mime not in _INLINE_SAFE),
         download_name=row["original_name"],
         max_age=0,
     )
+    resp.headers["X-Content-Type-Options"] = "nosniff"
+    # A document is somebody's ID or credit file. It must never be cached by
+    # a proxy, and it must never be framed by another site.
+    resp.headers["Cache-Control"] = "private, no-store"
+    resp.headers["Content-Security-Policy"] = "sandbox; default-src 'none'"
+    return resp
 
 
 @app.get("/portal/account")
