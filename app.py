@@ -282,6 +282,35 @@ def landing():
     return render_template("landing.html")
 
 
+@app.get("/favicon.ico")
+def favicon():
+    """Browsers request this path directly regardless of the <link> tags, so
+    serve it rather than logging a 404 on every first visit."""
+    return send_file(str(Path(app.static_folder) / "img" / "favicon.ico"),
+                     mimetype="image/x-icon")
+
+
+@app.get("/site.webmanifest")
+def site_webmanifest():
+    """Lets Android use the large icons when the site is added to a home
+    screen. Served from a route so it picks up the brand name and colours
+    from config instead of duplicating them in a static file."""
+    return jsonify({
+        "name": config.BRAND_NAME,
+        "short_name": config.BRAND_NAME,
+        "start_url": "/",
+        "display": "standalone",
+        "background_color": "#f6f9fd",
+        "theme_color": "#ffffff",
+        "icons": [
+            {"src": url_for("static", filename="img/favicon-192.png"),
+             "sizes": "192x192", "type": "image/png"},
+            {"src": url_for("static", filename="img/favicon-512.png"),
+             "sizes": "512x512", "type": "image/png"},
+        ],
+    })
+
+
 @app.get("/healthz")
 def healthz():
     return jsonify({"ok": True, "billing": config.BILLING_ENABLED})

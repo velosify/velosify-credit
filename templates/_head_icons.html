@@ -1,0 +1,10 @@
+{#  Shared favicon block. Three templates build their own <head>, so this
+    lives in one place rather than being kept in step by hand. Each href goes
+    through url_for, so the content hash busts caches when the mark changes,
+    which matters because browsers cache favicons unusually hard. #}
+<link rel="icon" href="{{ url_for('static', filename='img/favicon.ico') }}" sizes="32x32">
+<link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='img/favicon-16.png') }}">
+<link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='img/favicon-32.png') }}">
+<link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='img/favicon-192.png') }}">
+<link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='img/apple-touch-icon.png') }}">
+<link rel="manifest" href="{{ url_for('site_webmanifest') }}">
