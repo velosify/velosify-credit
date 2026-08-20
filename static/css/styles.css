@@ -375,17 +375,43 @@ p  { margin: 0 0 1em; }
   place-items: center;
   text-align: center;
   padding: clamp(64px, 10vw, 120px) 0;
-  background-image:
-    linear-gradient(180deg,
-      rgba(9, 18, 42, 0.72) 0%,
-      rgba(9, 18, 42, 0.64) 45%,
-      rgba(9, 18, 42, 0.76) 100%),
-    url("../img/hero-home.jpg");
-  background-size: auto, cover;
-  background-position: center, center 38%;
+  background-image: url("../img/hero-home.jpg");
+  background-size: cover;
+  background-position: center 38%;
   background-repeat: no-repeat;
 }
-.hero .container { position: relative; z-index: 1; }
+/* The mask is its own layer rather than a background-image stop, so the
+   mobile video can sit under it and be darkened by exactly the same wash
+   the photograph gets. */
+.hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(180deg,
+    rgba(9, 18, 42, 0.72) 0%,
+    rgba(9, 18, 42, 0.64) 45%,
+    rgba(9, 18, 42, 0.76) 100%);
+}
+.hero .container { position: relative; z-index: 2; }
+
+/* Phones only. The source has a watermark in its bottom-right corner, so the
+   encode is cropped to remove it; on a wide screen the crop would have to be
+   shown almost whole, which is why this stays off there. Script attaches the
+   src, so a desktop visitor never downloads half a megabyte of video. */
+.hero-video { display: none; }
+@media (max-width: 720px) {
+  .hero-video {
+    display: block;
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    pointer-events: none;
+  }
+}
 
 .hero-logo {
   width: min(560px, 84vw);
@@ -1019,6 +1045,44 @@ table.data tbody tr:hover { background: rgba(19, 100, 223, .04); }
     var(--bg);
 }
 .centered-card { width: 100%; max-width: 440px; }
+
+/* --- Scroll reveal ------------------------------------------------------
+   Markup ships in its finished state. Script adds .reveal-init only once it
+   has established that it can animate, then .is-visible as each element
+   arrives, so a JS failure or reduce-motion leaves an ordinary, fully
+   visible page rather than a blank one.
+   ------------------------------------------------------------------------ */
+[data-reveal].reveal-init {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity .6s cubic-bezier(.22, .8, .25, 1),
+              transform .6s cubic-bezier(.22, .8, .25, 1);
+  will-change: opacity, transform;
+}
+[data-reveal="scale"].reveal-init { transform: scale(.955); }
+[data-reveal].reveal-init.is-visible {
+  opacity: 1;
+  transform: none;
+  will-change: auto;
+}
+
+/* Sideways entrances are a phone treatment. On a wide screen the same cards
+   arrive four abreast, and sliding them in from opposite edges reads as
+   noise rather than motion, so above this width they just rise like the
+   rest of the page. */
+@media (max-width: 720px) {
+  [data-reveal="left"].reveal-init  { transform: translateX(-38px); }
+  [data-reveal="right"].reveal-init { transform: translateX(38px); }
+}
+
+/* An element travelling sideways passes beyond the viewport edge on its way
+   in, which would hand the document a horizontal scrollbar for the length of
+   the transition. Clipped rather than hidden, so this never becomes a scroll
+   container and never traps a sticky child. */
+.reveal-clip { overflow-x: clip; }
+@supports not (overflow-x: clip) {
+  .reveal-clip { overflow-x: hidden; }
+}
 
 /* --- Responsive -------------------------------------------------------- */
 @media (max-width: 980px) {

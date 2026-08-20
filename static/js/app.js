@@ -106,7 +106,11 @@
   /* ---- Scroll reveal ----------------------------------------------------
      Staggers [data-reveal] elements in as their group scrolls into view.
      The hiding class is applied by script, so nothing is ever stuck
-     invisible if JS fails or is switched off. */
+     invisible if JS fails or is switched off.
+
+     data-reveal carries the direction ("", "left", "right", "scale"); the
+     CSS reads it. data-reveal-step overrides the stagger for a group that
+     should land faster or slower than the default cascade. */
   (function reveal() {
     var nodes = Array.prototype.slice.call(document.querySelectorAll("[data-reveal]"));
     if (!nodes.length) return;
@@ -115,6 +119,18 @@
 
     nodes.forEach(function (n) { n.classList.add("reveal-init"); });
 
+    var pending = nodes.length;
+
+    function show(el) {
+      if (el.classList.contains("is-visible")) return;
+      el.classList.add("is-visible");
+      io.unobserve(el);
+      if (!--pending) {
+        window.removeEventListener("scroll", sweep);
+        window.removeEventListener("resize", sweep);
+      }
+    }
+
     var io = new IntersectionObserver(function (entries) {
       // Stagger by position within the batch that just became visible, so a
       // row of cards cascades rather than all landing at once.
@@ -122,13 +138,78 @@
       entries.forEach(function (e) {
         if (!e.isIntersecting) return;
         var el = e.target;
-        setTimeout(function () { el.classList.add("is-visible"); }, shown * 110);
+        var step = parseInt(el.getAttribute("data-reveal-step"), 10);
+        if (!isFinite(step)) step = 90;
+        var at = shown * step;
         shown++;
         io.unobserve(el);
+        if (!at) { show(el); return; }
+        setTimeout(function () { show(el); }, at);
       });
-    }, { threshold: 0.2, rootMargin: "0px 0px -40px 0px" });
+    }, { threshold: 0.12, rootMargin: "0px 0px -50px 0px" });
 
     nodes.forEach(function (n) { io.observe(n); });
+
+    /* A jump straight down the page, by dragging the scrollbar or following
+       an anchor, never intersects the elements it skips over. Without this
+       they would sit at opacity 0 for good, which is far worse than not
+       animating at all. Only elements now entirely above the viewport are
+       rescued here: anything still on screen is the observer's to stagger,
+       so the cascade is left alone. */
+    var queued = false;
+    function sweep() {
+      if (queued) return;
+      queued = true;
+      window.requestAnimationFrame(function () {
+        queued = false;
+        for (var i = 0; i < nodes.length; i++) {
+          var el = nodes[i];
+          if (el.classList.contains("is-visible")) continue;
+          if (el.getBoundingClientRect().bottom <= 0) show(el);
+        }
+      });
+    }
+    window.addEventListener("scroll", sweep, { passive: true });
+    window.addEventListener("resize", sweep, { passive: true });
+  })();
+
+  /* ---- Hero video (phones only) -----------------------------------------
+     The element ships with no src at all, so a desktop visitor never spends
+     the bytes. It is decorative: if anything here fails, the hero keeps the
+     photograph it already has behind it. */
+  (function heroVideo() {
+    var video = document.querySelector("[data-hero-video]");
+    if (!video) return;
+    if (!window.matchMedia) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (!window.matchMedia("(max-width: 720px)").matches) return;
+    // Respect a metered connection or an explicit data-saver preference.
+    var conn = navigator.connection;
+    if (conn && (conn.saveData || /(^|-)2g$/.test(conn.effectiveType || ""))) return;
+
+    // VP9 where it is available (smaller file), H.264 everywhere else, which
+    // is what iOS actually decodes.
+    var src = "";
+    if (video.canPlayType('video/webm; codecs="vp9"')) src = video.dataset.srcWebm;
+    if (!src && video.canPlayType("video/mp4")) src = video.dataset.srcMp4;
+    if (!src) return;
+
+    video.muted = true;              // as a property too, for iOS autoplay
+    video.src = src;
+
+    function play() {
+      var attempt = video.play();
+      if (attempt && attempt.catch) attempt.catch(function () { /* poster stands in */ });
+    }
+    play();
+    // Some browsers refuse before any interaction. One retry on the first
+    // touch or scroll costs nothing and rescues those.
+    ["touchstart", "scroll"].forEach(function (evt) {
+      window.addEventListener(evt, function once() {
+        window.removeEventListener(evt, once);
+        if (video.paused) play();
+      }, { passive: true });
+    });
   })();
 
   /* ---- How-it-works flow -------------------------------------------------

@@ -6,6 +6,16 @@
 
 <!-- ===================== Hero ===================== -->
 <section class="hero hero-brand">
+  {#  Decorative, and only ever shown on phones. The src is held in data-src
+      so a desktop browser never fetches it; script moves it across once it
+      has checked the viewport and that reduced motion is not requested. #}
+  <video class="hero-video" data-hero-video
+         data-src-webm="{{ url_for('static', filename='video/hero-mobile.webm') }}"
+         data-src-mp4="{{ url_for('static', filename='video/hero-mobile.mp4') }}"
+         poster="{{ url_for('static', filename='img/hero-mobile-poster.jpg') }}"
+         muted loop playsinline preload="none"
+         aria-hidden="true" tabindex="-1"></video>
+
   <div class="container">
     {#  The logo carries the name, so a visible headline would repeat it. An
         h1 is still needed for search engines and screen readers, so it is
@@ -14,12 +24,12 @@
       {{ cfg.BRAND_NAME }}, credit restoration
     </h1>
 
-    <img class="hero-logo"
+    <img class="hero-logo" data-reveal="scale"
          src="{{ url_for('static', filename='img/logo-wordmark.png') }}"
          alt="{{ cfg.BRAND_NAME }}, credit restoration"
          width="1221" height="420" fetchpriority="high">
 
-    <div class="hero-cta">
+    <div class="hero-cta" data-reveal>
       <a class="btn btn-primary btn-lg" href="{{ url_for('order_page') }}">
         Start my restoration
       </a>
@@ -41,7 +51,7 @@
 <section class="section section-alt" id="bureaus">
   <div class="container">
     <div class="text-center" style="margin-bottom:44px">
-      <h2 class="bureau-head mb-0">Three bureaus, at the same time</h2>
+      <h2 class="bureau-head mb-0" data-reveal>Three bureaus, at the same time</h2>
     </div>
 
     {#  The three logo files share one 377x128 canvas, each positioned so the
@@ -57,7 +67,7 @@
     <div class="gauge-grid">
       {% for name, slug, from_score, to_score, delay, bx, by, dashoff in bureaus %}
         <article class="gauge is-good"
-                 data-gauge
+                 data-reveal="scale" data-gauge
                  data-from="{{ from_score }}"
                  data-to="{{ to_score }}"
                  data-delay="{{ delay }}">
@@ -89,7 +99,7 @@
     {#  Short by design. The substantive disclosures already live in the
         footer, the terms and the agreement; this only has to stop the three
         dials from reading as a client's actual result. #}
-    <p class="gauge-note">Example figures, not a client result or a promise of one.</p>
+    <p class="gauge-note" data-reveal>Example figures, not a client result or a promise of one.</p>
   </div>
 </section>
 
@@ -97,8 +107,8 @@
 <section class="section" id="how">
   <div class="container">
     <div class="text-center" style="margin-bottom:52px">
-      <h2>Four steps, and you can watch every one</h2>
-      <p class="lead lead-center">
+      <h2 data-reveal>Four steps, and you can watch every one</h2>
+      <p class="lead lead-center" data-reveal>
         No black box. From the day you enroll, your portal shows what we've
         sent, what came back, and what's next.
       </p>
@@ -134,11 +144,11 @@
 </section>
 
 <!-- ===================== What we challenge ===================== -->
-<section class="section section-alt" id="challenge">
+<section class="section section-alt reveal-clip" id="challenge">
   <div class="container">
     <div class="text-center" style="margin-bottom:48px">
-      <h2>What typically comes off a report</h2>
-      <p class="lead lead-center">
+      <h2 data-reveal>What typically comes off a report</h2>
+      <p class="lead lead-center" data-reveal>
         Not every negative mark is disputable. These are the categories where
         errors turn up most often, and where a challenge usually has something
         real to work with.
@@ -169,7 +179,8 @@
 
     <div class="challenge-grid">
       {% for title, note, glyph in challenges %}
-        <article class="challenge-card" data-reveal>
+        <article class="challenge-card"
+                 data-reveal="{{ 'left' if loop.index0 is even else 'right' }}">
           <span class="challenge-ico" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
                  stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
@@ -182,7 +193,7 @@
       {% endfor %}
     </div>
 
-    <p class="challenge-note">
+    <p class="challenge-note" data-reveal>
       We challenge what is inaccurate, incomplete, or unverifiable. Accurate,
       current and verifiable information stays on your report. That's the law,
       and anyone who tells you otherwise is selling you something else.
@@ -194,17 +205,17 @@
 <section class="section" id="pricing">
   <div class="container container-narrow">
     <div class="text-center" style="margin-bottom:44px">
-      <h2>One fee. The whole program.</h2>
-      <p class="lead lead-center">
+      <h2 data-reveal>One fee. The whole program.</h2>
+      <p class="lead lead-center" data-reveal>
         Monthly credit repair billing rewards companies for taking their
         time. We'd rather be paid once and finish.
       </p>
     </div>
 
-    <div class="price-card">
+    <div class="price-card" data-reveal="scale">
       <div class="price-head">
         <span class="badge badge-accent">Complete program</span>
-        <div class="price-figure" data-reveal>
+        <div class="price-figure">
           <span class="price-num">{{ cfg.PRICE_LABEL }}</span>
           <span class="price-once">one time</span>
         </div>
@@ -220,7 +231,7 @@
       ] %}
       <ul class="feature-list price-includes">
         {% for item in includes %}
-          <li data-reveal><span class="tick">✓</span> {{ item }}</li>
+          <li><span class="tick">✓</span> {{ item }}</li>
         {% endfor %}
       </ul>
 
@@ -239,7 +250,7 @@
 <section class="section section-alt" id="faq">
   <div class="container container-narrow">
     <div class="text-center" style="margin-bottom:44px">
-      <h2>Questions people actually ask</h2>
+      <h2 data-reveal>Questions people actually ask</h2>
     </div>
 
     {% set faqs = [
@@ -277,7 +288,7 @@
     ] %}
 
     {% for question, answer in faqs %}
-      <details class="faq-item">
+      <details class="faq-item" data-reveal data-reveal-step="60">
         <summary>{{ question }}</summary>
         <div class="faq-body"><p>{{ answer }}</p></div>
       </details>
@@ -288,7 +299,7 @@
 <!-- ===================== Final CTA ===================== -->
 <section class="section-tight">
   <div class="container container-narrow">
-    <div class="price-card text-center">
+    <div class="price-card text-center" data-reveal="scale">
       <h2 style="margin-bottom:14px">Find out what's actually on your report</h2>
       <p class="lead lead-center" style="margin-bottom:28px">
         Enroll today, upload your documents, and we'll have your audit back to

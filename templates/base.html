@@ -68,7 +68,7 @@
 <footer class="footer">
   <div class="container">
     <div class="footer-grid">
-      <div>
+      <div data-reveal>
         <a class="brand" href="{{ url_for('landing') }}">
           <span class="brand-mark">V</span>
           <span>Velosify<span class="gradient-text">Credit</span></span>
@@ -78,7 +78,7 @@
           and a portal that shows you exactly where things stand.
         </p>
       </div>
-      <div>
+      <div data-reveal>
         <h4>Company</h4>
         <ul>
           <li><a href="{{ url_for('landing') }}#how">How it works</a></li>
@@ -87,7 +87,7 @@
           <li><a href="mailto:{{ cfg.SUPPORT_EMAIL }}">Contact</a></li>
         </ul>
       </div>
-      <div>
+      <div data-reveal>
         <h4>Legal</h4>
         <ul>
           <li><a href="{{ url_for('agreement_preview') }}">Service agreement</a></li>
@@ -98,7 +98,7 @@
       </div>
     </div>
 
-    <div class="footer-legal">
+    <div class="footer-legal" data-reveal>
       <p>&copy; {{ current_year }} {{ cfg.COMPANY_LEGAL_NAME }}. All rights reserved.
       {% if cfg.COMPANY_ADDRESS %} {{ cfg.COMPANY_ADDRESS }}.{% endif %}</p>
       <p>
