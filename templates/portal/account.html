@@ -11,7 +11,7 @@
   <div class="card">
     <div class="card-title" style="margin-bottom:18px">Your details</div>
     <form method="post" action="{{ url_for('portal_account_save') }}" data-guard>
-          {{ csrf_field() }}
+      {{ csrf_field() }}
       <div class="field-row">
         <div class="field">
           <label for="first_name">First name</label>
@@ -45,7 +45,7 @@
     <div class="card">
       <div class="card-title" style="margin-bottom:18px">Change password</div>
       <form method="post" action="{{ url_for('portal_password') }}" data-guard>
-          {{ csrf_field() }}
+        {{ csrf_field() }}
         <div class="field">
           <label for="current_password">Current password</label>
           <input class="input" id="current_password" name="current_password"

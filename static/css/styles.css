@@ -857,6 +857,88 @@ p  { margin: 0 0 1em; }
 .page-head { margin-bottom: 30px; }
 .page-head h1 { font-size: clamp(1.6rem, 3vw, 2.1rem); margin-bottom: 6px; }
 
+/* A main column beside a rail of smaller cards. Was written as an inline
+   style on both pages, which no media query can override, so on a phone it
+   stayed two-up at 200px and 133px and everything inside it wrapped to
+   ribbons. As a class it can collapse. */
+.portal-split {
+  grid-template-columns: 1.5fr 1fr;
+  gap: 24px;
+}
+
+/* --- Portal chrome on a phone -------------------------------------------
+   Both of these are display:none until the mobile breakpoint switches them
+   on, so a wide screen keeps the sidebar and never renders either.
+   ------------------------------------------------------------------------ */
+.app-topbar {
+  display: none;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  padding-top: calc(10px + env(safe-area-inset-top));
+  background: rgba(255, 255, 255, .92);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+}
+.app-topbar .brand { padding: 0; font-size: 1.02rem; }
+.app-topbar-actions { display: flex; gap: 6px; }
+.topbar-btn {
+  display: grid;
+  place-items: center;
+  /* 44px is the smallest target most people can hit reliably. */
+  width: 44px;
+  height: 44px;
+  color: var(--text-muted);
+  font-size: 1.05rem;
+  line-height: 1;
+}
+.topbar-btn:hover, .topbar-btn:focus-visible {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.app-tabs {
+  display: none;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 50;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  background: rgba(255, 255, 255, .95);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid var(--border);
+  /* Clears the home indicator on a notched phone. Falls back to plain
+     padding where the inset is unsupported or zero. */
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.app-tab {
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  padding: 9px 4px 8px;
+  color: var(--text-faint);
+  font-size: .68rem;
+  font-weight: 600;
+  letter-spacing: .01em;
+  min-height: 52px;
+  border-top: 2px solid transparent;
+  transition: color .15s ease, border-color .15s ease;
+}
+.app-tab-ico { font-size: 1.12rem; line-height: 1; }
+.app-tab-label { line-height: 1.1; }
+.app-tab.active {
+  color: var(--accent-deep);
+  border-top-color: var(--accent);
+  background: var(--gradient-soft);
+}
+.app-tab:active { background: var(--surface-2); }
+
 /* --- Progress tracker -------------------------------------------------- */
 .tracker { display: flex; gap: 0; margin: 6px 0 4px; }
 /* min-width:0 lets the six steps share a narrow viewport; without it each
@@ -893,6 +975,15 @@ p  { margin: 0 0 1em; }
 }
 .tracker-step.done .name, .tracker-step.current .name { color: var(--text); font-weight: 600; }
 
+/* Only rendered on a phone, where the per-step labels are hidden. */
+.tracker-caption {
+  display: none;
+  margin: 12px 0 0;
+  font-size: .82rem;
+  color: var(--text-muted);
+}
+.tracker-caption strong { color: var(--text); }
+
 /* --- Checklist / documents -------------------------------------------- */
 .doc-item {
   border: 1px solid var(--border);
@@ -923,8 +1014,20 @@ p  { margin: 0 0 1em; }
   margin-top: 10px;
   font-size: .87rem;
 }
-.file-row { flex-wrap: wrap; }
-.file-row .name { flex: 1 1 140px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Was flex-wrap, which on a phone dropped the delete control onto its own
+   line under the filename and left a stray x floating in the row. A grid
+   pins each part: icon, name that truncates, status, control. */
+.file-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  flex-wrap: nowrap;
+}
+.file-row .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-row form { display: flex; }
+/* A 36px square is the smallest comfortable target for a destructive control
+   that sits next to text. */
+.file-row .btn-quiet { padding: 0; width: 36px; height: 36px; display: grid; place-items: center; }
 .file-ico { width: 30px; height: 30px; border-radius: 0; background: var(--surface-3); display: grid; place-items: center; font-size: .68rem; font-weight: 700; color: var(--text-muted); flex: none; }
 
 .dropzone {
@@ -1241,17 +1344,26 @@ table.data tbody tr:hover { background: rgba(19, 100, 223, .04); }
   .gauge-grid { gap: 14px; }
   .gauge { padding: 22px 14px 20px; }
   .footer-grid { grid-template-columns: 1fr 1fr; }
+  /* The sidebar used to become a horizontally scrolling strip here: 849px of
+     links crammed into a 390px viewport, so Sign out and half the sections
+     were off screen behind a scrollbar nobody looks for. On a phone the nav
+     moves to a fixed bottom bar instead, which is where a thumb already is. */
   .app-shell { grid-template-columns: 1fr; background: none; }
-  .sidebar {
-    position: static; height: auto; flex-direction: row; align-items: center;
-    overflow-x: auto; padding: 12px 16px; gap: 4px;
-    background: var(--bg-soft);
-    border-bottom: 1px solid var(--border);
+  .sidebar { display: none; }
+  .app-topbar { display: flex; }
+  .app-tabs { display: grid; }
+  .app-main {
+    padding: 20px 16px calc(78px + env(safe-area-inset-bottom));
   }
-  .sidebar .brand { padding: 0 14px 0 4px; }
-  .side-foot { margin-top: 0; padding-top: 0; border-top: 0; margin-left: auto; }
-  .side-link { padding: 9px 12px; white-space: nowrap; }
-  .app-main { padding: 26px 20px 60px; }
+  .portal-split { grid-template-columns: 1fr; gap: 16px; }
+
+  /* Six labels across a phone is about 50px each, which turned "Collecting
+     documents" into four broken lines. The dots still show progress; the
+     stage name is already spelled out in the badge above them, and the
+     caption below says which number it is. */
+  .tracker-step .name { display: none; }
+  .tracker-caption { display: block; }
+  .tracker { margin-bottom: 0; }
 }
 
 @media (max-width: 700px) {

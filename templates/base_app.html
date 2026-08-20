@@ -2,45 +2,80 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>{% block title %}Portal · {{ cfg.BRAND_NAME }}{% endblock %}</title>
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#ffffff">
 {% include "_head_icons.html" %}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Inter:wght@400..800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 {% block head %}{% endblock %}
 </head>
-<body>
+<body class="app-body">
+
+{#  One list, rendered twice: as a sidebar on a wide screen and as a bottom
+    tab bar on a phone. Defining it once means the two can never drift apart,
+    which is how a link ends up in one and not the other.
+
+    Capped at four destinations on purpose. A bottom bar with six items gives
+    each one about 60px, which is under the 44px touch target once padding is
+    taken off, and reads as a toolbar rather than navigation. Everything that
+    does not earn a tab (sign out, the public site) lives in the top bar. #}
+{% if is_admin %}
+  {% set nav_items = [
+    ('Clients',  '◫', url_for('admin_clients'), '/admin/clients'),
+    ('Audit',    '⧉', url_for('admin_audit'),   '/admin/audit'),
+    ('Team',     '◎', url_for('admin_team'),    '/admin/team'),
+    ('System',   '◇', url_for('admin_system'),  '/admin/system')
+  ] %}
+{% else %}
+  {% set nav_items = [
+    ('Overview',  '◆', url_for('portal'),            '/portal'),
+    ('Documents', '▤', url_for('portal_documents'),  '/portal/documents'),
+    ('Account',   '◉', url_for('portal_account'),    '/portal/account'),
+    ('Agreement', '§', url_for('portal_agreement'),  '/portal/agreement')
+  ] %}
+{% endif %}
+
+{% macro is_active(path) -%}
+  {#- Overview must match exactly, or every /portal/* page lights it up too. -#}
+  {{ 'active' if (request.path == path if path == '/portal' else request.path.startswith(path)) }}
+{%- endmacro %}
 
 <div class="app-shell">
+
+  {#  Phone only. Keeps the brand and the two things that do not belong in a
+      tab bar within thumb reach of the top. #}
+  <header class="app-topbar">
+    <a class="brand" href="{{ url_for('landing') }}">
+      <span class="brand-mark">V</span>
+      <span>Velosify<span class="gradient-text">Credit</span></span>
+    </a>
+    <div class="app-topbar-actions">
+      {% if is_admin %}
+        <a class="topbar-btn" href="{{ url_for('landing') }}"
+           title="Public site" aria-label="Public site">↗</a>
+      {% endif %}
+      <a class="topbar-btn" href="{{ url_for('logout') }}"
+         title="Sign out" aria-label="Sign out">⏻</a>
+    </div>
+  </header>
+
   <aside class="sidebar">
     <a class="brand" href="{{ url_for('landing') }}">
       <span class="brand-mark">V</span>
       <span>Velosify<span class="gradient-text">Credit</span></span>
     </a>
 
+    {% for label, icon, href, path in nav_items %}
+      <a class="side-link {{ is_active(path) }}" href="{{ href }}">
+        <span class="ico">{{ icon }}</span> {{ label }}
+      </a>
+    {% endfor %}
     {% if is_admin %}
-      <a class="side-link {{ 'active' if request.path.startswith('/admin/clients') }}"
-         href="{{ url_for('admin_clients') }}"><span class="ico">◫</span> Clients</a>
-      <a class="side-link {{ 'active' if request.path.startswith('/admin/audit') }}"
-         href="{{ url_for('admin_audit') }}"><span class="ico">⧉</span> Audit log</a>
-      <a class="side-link {{ 'active' if request.path.startswith('/admin/team') }}"
-         href="{{ url_for('admin_team') }}"><span class="ico">◎</span> Team</a>
-      <a class="side-link {{ 'active' if request.path.startswith('/admin/system') }}"
-         href="{{ url_for('admin_system') }}"><span class="ico">◇</span> System check</a>
       <a class="side-link" href="{{ url_for('landing') }}"><span class="ico">↗</span> Public site</a>
-    {% else %}
-      <a class="side-link {{ 'active' if request.path == '/portal' }}"
-         href="{{ url_for('portal') }}"><span class="ico">◆</span> Overview</a>
-      <a class="side-link {{ 'active' if request.path.startswith('/portal/documents') }}"
-         href="{{ url_for('portal_documents') }}"><span class="ico">▤</span> Documents</a>
-      <a class="side-link {{ 'active' if request.path.startswith('/portal/account') }}"
-         href="{{ url_for('portal_account') }}"><span class="ico">◉</span> Account</a>
-      <a class="side-link {{ 'active' if request.path.startswith('/portal/agreement') }}"
-         href="{{ url_for('portal_agreement') }}"><span class="ico">§</span> My agreement</a>
     {% endif %}
 
     <div class="side-foot">
@@ -65,6 +100,17 @@
     {% block body %}{% endblock %}
   </main>
 </div>
+
+{#  Phone only, fixed to the bottom. Outside .app-shell so it is positioned
+    against the viewport rather than a grid cell. #}
+<nav class="app-tabs" aria-label="Sections">
+  {% for label, icon, href, path in nav_items %}
+    <a class="app-tab {{ is_active(path) }}" href="{{ href }}">
+      <span class="app-tab-ico" aria-hidden="true">{{ icon }}</span>
+      <span class="app-tab-label">{{ label }}</span>
+    </a>
+  {% endfor %}
+</nav>
 
 <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 {% block scripts %}{% endblock %}

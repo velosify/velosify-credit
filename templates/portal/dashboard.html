@@ -46,6 +46,12 @@
       </div>
     {% endfor %}
   </div>
+
+  {#  Shown only on a phone, where the per-step labels are hidden. #}
+  <p class="tracker-caption">
+    Step {{ stage_index + 1 }} of {{ CASE_STAGES | length }} &mdash;
+    <strong>{{ CASE_STAGE_LABELS.get(user.case_stage, 'Intake') }}</strong>
+  </p>
 </div>
 
 <!-- ---------- Documents ---------- -->
@@ -78,7 +84,7 @@
 </div>
 
 <!-- ---------- Timeline + side panel ---------- -->
-<div class="grid" style="grid-template-columns:1.5fr 1fr;gap:24px" id="case-grid">
+<div class="grid portal-split" id="case-grid">
   <div class="card">
     <div class="card-title" style="margin-bottom:20px">Case activity</div>
     {% if events %}
