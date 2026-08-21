@@ -85,14 +85,15 @@ def password_problem(password: str, *, admin: bool = False) -> str | None:
     Length does most of the work; composition rules mostly push people toward
     Passw0rd!, which is why the weak-root check exists instead.
 
-    Admin accounts are held to a longer minimum. One admin password is the
-    single credential standing in front of every client's government ID,
-    Social Security proof and full credit file, so it should not be the same
-    bar as a personal login.
+    Staff accounts are held to a longer minimum. A staff password is the
+    single credential standing in front of other people's government IDs,
+    Social Security proofs and full credit files, so it should not be the same
+    bar as a personal login. That applies to a specialist exactly as much as
+    to an administrator: they open the same documents.
     """
     floor = 14 if admin else 10
     if len(password) < floor:
-        return (f"Admin passwords must be at least {floor} characters."
+        return (f"Staff passwords must be at least {floor} characters."
                 if admin else
                 f"Password must be at least {floor} characters.")
     if _weak_root(password):
@@ -154,6 +155,21 @@ def is_admin() -> bool:
     return bool(user and user["role"] == "admin")
 
 
+def is_specialist() -> bool:
+    """A credit specialist: works assigned files, sees nothing else.
+
+    Deliberately not a lesser admin. They can do everything on a file they
+    have been given and cannot see that any other file exists.
+    """
+    user = current_user()
+    return bool(user and user["role"] == "specialist")
+
+
+def is_staff() -> bool:
+    user = current_user()
+    return bool(user and user["role"] in ("admin", "specialist"))
+
+
 def _unauthorized():
     if request.accept_mimetypes.best == "application/json" or request.path.startswith("/api/"):
         return jsonify({"error": "Sign in to continue."}), 401
@@ -175,6 +191,24 @@ def require_admin(fn):
         if current_user() is None:
             return _unauthorized()
         if not is_admin():
+            return jsonify({"error": "Not authorized."}), 403
+        return fn(*args, **kwargs)
+    return wrapper
+
+
+def require_staff(fn):
+    """Admin or specialist.
+
+    This only gets someone through the door. Which client files they may then
+    open is a separate question, answered per file by the caller, because a
+    specialist passing this check still must not see another specialist's
+    client.
+    """
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        if current_user() is None:
+            return _unauthorized()
+        if not is_staff():
             return jsonify({"error": "Not authorized."}), 403
         return fn(*args, **kwargs)
     return wrapper

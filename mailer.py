@@ -169,26 +169,35 @@ def send_email_verification(user: dict, link: str) -> bool:
     )
 
 
-def send_admin_invite(user: dict, link: str, invited_by: str) -> bool:
-    """Invite to an admin account. Carries a link, never a password.
+def send_admin_invite(user: dict, link: str, invited_by: str,
+                      role: str = "admin") -> bool:
+    """Invite to a staff account. Carries a link, never a password.
 
     Nobody should ever be sent a password they did not choose, least of all
-    for an account that can open every client's Social Security proof. The
+    for an account that can open a client's Social Security proof. The
     recipient sets their own, and it is known only to them.
     """
+    specialist = role == "specialist"
+    what = "a credit specialist account" if specialist else "an administrator account"
+    scope = (
+        "This account can read the full file of every client assigned to "
+        "you, including their government ID, Social Security proof and "
+        "credit reports."
+        if specialist else
+        "This account can read every client's file, including government "
+        "IDs, Social Security proofs and full credit reports."
+    )
     return send_email(
         to=user["email"],
-        subject=f"You have been given admin access to {config.BRAND_NAME}",
+        subject=f"Your {config.BRAND_NAME} staff account",
         text=(
-            f"{invited_by} has set up an administrator account for you on "
+            f"{invited_by} has set up {what} for you on "
             f"{config.BRAND_NAME}.\n\n"
             "Set your password here. The link works once and expires in 72 "
             "hours:\n\n"
             f"{link}\n\n"
-            "This account can read every client's file, including government "
-            "IDs, Social Security proofs and full credit reports. Every "
-            "document you open is logged against your name. Please use a long, "
-            "unique password and a password manager.\n\n"
+            f"{scope} Every document you open is logged against your name. "
+            "Please use a long, unique password and a password manager.\n\n"
             "If you were not expecting this, do not use the link, and tell "
             f"{config.SUPPORT_EMAIL} straight away.\n\n"
             f"The {config.BRAND_NAME} team"
@@ -217,6 +226,72 @@ def send_client_activation(user: dict, link: str) -> bool:
             "not expecting this email, ignore it and nothing further will "
             f"happen, or tell us at {config.SUPPORT_EMAIL}.\n\n"
             f"The {config.BRAND_NAME} team"
+        ),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Message notifications
+#
+# None of these carry the message itself. A thread about someone's credit file
+# names accounts, balances and sometimes identity theft, and email is the one
+# channel in this system we do not control the far end of. The notification
+# says there is something to read and where to read it; the content stays
+# behind the sign-in.
+# ---------------------------------------------------------------------------
+
+def send_message_to_client(client: dict, staff_name: str) -> bool:
+    first = client.get("first_name") or "there"
+    return send_email(
+        to=client["email"],
+        subject=f"New message about your {config.BRAND_NAME} case",
+        text=(
+            f"Hi {first},\n\n"
+            f"{staff_name} has replied on your case. Read it and answer here:\n\n"
+            f"{config.APP_BASE_URL}/portal/messages\n\n"
+            "We keep case messages in the portal rather than in email, "
+            "because your file has account numbers in it.\n\n"
+            f"The {config.BRAND_NAME} team"
+        ),
+    )
+
+
+def send_message_to_staff(staff: dict, client: dict) -> bool:
+    name = f"{client.get('first_name','')} {client.get('last_name','')}".strip()
+    return send_email(
+        to=staff["email"],
+        subject=f"{name or client['email']} sent you a message",
+        text=(
+            f"{name or client['email']} has written on their case.\n\n"
+            f"{config.APP_BASE_URL}/admin/clients/{client['id']}#thread\n"
+        ),
+    )
+
+
+def send_message_unassigned(client: dict) -> bool:
+    """Nobody is on this file yet, so it goes to the office."""
+    name = f"{client.get('first_name','')} {client.get('last_name','')}".strip()
+    return send_email(
+        to=config.ADMIN_ALERT_EMAIL,
+        subject=f"Unassigned client message: {name or client['email']}",
+        text=(
+            f"{name or client['email']} has written a message and has no "
+            f"specialist assigned, so nobody has been notified but you.\n\n"
+            f"{config.APP_BASE_URL}/admin/clients/{client['id']}#thread\n"
+        ),
+    )
+
+
+def send_case_assigned(staff: dict, client: dict) -> bool:
+    name = f"{client.get('first_name','')} {client.get('last_name','')}".strip()
+    return send_email(
+        to=staff["email"],
+        subject=f"You have been assigned {name or client['email']}",
+        text=(
+            f"{name or client['email']} is now on your list.\n\n"
+            f"{config.APP_BASE_URL}/admin/clients/{client['id']}\n\n"
+            "Their documents include a government ID and a Social Security "
+            "proof. Every one you open is logged against your name.\n"
         ),
     )
 

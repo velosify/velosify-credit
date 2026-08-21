@@ -25,19 +25,35 @@
     does not earn a tab (sign out, the public site) lives in the top bar. #}
 {% if is_admin %}
   {% set nav_items = [
-    ('Clients',  '◫', url_for('admin_clients'), '/admin/clients'),
-    ('Audit',    '⧉', url_for('admin_audit'),   '/admin/audit'),
-    ('Team',     '◎', url_for('admin_team'),    '/admin/team'),
-    ('System',   '◇', url_for('admin_system'),  '/admin/system')
+    ('Clients',  '◫', url_for('admin_clients'),  '/admin/clients'),
+    ('Messages', '✉', url_for('admin_messages'), '/admin/messages'),
+    ('Team',     '◎', url_for('admin_team'),     '/admin/team'),
+    ('Audit',    '⧉', url_for('admin_audit'),    '/admin/audit'),
+    ('System',   '◇', url_for('admin_system'),   '/admin/system')
+  ] %}
+{% elif is_specialist %}
+  {#  A specialist has two places to be: their files, and what has been said
+      on them. Nothing else on this list would show them anything. #}
+  {% set nav_items = [
+    ('My clients', '◫', url_for('admin_clients'),  '/admin/clients'),
+    ('Messages',   '✉', url_for('admin_messages'), '/admin/messages')
   ] %}
 {% else %}
   {% set nav_items = [
     ('Overview',  '◆', url_for('portal'),            '/portal'),
     ('Documents', '▤', url_for('portal_documents'),  '/portal/documents'),
+    ('Messages',  '✉', url_for('portal_messages'),   '/portal/messages'),
     ('Account',   '◉', url_for('portal_account'),    '/portal/account'),
     ('Agreement', '§', url_for('portal_agreement'),  '/portal/agreement')
   ] %}
 {% endif %}
+
+{#  The sidebar takes the whole list. The bottom bar takes the first four and
+    no more: five tabs at 390px is 78px each, and once padding comes off that
+    is under the 44px a thumb needs. Whatever is fifth is reachable from the
+    pages above it, which is why the list is ordered by how often it is
+    wanted rather than alphabetically. #}
+{% set tab_items = nav_items[:4] %}
 
 {% macro is_active(path) -%}
   {#- Overview must match exactly, or every /portal/* page lights it up too. -#}
@@ -72,6 +88,9 @@
     {% for label, icon, href, path in nav_items %}
       <a class="side-link {{ is_active(path) }}" href="{{ href }}">
         <span class="ico">{{ icon }}</span> {{ label }}
+        {% if label == 'Messages' and unread %}
+          <span class="pill-count">{{ unread }}</span>
+        {% endif %}
       </a>
     {% endfor %}
     {% if is_admin %}
@@ -104,9 +123,12 @@
 {#  Phone only, fixed to the bottom. Outside .app-shell so it is positioned
     against the viewport rather than a grid cell. #}
 <nav class="app-tabs" aria-label="Sections">
-  {% for label, icon, href, path in nav_items %}
+  {% for label, icon, href, path in tab_items %}
     <a class="app-tab {{ is_active(path) }}" href="{{ href }}">
-      <span class="app-tab-ico" aria-hidden="true">{{ icon }}</span>
+      <span class="app-tab-ico" aria-hidden="true">
+        {{ icon }}
+        {% if label == 'Messages' and unread %}<span class="tab-dot"></span>{% endif %}
+      </span>
       <span class="app-tab-label">{{ label }}</span>
     </a>
   {% endfor %}

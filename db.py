@@ -137,7 +137,23 @@ CREATE TABLE IF NOT EXISTS users (
     -- Separate from the agreement: the Credit Repair Organizations Act wants
     -- a signed acknowledgment that the credit file rights disclosure was
     -- received BEFORE the contract was signed, kept for two years.
-    disclosure_ack_at   TEXT
+    disclosure_ack_at   TEXT,
+    -- Set on a client row: the specialist working the file. Null means
+    -- unassigned, which is a real state and not an error; a client can pay
+    -- and message before anyone has picked them up.
+    assigned_to         INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    assigned_at         TEXT,
+    -- Two watermarks on the client's message thread, both stored on the
+    -- client row because there is exactly one thread per client. Comparing a
+    -- watermark against the newest message from the other side is what makes
+    -- an unread count a single cheap query rather than a per-recipient table.
+    --
+    -- Message ids rather than timestamps, deliberately. Timestamps here are
+    -- stored to the second, so a message written in the same second the
+    -- thread was opened compares as "already read" and is never counted. An
+    -- id is monotonic and has no such tie.
+    client_read_id      INTEGER NOT NULL DEFAULT 0,
+    staff_read_id       INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS orders (
@@ -185,6 +201,25 @@ CREATE TABLE IF NOT EXISTS case_events (
     created_by TEXT    NOT NULL DEFAULT 'system'
 );
 CREATE INDEX IF NOT EXISTS idx_events_user ON case_events(user_id, created_at);
+
+-- One thread per client, staff on one side and the client on the other.
+--
+-- sender_id is kept as well as sender_role so a message still names the
+-- person who wrote it after they leave the company, and so an admin reading
+-- a thread can see which specialist said what. Deleting a staff account must
+-- not delete what they said to a client, hence SET NULL rather than CASCADE
+-- on that reference; the client's own deletion does cascade, because their
+-- file going means their thread goes with it.
+CREATE TABLE IF NOT EXISTS messages (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    client_id   INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    sender_id   INTEGER          REFERENCES users(id) ON DELETE SET NULL,
+    sender_role TEXT    NOT NULL,          -- 'client' | 'specialist' | 'admin'
+    sender_name TEXT    NOT NULL DEFAULT '',
+    body        TEXT    NOT NULL,
+    created_at  TEXT    NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_messages_client ON messages(client_id, created_at);
 
 -- Single-use, expiring tokens for password reset and email confirmation.
 -- Only the SHA-256 of the token is stored: a stolen database backup must not
@@ -245,7 +280,23 @@ _ADDED_COLUMNS = [
     ("users", "password_changed_at", "TEXT"),
     ("orders", "source", "TEXT NOT NULL DEFAULT 'stripe'"),
     ("orders", "note", "TEXT NOT NULL DEFAULT ''"),
+    # SQLite cannot add a column with a REFERENCES clause to an existing
+    # table, so on an upgrade this is a plain integer. The constraint is only
+    # ever enforced on a database created from SCHEMA; nothing writes to it
+    # except the assignment route, which checks the specialist exists first.
+    ("users", "assigned_to", "INTEGER"),
+    ("users", "assigned_at", "TEXT"),
+    ("users", "client_read_id", "INTEGER NOT NULL DEFAULT 0"),
+    ("users", "staff_read_id", "INTEGER NOT NULL DEFAULT 0"),
 ]
+
+
+# Indexes on columns that arrived after the first release. They cannot live in
+# SCHEMA: that runs before the migrations, and indexing a column the table does
+# not have yet is an error rather than a no-op.
+LATE_INDEXES = """
+CREATE INDEX IF NOT EXISTS idx_users_assigned ON users(assigned_to);
+"""
 
 
 def _apply_added_columns(conn: sqlite3.Connection) -> None:
@@ -267,6 +318,7 @@ def init_db() -> None:
     try:
         conn.executescript(SCHEMA)
         _apply_added_columns(conn)
+        conn.executescript(LATE_INDEXES)
         conn.commit()
     finally:
         conn.close()
@@ -281,6 +333,86 @@ def add_event(conn: sqlite3.Connection, user_id: int, title: str,
         "VALUES (?, ?, ?, ?, ?, ?)",
         (user_id, title, body, stage, utcnow(), created_by),
     )
+
+
+# ---------------------------------------------------------------------------
+# Messages
+#
+# One thread per client. Everyone on the staff side sees the same thread: the
+# specialist assigned to the file, and any administrator. There is deliberately
+# no private staff-only note in here. A single thread that everyone can read is
+# a feature nobody can misuse; a thread with two kinds of message in it is one
+# mis-click away from a client reading something never meant for them. Internal
+# remarks belong on the case timeline, which is already marked as staff-written.
+# ---------------------------------------------------------------------------
+
+STAFF_ROLES = ("admin", "specialist")
+MESSAGE_MAX = 4000
+
+
+def post_message(conn: sqlite3.Connection, client_id: int, body: str, *,
+                 sender_id: int | None, sender_role: str,
+                 sender_name: str = "") -> int:
+    """Append to a client's thread. The caller commits."""
+    cur = conn.execute(
+        "INSERT INTO messages (client_id, sender_id, sender_role, sender_name, "
+        "body, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+        (client_id, sender_id, sender_role, sender_name,
+         body.strip()[:MESSAGE_MAX], utcnow()),
+    )
+    return int(cur.lastrowid)
+
+
+def thread_for(conn: sqlite3.Connection, client_id: int) -> list[dict]:
+    return [dict(r) for r in conn.execute(
+        "SELECT * FROM messages WHERE client_id = ? ORDER BY created_at, id",
+        (client_id,),
+    ).fetchall()]
+
+
+def mark_thread_read(conn: sqlite3.Connection, client_id: int, *,
+                     staff: bool) -> None:
+    """Move one side's watermark to now. The caller commits.
+
+    Staff share a single watermark on purpose. If an administrator has read
+    the thread, it is read; the alternative is a per-person table whose only
+    job is to keep a badge accurate.
+    """
+    column = "staff_read_id" if staff else "client_read_id"
+    conn.execute(
+        f"UPDATE users SET {column} = "
+        f"  (SELECT COALESCE(MAX(id), 0) FROM messages WHERE client_id = ?) "
+        f"WHERE id = ?",
+        (client_id, client_id),
+    )
+
+
+def unread_for_client(conn: sqlite3.Connection, client: dict) -> int:
+    """How many staff messages the client has not seen."""
+    return int(conn.execute(
+        "SELECT COUNT(*) AS n FROM messages "
+        "WHERE client_id = ? AND sender_role != 'client' AND id > ?",
+        (client["id"], client.get("client_read_id") or 0),
+    ).fetchone()["n"])
+
+
+def unread_by_client(conn: sqlite3.Connection,
+                     specialist_id: int | None = None) -> dict[int, int]:
+    """Client id -> number of their messages the staff side has not read.
+
+    One query for the whole inbox rather than one per thread. Pass a
+    specialist id to count only the files assigned to them.
+    """
+    sql = ("SELECT m.client_id AS cid, COUNT(*) AS n "
+           "FROM messages m JOIN users u ON u.id = m.client_id "
+           "WHERE m.sender_role = 'client' "
+           "AND m.id > COALESCE(u.staff_read_id, 0) ")
+    params: list = []
+    if specialist_id is not None:
+        sql += "AND u.assigned_to = ? "
+        params.append(specialist_id)
+    sql += "GROUP BY m.client_id"
+    return {int(r["cid"]): int(r["n"]) for r in conn.execute(sql, params)}
 
 
 def document_status_for(conn: sqlite3.Connection, user_id: int) -> dict:

@@ -1,0 +1,28 @@
+{% extends "base_app.html" %}
+{% block title %}Messages | {{ cfg.BRAND_NAME }}{% endblock %}
+
+{% block body %}
+<div class="page-head">
+  <h1>Messages</h1>
+  <p class="muted mb-0">
+    {% if specialist and specialist.first_name %}
+      {{ specialist.first_name }} {{ specialist.last_name[:1] }}. is working on
+      your file. Anything you send here goes straight to them.
+    {% else %}
+      Questions about your case go here. Our team answers in the order they
+      arrive, usually within one business day.
+    {% endif %}
+  </p>
+</div>
+
+<div class="card thread-card">
+  {% set viewer = 'client' %}
+  {% set action = url_for('portal_message_send') %}
+  {% include "_thread.html" with context %}
+</div>
+
+<p class="small faint mt-2">
+  Messages are kept on your file. For anything urgent, call
+  <a href="tel:{{ cfg.SUPPORT_PHONE_TEL }}">{{ cfg.SUPPORT_PHONE }}</a>.
+</p>
+{% endblock %}

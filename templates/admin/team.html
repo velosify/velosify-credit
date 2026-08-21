@@ -14,11 +14,71 @@
 {% endif %}
 
 <div class="alert alert-info">
-  <strong>Admin accounts see everything.</strong> Government IDs, Social
-  Security proofs and full credit reports, for every client. Every document
-  opened is recorded in the <a href="{{ url_for('admin_audit') }}">audit log</a>
-  against the name that opened it.
+  <strong>Two kinds of account.</strong> An <strong>administrator</strong> sees
+  every client, every payment and this page. A <strong>credit specialist</strong>
+  sees only the clients assigned to them &mdash; the full file for those, and
+  no sign that any other client exists. Both open government IDs and Social
+  Security proofs, and every document opened is recorded in the
+  <a href="{{ url_for('admin_audit') }}">audit log</a> against the name that
+  opened it.
 </div>
+
+<h2 class="section-sub">Credit specialists</h2>
+{% if specialists %}
+  <div class="table-wrap" style="margin-bottom:26px">
+    <table class="data">
+      <thead>
+        <tr><th>Specialist</th><th>Clients</th><th>Last signed in</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for s in specialists %}
+          <tr>
+            <td>
+              <div class="strong">{{ (s.first_name ~ ' ' ~ s.last_name) | trim or s.email }}</div>
+              <div class="small muted">{{ s.email }}</div>
+            </td>
+            <td>
+              <a href="{{ url_for('admin_clients', assigned=s.id) }}">
+                {{ s.caseload }} file{{ '' if s.caseload == 1 else 's' }}
+              </a>
+            </td>
+            <td class="small nowrap">
+              {% if s.last_login_at %}
+                {{ s.last_login_at | datetime }}
+              {% else %}
+                <span class="faint">never</span>
+                {% if not s.password_changed_at %}
+                  <span class="badge">invite pending</span>
+                {% endif %}
+              {% endif %}
+            </td>
+            <td style="text-align:right">
+              {#  Their clients come back to the unassigned pile, which the
+                  confirmation says out loud because it is the part that
+                  surprises people. #}
+              <form method="post"
+                    action="{{ url_for('admin_team_revoke', user_id=s.id) }}"
+                    data-confirm="Remove {{ s.email }}? Their {{ s.caseload }} client(s) become unassigned."
+                    style="display:inline">
+                {{ csrf_field() }}
+                <button class="btn btn-danger btn-sm" type="submit">Remove access</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  <div class="card" style="margin-bottom:26px">
+    <p class="small muted mb-0">
+      No credit specialists yet. Invite one below and they can be assigned
+      clients from any client's file.
+    </p>
+  </div>
+{% endif %}
+
+<h2 class="section-sub">Administrators</h2>
 
 <div class="table-wrap" style="margin-bottom:26px">
   <table class="data">
@@ -106,12 +166,19 @@
     <div class="card-title" style="font-size:.95rem">Invites not yet used</div>
     <ul class="feature-list">
       {% for p in pending %}
-        <li>
-          <span class="tick">›</span> {{ p.email }} &mdash;
-          <span class="small muted">expires {{ p.expires_at | datetime }}</span>
+        {#  The row wraps rather than squeezing: on a phone the button was
+            being handed about 60px and breaking "Send a new link" across four
+            lines. #}
+        <li style="flex-wrap:wrap;align-items:baseline">
+          <span class="tick">›</span>
+          <span>
+            {{ p.email }}
+            <span class="badge" style="margin-left:4px">{{ role_labels.get(p.role, p.role) }}</span>
+            <span class="small muted">&mdash; expires {{ p.expires_at | datetime }}</span>
+          </span>
           <form method="post"
                 action="{{ url_for('admin_team_resend', user_id=p.user_id) }}"
-                style="display:inline">
+                style="display:inline;white-space:nowrap">
             {{ csrf_field() }}
             <button class="btn btn-quiet btn-sm" type="submit"
                     style="text-decoration:underline">Send a new link</button>
@@ -123,7 +190,7 @@
 {% endif %}
 
 <div class="card" style="max-width:560px">
-  <div class="card-title">Invite an administrator</div>
+  <div class="card-title">Invite someone</div>
   <p class="small muted">
     They get a link and choose their own password. We never set one for them,
     and no password is ever sent by email.
@@ -131,8 +198,25 @@
   <form method="post" action="{{ url_for('admin_team_invite') }}" data-guard>
     {{ csrf_field() }}
     <div class="field">
-      <label for="first_name">First name</label>
-      <input class="input" id="first_name" name="first_name" autocomplete="off">
+      <label for="role">What kind of account?</label>
+      <select class="select" id="role" name="role" required>
+        <option value="specialist" {{ 'selected' if invite_role != 'admin' }}>
+          Credit specialist &mdash; only the clients assigned to them
+        </option>
+        <option value="admin" {{ 'selected' if invite_role == 'admin' }}>
+          Administrator &mdash; every client, every payment, this page
+        </option>
+      </select>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="first_name">First name</label>
+        <input class="input" id="first_name" name="first_name" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="last_name">Last name</label>
+        <input class="input" id="last_name" name="last_name" autocomplete="off">
+      </div>
     </div>
     <div class="field">
       <label for="email">Email address</label>

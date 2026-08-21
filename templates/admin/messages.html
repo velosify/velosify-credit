@@ -1,0 +1,61 @@
+{% extends "base_app.html" %}
+{% block title %}Messages | {{ cfg.BRAND_NAME }}{% endblock %}
+
+{% block body %}
+<div class="page-head">
+  <h1>Messages</h1>
+  <p class="muted mb-0">
+    {% if is_specialist %}
+      Every conversation on the files assigned to you. Unread first.
+    {% else %}
+      Every conversation on every file, whoever is working it. Unread first.
+    {% endif %}
+  </p>
+</div>
+
+{% if threads %}
+  <div class="thread-list">
+    {% for t in threads %}
+      <a class="thread-row {{ 'unread' if t.unread }}"
+         href="{{ url_for('admin_client_detail', user_id=t.id) }}#thread">
+        <span class="thread-avatar" aria-hidden="true">
+          {{ (t.first_name or t.email)[:1] | upper }}
+        </span>
+        <span class="thread-main">
+          <span class="thread-top">
+            <span class="thread-name">
+              {{ t.first_name }} {{ t.last_name }}
+              {% if t.unread %}<span class="pill-count">{{ t.unread }}</span>{% endif %}
+            </span>
+            <span class="tiny faint">{{ t.last_at | datetime }}</span>
+          </span>
+          <span class="thread-preview">
+            {% if t.last_role != 'client' %}<span class="faint">You:</span> {% endif %}
+            {{ t.last_body }}
+          </span>
+          {% if not is_specialist %}
+            <span class="tiny faint">
+              {% if t.assigned_to %}
+                Assigned to {{ t.spec_first }} {{ t.spec_last }}
+              {% else %}
+                Unassigned
+              {% endif %}
+            </span>
+          {% endif %}
+        </span>
+      </a>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="card text-center" style="padding:40px 22px">
+    <p class="muted mb-0">
+      {% if is_specialist %}
+        Nobody on your list has written yet. Messages appear here the moment
+        one of your clients sends one.
+      {% else %}
+        No client has sent a message yet.
+      {% endif %}
+    </p>
+  </div>
+{% endif %}
+{% endblock %}

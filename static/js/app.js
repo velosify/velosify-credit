@@ -13,6 +13,29 @@
     });
   }
 
+  /* ---- Message composer ----------------------------------------------
+     Grows with what is typed, and scrolls the thread to the newest message
+     on arrival. Both are conveniences: with JS off the box is still three
+     rows and the thread still ends at the bottom of the page. */
+  document.querySelectorAll("textarea[data-autogrow]").forEach(function (box) {
+    function grow() {
+      box.style.height = "auto";
+      // Capped, or a long message pushes the Send button off the screen.
+      box.style.height = Math.min(box.scrollHeight, 260) + "px";
+    }
+    box.addEventListener("input", grow);
+    grow();
+  });
+
+  (function () {
+    var thread = document.getElementById("thread");
+    if (!thread) return;
+    // The newest message is at the bottom, which is where a conversation is
+    // read from. Jump rather than smooth-scroll: this is the starting
+    // position, not an animation.
+    thread.scrollTop = thread.scrollHeight;
+  })();
+
   /* ---- Upload dropzones ----------------------------------------------
      Each .dropzone wraps a hidden <input type="file">. Clicking the zone
      opens the picker; dragging files onto it assigns them directly. The

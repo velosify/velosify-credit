@@ -33,16 +33,19 @@ from markupsafe import Markup, escape
 import config
 import db as database
 import mailer
-from auth import (current_user, hash_password, is_admin, login_user,
-                  logout_user, normalize_email, password_problem,
-                  require_admin, require_login, valid_email, verify_password)
+from auth import (current_user, hash_password, is_admin, is_specialist,
+                  is_staff, login_user, logout_user, normalize_email,
+                  password_problem, require_admin, require_login,
+                  require_staff, valid_email, verify_password)
 import security
 from security import (audit, client_ip, clear_failures, consume_token,
                       csrf_ok, csrf_token, issue_token, record_failure,
                       retry_after_minutes, sweep_failures, throttled)
 from db import (CASE_STAGE_KEYS, CASE_STAGE_LABELS, CASE_STAGES, DOC_STATUSES,
-                DOCUMENT_TYPE_KEYS, DOCUMENT_TYPES, add_event,
-                document_status_for, get_db, row_to_dict, utcnow)
+                DOCUMENT_TYPE_KEYS, DOCUMENT_TYPES, MESSAGE_MAX, add_event,
+                document_status_for, get_db, mark_thread_read, post_message,
+                row_to_dict, thread_for, unread_by_client, unread_for_client,
+                utcnow)
 
 try:
     import stripe
@@ -136,10 +139,32 @@ def inject_globals() -> dict:
         "cfg": config,
         "user": current_user(),
         "is_admin": is_admin(),
+        "is_staff": is_staff(),
+        "is_specialist": is_specialist(),
+        "unread": _nav_unread(),
         "current_year": datetime.now(timezone.utc).year,
         "CASE_STAGES": CASE_STAGES,
         "CASE_STAGE_LABELS": CASE_STAGE_LABELS,
     }
+
+
+def _nav_unread() -> int:
+    """The number on the Messages tab, for whoever is signed in.
+
+    Runs on every rendered page, so it is one indexed count and nothing more,
+    and it does not run at all for a visitor who is not signed in.
+    """
+    user = current_user()
+    if not user:
+        return 0
+    conn = get_db()
+    if user["role"] == "client":
+        return unread_for_client(conn, user)
+    if user["role"] == "specialist":
+        return sum(unread_by_client(conn, specialist_id=int(user["id"])).values())
+    if user["role"] == "admin":
+        return sum(unread_by_client(conn).values())
+    return 0
 
 
 @app.template_filter("money")
@@ -200,6 +225,64 @@ def _pending_order(user_id: int) -> dict | None:
         "ORDER BY created_at DESC, id DESC LIMIT 1",
         (user_id,),
     ).fetchone())
+
+
+# ---------------------------------------------------------------------------
+# Who may open whose file
+#
+# An administrator sees every client. A specialist sees the clients assigned
+# to them and has no way to learn that any other client exists. That second
+# half is why this returns 404 rather than 403: a 403 on /admin/clients/57
+# and a 404 on /admin/clients/58 is a way of counting the customer list, and
+# a specialist who has left for a competitor should not be able to do that.
+#
+# Every route that reads or writes a client's file goes through here. There is
+# no second copy of this rule anywhere, because a second copy is the one that
+# eventually disagrees.
+# ---------------------------------------------------------------------------
+
+def _visible_client(user_id: int) -> dict:
+    row = row_to_dict(get_db().execute(
+        "SELECT * FROM users WHERE id = ? AND role = 'client'", (user_id,)
+    ).fetchone())
+    if not row:
+        abort(404)
+    if is_admin():
+        return row
+    me = current_user()
+    if is_specialist() and row.get("assigned_to") == int(me["id"]):
+        return row
+    abort(404)
+
+
+def _can_see_client(user_id: int) -> bool:
+    """Same rule, as a question rather than a gate. For the file download,
+    where the client themselves is also a legitimate answer."""
+    if is_admin():
+        return True
+    me = current_user()
+    if not me or me["role"] != "specialist":
+        return False
+    row = get_db().execute("SELECT assigned_to FROM users WHERE id = ?",
+                           (user_id,)).fetchone()
+    return bool(row and row["assigned_to"] == int(me["id"]))
+
+
+def _specialists() -> list[dict]:
+    return [dict(r) for r in get_db().execute(
+        "SELECT id, first_name, last_name, email, last_login_at FROM users "
+        "WHERE role = 'specialist' ORDER BY first_name, last_name"
+    ).fetchall()]
+
+
+def _staff_name(user: dict) -> str:
+    """What a client sees on a staff message. First name and last initial:
+    enough to know who they are talking to, without publishing a directory."""
+    first = (user.get("first_name") or "").strip()
+    last = (user.get("last_name") or "").strip()
+    if first and last:
+        return f"{first} {last[0]}."
+    return first or (user.get("email") or "").split("@")[0]
 
 
 def _safe_ext(filename: str) -> str | None:
@@ -404,6 +487,19 @@ def _request_id():
     """One short id per request, logged with any error and shown on the error
     page, so a client can quote it and it can actually be found."""
     g.request_id = secrets.token_hex(6)
+
+
+@app.before_request
+def _staff_out_of_the_portal():
+    """The portal is the client's view of their own case.
+
+    A staff account has no case, so every page there is either empty or
+    confusing. Send them where their work is instead of rendering a portal
+    for a client that does not exist.
+    """
+    if request.path.startswith("/portal") and is_staff():
+        return redirect(url_for("admin_clients"))
+    return None
 
 
 @app.before_request
@@ -939,7 +1035,9 @@ def login_submit():
     # Only ever redirect within this site.
     if nxt.startswith("/") and not nxt.startswith("//"):
         return redirect(nxt)
-    return redirect(url_for("admin_clients") if row["role"] == "admin" else url_for("portal"))
+    return redirect(url_for("admin_clients")
+                    if row["role"] in ("admin", "specialist")
+                    else url_for("portal"))
 
 
 # ---------------------------------------------------------------------------
@@ -1230,13 +1328,17 @@ def portal_delete_document(doc_id: int):
 @app.get("/files/<int:doc_id>")
 @require_login
 def download_document(doc_id: int):
-    """The only way an uploaded file is ever served. Owner or admin only,
-    nothing under the upload directory is reachable from /static."""
+    """The only way an uploaded file is ever served.
+
+    Three people may open a document: the client it belongs to, any
+    administrator, and the specialist that client is assigned to. Nobody else,
+    and nothing under the upload directory is reachable from /static.
+    """
     user = current_user()
     row = get_db().execute("SELECT * FROM documents WHERE id = ?", (doc_id,)).fetchone()
     if not row:
         abort(404)
-    if row["user_id"] != user["id"] and not is_admin():
+    if row["user_id"] != user["id"] and not _can_see_client(int(row["user_id"])):
         abort(404)  # 404 rather than 403, so the id can't be confirmed
 
     path = config.UPLOAD_DIR / row["stored_name"]
@@ -1331,35 +1433,59 @@ def portal_agreement():
 # ---------------------------------------------------------------------------
 
 @app.get("/admin")
-@require_admin
+@require_staff
 def admin_home():
     return redirect(url_for("admin_clients"))
 
 
 @app.get("/admin/clients")
-@require_admin
+@require_staff
 def admin_clients():
     q = (request.args.get("q") or "").strip()
+    mine = (request.args.get("assigned") or "").strip()
+    conn = get_db()
+    me = current_user()
     sql = (
         "SELECT u.*, "
         "  (SELECT COUNT(*) FROM documents d WHERE d.user_id = u.id) AS doc_count, "
         "  (SELECT COUNT(*) FROM documents d WHERE d.user_id = u.id "
         "     AND d.status = 'received') AS unreviewed_count, "
         "  (SELECT status FROM orders o WHERE o.user_id = u.id "
-        "     ORDER BY o.created_at DESC LIMIT 1) AS order_status "
-        "FROM users u WHERE u.role = 'client' "
+        "     ORDER BY o.created_at DESC LIMIT 1) AS order_status, "
+        "  s.first_name AS spec_first, s.last_name AS spec_last "
+        "FROM users u LEFT JOIN users s ON s.id = u.assigned_to "
+        "WHERE u.role = 'client' "
     )
     params: list = []
+    # The filter a specialist gets is not a filter. It is applied in SQL
+    # before anything reaches the page, and there is no query string that
+    # widens it.
+    if is_specialist():
+        sql += "AND u.assigned_to = ? "
+        params.append(int(me["id"]))
+    elif mine == "me":
+        sql += "AND u.assigned_to = ? "
+        params.append(int(me["id"]))
+    elif mine == "none":
+        sql += "AND u.assigned_to IS NULL "
+    elif mine.isdigit():
+        sql += "AND u.assigned_to = ? "
+        params.append(int(mine))
     if q:
         sql += "AND (u.email LIKE ? OR u.first_name LIKE ? OR u.last_name LIKE ?) "
         params += [f"%{q}%"] * 3
     sql += "ORDER BY u.created_at DESC"
-    clients = [dict(r) for r in get_db().execute(sql, params).fetchall()]
-    return render_template("admin/clients.html", clients=clients, q=q)
+    clients = [dict(r) for r in conn.execute(sql, params).fetchall()]
+    unread = unread_by_client(
+        conn, specialist_id=int(me["id"]) if is_specialist() else None)
+    for row in clients:
+        row["unread"] = unread.get(int(row["id"]), 0)
+    return render_template("admin/clients.html", clients=clients, q=q,
+                           assigned=mine, specialists=_specialists())
 
 
 @app.get("/admin/clients/<int:user_id>")
-@require_admin
+@require_staff
 def admin_client_detail(user_id: int):
     return _client_detail_page(user_id)
 
@@ -1372,13 +1498,8 @@ def _client_detail_page(user_id: int, activation_link: str | None = None,
     does: when the email cannot be delivered the operator still needs the link,
     and it only exists in memory for the length of this request.
     """
+    client = _visible_client(user_id)
     conn = get_db()
-    client = row_to_dict(
-        conn.execute("SELECT * FROM users WHERE id = ? AND role = 'client'",
-                     (user_id,)).fetchone()
-    )
-    if not client:
-        abort(404)
     orders = [dict(r) for r in conn.execute(
         "SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC", (user_id,)
     ).fetchall()]
@@ -1386,6 +1507,10 @@ def _client_detail_page(user_id: int, activation_link: str | None = None,
         "SELECT * FROM case_events WHERE user_id = ? ORDER BY created_at DESC, id DESC",
         (user_id,),
     ).fetchall()]
+    messages = thread_for(conn, user_id)
+    # Opening the file is reading the thread. Marking it here rather than on a
+    # separate route means the badge tracks what has actually been seen.
+    mark_thread_read(conn, user_id, staff=True)
     audit("admin.client_opened", actor=current_user(), target_user_id=user_id,
           conn=conn)
     conn.commit()
@@ -1394,6 +1519,11 @@ def _client_detail_page(user_id: int, activation_link: str | None = None,
         client=client,
         orders=orders,
         events=events,
+        messages=messages,
+        assigned=row_to_dict(conn.execute(
+            "SELECT id, first_name, last_name, email FROM users WHERE id = ?",
+            (client.get("assigned_to") or 0,)).fetchone()),
+        specialists=_specialists(),
         checklist=document_status_for(conn, user_id),
         activation_link=activation_link,
         mail_error=mail_error,
@@ -1633,6 +1763,183 @@ def activate_client_submit(token: str):
     return redirect(url_for("login"))
 
 
+# ---------------------------------------------------------------------------
+# Assigning a client to a specialist
+#
+# Assignment is what makes a specialist able to see a file at all, so it is an
+# administrator's decision and nobody else's. A specialist cannot assign
+# themselves work, cannot reassign their own client to someone else, and
+# cannot see the list they would be picking from.
+# ---------------------------------------------------------------------------
+
+@app.post("/admin/clients/<int:user_id>/assign")
+@require_admin
+def admin_assign_client(user_id: int):
+    client = _visible_client(user_id)
+    raw = (request.form.get("specialist_id") or "").strip()
+    conn = get_db()
+    actor = current_user()
+
+    if raw in ("", "0", "none"):
+        previous = client.get("assigned_to")
+        conn.execute("UPDATE users SET assigned_to = NULL, assigned_at = NULL "
+                     "WHERE id = ?", (user_id,))
+        audit("client.unassigned", actor=actor, target_user_id=user_id,
+              detail=f"was {previous}", conn=conn)
+        conn.commit()
+        flash("Unassigned. Only administrators can see this file now.",
+              "success")
+        return redirect(url_for("admin_client_detail", user_id=user_id))
+
+    if not raw.isdigit():
+        abort(400)
+    person = conn.execute(
+        "SELECT * FROM users WHERE id = ? AND role = 'specialist'",
+        (int(raw),)).fetchone()
+    if not person:
+        flash("That isn't a credit specialist account.", "error")
+        return redirect(url_for("admin_client_detail", user_id=user_id))
+
+    conn.execute("UPDATE users SET assigned_to = ?, assigned_at = ? WHERE id = ?",
+                 (int(raw), utcnow(), user_id))
+    name = f"{person['first_name']} {person['last_name']}".strip() or person["email"]
+    # The client is told who is working their file. They are entitled to know
+    # who is reading their Social Security proof.
+    add_event(conn, user_id, title="Your case has a specialist",
+              body=f"{name} is now working on your file. You can message them "
+                   f"from your portal any time.",
+              created_by=actor["email"])
+    audit("client.assigned", actor=actor, target_user_id=user_id,
+          detail=f"{person['email']}", conn=conn)
+    conn.commit()
+
+    mailer.send_case_assigned(row_to_dict(person), client)
+    flash(f"Assigned to {name}.", "success")
+    return redirect(url_for("admin_client_detail", user_id=user_id))
+
+
+# ---------------------------------------------------------------------------
+# Messages
+#
+# One thread per client, staff on one side and the client on the other. Who
+# may open a thread is not a separate rule: it is the same _visible_client
+# check the rest of the file uses, so a specialist can no more read a message
+# on someone else's case than they can open that case.
+# ---------------------------------------------------------------------------
+
+def _message_body() -> str:
+    return (request.form.get("body") or "").strip()[:MESSAGE_MAX]
+
+
+@app.get("/portal/messages")
+@require_login
+def portal_messages():
+    user = current_user()
+    if not _paid_order(user["id"]):
+        return redirect(url_for("portal"))
+    conn = get_db()
+    messages = thread_for(conn, int(user["id"]))
+    mark_thread_read(conn, int(user["id"]), staff=False)
+    conn.commit()
+    specialist = row_to_dict(conn.execute(
+        "SELECT first_name, last_name FROM users WHERE id = ?",
+        (user.get("assigned_to") or 0,)).fetchone())
+    return render_template("portal/messages.html", messages=messages,
+                           specialist=specialist)
+
+
+@app.post("/portal/messages")
+@require_login
+def portal_message_send():
+    user = current_user()
+    if not _paid_order(user["id"]):
+        abort(403)
+    body = _message_body()
+    if not body:
+        flash("Write a message first.", "error")
+        return redirect(url_for("portal_messages"))
+
+    conn = get_db()
+    post_message(conn, int(user["id"]), body, sender_id=int(user["id"]),
+                 sender_role="client",
+                 sender_name=user.get("first_name") or "Client")
+    # Sending is reading: a client should not come back to a badge counting
+    # their own conversation.
+    mark_thread_read(conn, int(user["id"]), staff=False)
+    audit("message.sent", actor=user, target_user_id=int(user["id"]),
+          detail=f"{len(body)} chars", conn=conn)
+    conn.commit()
+
+    # Whoever is responsible gets told. Unassigned means nobody has picked the
+    # file up yet, so it goes to the office rather than into a void.
+    if user.get("assigned_to"):
+        to = row_to_dict(conn.execute("SELECT * FROM users WHERE id = ?",
+                                      (user["assigned_to"],)).fetchone())
+        if to:
+            mailer.send_message_to_staff(to, user)
+    else:
+        mailer.send_message_unassigned(user)
+    flash("Sent. We'll reply here.", "success")
+    return redirect(url_for("portal_messages"))
+
+
+@app.post("/admin/clients/<int:user_id>/message")
+@require_staff
+def admin_message_send(user_id: int):
+    client = _visible_client(user_id)
+    body = _message_body()
+    if not body:
+        flash("Write a message first.", "error")
+        return redirect(url_for("admin_client_detail", user_id=user_id))
+
+    me = current_user()
+    conn = get_db()
+    post_message(conn, user_id, body, sender_id=int(me["id"]),
+                 sender_role=me["role"], sender_name=_staff_name(me))
+    mark_thread_read(conn, user_id, staff=True)
+    audit("message.sent_to_client", actor=me, target_user_id=user_id,
+          detail=f"{len(body)} chars", conn=conn)
+    conn.commit()
+
+    mailer.send_message_to_client(client, _staff_name(me))
+    return redirect(url_for("admin_client_detail", user_id=user_id) + "#thread")
+
+
+@app.get("/admin/messages")
+@require_staff
+def admin_messages():
+    """Every thread the signed-in person is allowed to see, unread first."""
+    conn = get_db()
+    me = current_user()
+    sql = (
+        "SELECT u.id, u.first_name, u.last_name, u.email, u.assigned_to, "
+        "  s.first_name AS spec_first, s.last_name AS spec_last, "
+        "  (SELECT body FROM messages m WHERE m.client_id = u.id "
+        "     ORDER BY m.created_at DESC, m.id DESC LIMIT 1) AS last_body, "
+        "  (SELECT created_at FROM messages m WHERE m.client_id = u.id "
+        "     ORDER BY m.created_at DESC, m.id DESC LIMIT 1) AS last_at, "
+        "  (SELECT sender_role FROM messages m WHERE m.client_id = u.id "
+        "     ORDER BY m.created_at DESC, m.id DESC LIMIT 1) AS last_role "
+        "FROM users u LEFT JOIN users s ON s.id = u.assigned_to "
+        "WHERE u.role = 'client' "
+        "AND EXISTS (SELECT 1 FROM messages m WHERE m.client_id = u.id) "
+    )
+    params: list = []
+    if is_specialist():
+        sql += "AND u.assigned_to = ? "
+        params.append(int(me["id"]))
+    sql += "ORDER BY last_at DESC"
+    threads = [dict(r) for r in conn.execute(sql, params).fetchall()]
+    unread = unread_by_client(
+        conn, specialist_id=int(me["id"]) if is_specialist() else None)
+    for t in threads:
+        t["unread"] = unread.get(int(t["id"]), 0)
+    # Python's sort is stable, so this lifts the unread threads to the top
+    # while leaving the newest-first order the query already produced.
+    threads.sort(key=lambda t: -t["unread"])
+    return render_template("admin/messages.html", threads=threads)
+
+
 @app.get("/admin/audit")
 @require_admin
 def admin_audit():
@@ -1668,21 +1975,34 @@ def admin_audit():
 # question later.
 # ---------------------------------------------------------------------------
 
+STAFF_ROLE_LABELS = {"admin": "Administrator", "specialist": "Credit specialist"}
+
+
 def _team_page(**extra):
     conn = get_db()
     admins = [dict(r) for r in conn.execute(
         "SELECT id, email, first_name, last_name, created_at, last_login_at, "
         "password_changed_at FROM users WHERE role = 'admin' ORDER BY created_at"
     ).fetchall()]
+    # Caseload alongside the name, because "can I give Adam another file" is
+    # the question this page gets asked.
+    specialists = [dict(r) for r in conn.execute(
+        "SELECT u.id, u.email, u.first_name, u.last_name, u.created_at, "
+        "  u.last_login_at, u.password_changed_at, "
+        "  (SELECT COUNT(*) FROM users c WHERE c.assigned_to = u.id) AS caseload "
+        "FROM users u WHERE u.role = 'specialist' ORDER BY u.created_at"
+    ).fetchall()]
     pending = [dict(r) for r in conn.execute(
-        "SELECT t.user_id, t.expires_at, u.email FROM auth_tokens t "
+        "SELECT t.user_id, t.expires_at, u.email, u.role FROM auth_tokens t "
         "JOIN users u ON u.id = t.user_id "
         "WHERE t.kind = ? AND t.used_at IS NULL AND t.expires_at > ? "
         "ORDER BY t.created_at DESC",
         (security.ADMIN_INVITE, utcnow()),
     ).fetchall()]
-    context = {"admins": admins, "pending": pending, "error": None,
-               "invite_link": None, "invite_email": None,
+    context = {"admins": admins, "specialists": specialists, "pending": pending,
+               "error": None, "invite_link": None, "invite_email": None,
+               "invite_role": "specialist",
+               "role_labels": STAFF_ROLE_LABELS,
                "mail_enabled": mailer.ENABLED,
                "mail_error": mailer.last_error}
     context.update(extra)
@@ -1866,26 +2186,36 @@ def admin_team_invite():
     actor = current_user()
     email = normalize_email(request.form.get("email"))
     first = (request.form.get("first_name") or "").strip()[:60]
+    last = (request.form.get("last_name") or "").strip()[:60]
+    role = (request.form.get("role") or "specialist").strip()
     conn = get_db()
 
     def fail(message: str):
-        return _team_page(error=message), 400
+        return _team_page(error=message, invite_role=role), 400
 
+    if role not in STAFF_ROLE_LABELS:
+        return fail("Choose what kind of account this is.")
     if not valid_email(email):
         return fail("That email address doesn't look right.")
 
     row = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
-    if row and row["role"] == "admin":
-        return fail(f"{email} is already an administrator.")
+    if row and row["role"] == role:
+        return fail(f"{email} already has a "
+                    f"{STAFF_ROLE_LABELS[role].lower()} account.")
+    if row and row["role"] in STAFF_ROLE_LABELS:
+        # Changing someone between the two roles silently would move their
+        # caseload out from under them, so it is refused and left to a person.
+        return fail(f"{email} is already a {STAFF_ROLE_LABELS[row['role']].lower()}. "
+                    f"Remove that access first if the role is changing.")
     if row and _paid_order(row["id"]):
-        # Promoting a paying client would let them read every other client's
-        # file. If that is genuinely wanted it needs a separate account.
+        # Promoting a paying client would let them read other clients' files.
+        # If that is genuinely wanted it needs a separate account.
         return fail(f"{email} is an enrolled client. Use a separate address "
-                    f"for an admin account so the two roles stay apart.")
+                    f"for a staff account so the two roles stay apart.")
 
     if row:
         user_id = int(row["id"])
-        conn.execute("UPDATE users SET role = 'admin' WHERE id = ?", (user_id,))
+        conn.execute("UPDATE users SET role = ? WHERE id = ?", (role, user_id))
     else:
         # A password nobody knows, including us. The account cannot be signed
         # into until the invitee sets one through the link.
@@ -1893,14 +2223,15 @@ def admin_team_invite():
         cur = conn.execute(
             "INSERT INTO users (email, password_hash, first_name, last_name, "
             "role, case_stage, created_at) "
-            "VALUES (?, ?, ?, '', 'admin', 'intake', ?)",
-            (email, unusable, first or "Admin", utcnow()),
+            "VALUES (?, ?, ?, ?, ?, 'intake', ?)",
+            (email, unusable, first or STAFF_ROLE_LABELS[role], last, role,
+             utcnow()),
         )
         user_id = int(cur.lastrowid)
 
     token = issue_token(conn, user_id, security.ADMIN_INVITE)
-    audit("admin.invited", actor=actor, target_user_id=user_id, detail=email,
-          conn=conn)
+    audit("staff.invited", actor=actor, target_user_id=user_id,
+          detail=f"{email} as {role}", conn=conn)
     conn.commit()
 
     invited = row_to_dict(conn.execute("SELECT * FROM users WHERE id = ?",
@@ -1909,6 +2240,7 @@ def admin_team_invite():
     sent = mailer.send_admin_invite(
         invited, link,
         f"{actor.get('first_name') or 'An administrator'} ({actor['email']})",
+        role=role,
     )
     if sent:
         flash(f"Invite sent to {email}. It expires in 72 hours.", "success")
@@ -1932,8 +2264,8 @@ def admin_team_resend(user_id: int):
     actor = current_user()
     conn = get_db()
     row = conn.execute(
-        "SELECT * FROM users WHERE id = ? AND role = 'admin'", (user_id,)
-    ).fetchone()
+        "SELECT * FROM users WHERE id = ? AND role IN ('admin', 'specialist')",
+        (user_id,)).fetchone()
     if not row:
         abort(404)
     if row["last_login_at"]:
@@ -1942,7 +2274,7 @@ def admin_team_resend(user_id: int):
         return redirect(url_for("admin_team"))
 
     token = issue_token(conn, user_id, security.ADMIN_INVITE)
-    audit("admin.invite_resent", actor=actor, target_user_id=user_id,
+    audit("staff.invite_resent", actor=actor, target_user_id=user_id,
           detail=row["email"], conn=conn)
     conn.commit()
 
@@ -1950,6 +2282,7 @@ def admin_team_resend(user_id: int):
     sent = mailer.send_admin_invite(
         row_to_dict(row), link,
         f"{actor.get('first_name') or 'An administrator'} ({actor['email']})",
+        role=row["role"],
     )
     if sent:
         flash(f"A fresh invite is on its way to {row['email']}.", "success")
@@ -1967,20 +2300,22 @@ def admin_team_revoke(user_id: int):
         flash("You can't remove your own admin access.", "error")
         return redirect(url_for("admin_team"))
 
-    remaining = conn.execute(
-        "SELECT COUNT(*) AS n FROM users WHERE role = 'admin'"
-    ).fetchone()["n"]
-    if remaining <= 1:
-        # Locking everyone out of the admin panel would need a redeploy to
-        # undo, so it is refused rather than confirmed.
-        flash("That's the last administrator. Add another before removing "
-              "this one.", "error")
-        return redirect(url_for("admin_team"))
-
-    row = conn.execute("SELECT * FROM users WHERE id = ? AND role = 'admin'",
-                       (user_id,)).fetchone()
+    row = conn.execute(
+        "SELECT * FROM users WHERE id = ? AND role IN ('admin', 'specialist')",
+        (user_id,)).fetchone()
     if not row:
         abort(404)
+
+    if row["role"] == "admin":
+        remaining = conn.execute(
+            "SELECT COUNT(*) AS n FROM users WHERE role = 'admin'"
+        ).fetchone()["n"]
+        if remaining <= 1:
+            # Locking everyone out of the admin panel would need a redeploy to
+            # undo, so it is refused rather than confirmed.
+            flash("That's the last administrator. Add another before removing "
+                  "this one.", "error")
+            return redirect(url_for("admin_team"))
 
     conn.execute("UPDATE users SET role = 'client' WHERE id = ?", (user_id,))
     # Any invite they have not used yet dies with the access it was for.
@@ -1988,10 +2323,22 @@ def admin_team_revoke(user_id: int):
         "UPDATE auth_tokens SET used_at = ? WHERE user_id = ? AND used_at IS NULL",
         (utcnow(), user_id),
     )
-    audit("admin.revoked", actor=actor, target_user_id=user_id,
-          detail=row["email"], conn=conn)
+    # Their caseload comes back to the administrators rather than pointing at
+    # an account that is no longer staff. Left as it was, assigned_to would
+    # name a client row, and a specialist re-invited on that same address
+    # would silently inherit files nobody meant to give them.
+    freed = conn.execute(
+        "SELECT COUNT(*) AS n FROM users WHERE assigned_to = ?",
+        (user_id,)).fetchone()["n"]
+    conn.execute("UPDATE users SET assigned_to = NULL, assigned_at = NULL "
+                 "WHERE assigned_to = ?", (user_id,))
+    audit("staff.revoked", actor=actor, target_user_id=user_id,
+          detail=f"{row['email']} ({row['role']}), {freed} client(s) unassigned",
+          conn=conn)
     conn.commit()
-    flash(f"Admin access removed from {row['email']}.", "success")
+    flash(f"Access removed from {row['email']}."
+          + (f" {freed} client(s) are now unassigned." if freed else ""),
+          "success")
     return redirect(url_for("admin_team"))
 
 
@@ -2037,8 +2384,9 @@ def accept_invite_submit(token: str):
 
 
 @app.post("/admin/clients/<int:user_id>/stage")
-@require_admin
+@require_staff
 def admin_set_stage(user_id: int):
+    _visible_client(user_id)
     stage = (request.form.get("stage") or "").strip()
     if stage not in CASE_STAGE_KEYS:
         abort(400)
@@ -2056,8 +2404,9 @@ def admin_set_stage(user_id: int):
 
 
 @app.post("/admin/clients/<int:user_id>/event")
-@require_admin
+@require_staff
 def admin_add_event(user_id: int):
+    _visible_client(user_id)
     title = (request.form.get("title") or "").strip()
     body = (request.form.get("body") or "").strip()
     if not title:
@@ -2074,7 +2423,7 @@ def admin_add_event(user_id: int):
 
 
 @app.post("/admin/documents/<int:doc_id>/status")
-@require_admin
+@require_staff
 def admin_document_status(doc_id: int):
     status = (request.form.get("status") or "").strip()
     note = (request.form.get("review_note") or "").strip()
@@ -2084,6 +2433,10 @@ def admin_document_status(doc_id: int):
     row = conn.execute("SELECT * FROM documents WHERE id = ?", (doc_id,)).fetchone()
     if not row:
         abort(404)
+    # The document id is the only thing in the URL, so the ownership check has
+    # to happen after the lookup: a specialist must not be able to accept or
+    # reject a file on someone else's case by guessing a number.
+    _visible_client(int(row["user_id"]))
     conn.execute(
         "UPDATE documents SET status = ?, review_note = ?, reviewed_at = ? WHERE id = ?",
         (status, note, utcnow(), doc_id),

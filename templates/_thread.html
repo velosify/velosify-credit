@@ -1,0 +1,63 @@
+{#  One conversation, rendered for whichever side is looking at it.
+
+    Expects:
+      messages  the thread, oldest first
+      viewer    'client' or 'staff'
+      action    where the composer posts
+
+    There is one thread per client and both sides see all of it. Nothing here
+    is conditional on role beyond which side of the page a message sits on,
+    which is deliberate: a template that hides some messages from some people
+    is a template that eventually shows the wrong one to the wrong person. #}
+
+<div class="thread" id="thread">
+  {% if messages %}
+    {% for m in messages %}
+      {% set mine = (m.sender_role == 'client') == (viewer == 'client') %}
+      <div class="msg {{ 'mine' if mine else 'theirs' }}">
+        <div class="msg-meta">
+          <span class="msg-who">
+            {%- if mine -%}
+              You
+            {%- elif m.sender_role == 'client' -%}
+              {{ m.sender_name or 'Client' }}
+            {%- else -%}
+              {{ m.sender_name or 'Your case team' }}
+            {%- endif -%}
+          </span>
+          <span class="msg-when">{{ m.created_at | datetime }}</span>
+        </div>
+        <div class="msg-body">{{ m.body }}</div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="thread-empty">
+      <span class="thread-empty-ico" aria-hidden="true">◌</span>
+      <p class="mb-0">
+        {% if viewer == 'client' %}
+          No messages yet. Ask us anything about your case here.
+        {% else %}
+          Nothing has been said on this file yet.
+        {% endif %}
+      </p>
+    </div>
+  {% endif %}
+</div>
+
+<form method="post" action="{{ action }}" class="composer" data-guard>
+  {{ csrf_field() }}
+  <label class="sr-only" for="body">Message</label>
+  <textarea class="input" id="body" name="body" rows="3" required
+            maxlength="4000" data-autogrow
+            placeholder="{{ 'Type your message…' if viewer == 'client' else 'Reply to the client…' }}"></textarea>
+  <div class="composer-foot">
+    <span class="tiny faint">
+      {% if viewer == 'client' %}
+        Please don't send passwords or card numbers here.
+      {% else %}
+        The client sees this, and it is kept on the file.
+      {% endif %}
+    </span>
+    <button class="btn btn-primary btn-sm" type="submit" data-busy="Sending…">Send</button>
+  </div>
+</form>

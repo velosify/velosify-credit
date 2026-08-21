@@ -79,6 +79,18 @@
         </p>
       </div>
     {% endif %}
+
+    {#  The agreement is the fifth item in the sidebar and does not fit the
+        phone's tab bar, so it needs a way in from a page that does. #}
+    <div class="card card-pad-sm">
+      <div class="card-title" style="font-size:.95rem">Your agreement</div>
+      <p class="small muted">
+        The contract you signed, your cancellation rights and your credit file
+        rights, exactly as they were on the day you signed.
+      </p>
+      <a class="btn btn-ghost btn-sm btn-block"
+         href="{{ url_for('portal_agreement') }}">Open my agreement</a>
+    </div>
   </div>
 </div>
 {% endblock %}

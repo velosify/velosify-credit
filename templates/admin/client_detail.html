@@ -44,12 +44,17 @@
           cannot sign in. Sending again issues a new link and retires the old.
         </p>
       </div>
-      <form method="post"
-            action="{{ url_for('admin_client_resend_activation', user_id=client.id) }}">
-        {{ csrf_field() }}
-        <button class="btn btn-quiet btn-sm" type="submit"
-                data-busy="Sending…">Send their link again</button>
-      </form>
+      {#  Resending mints a credential, so it stays with the administrators
+          even though the waiting notice itself is useful to whoever is
+          working the file. #}
+      {% if is_admin %}
+        <form method="post"
+              action="{{ url_for('admin_client_resend_activation', user_id=client.id) }}">
+          {{ csrf_field() }}
+          <button class="btn btn-quiet btn-sm" type="submit"
+                  data-busy="Sending…">Send their link again</button>
+        </form>
+      {% endif %}
     </div>
   </div>
 {% endif %}
@@ -124,6 +129,16 @@
       </div>
     </div>
 
+    <div class="card thread-card">
+      <div class="row-between" style="margin-bottom:14px">
+        <div class="card-title mb-0">Messages</div>
+        <span class="tiny faint">The client sees this thread</span>
+      </div>
+      {% set viewer = 'staff' %}
+      {% set action = url_for('admin_message_send', user_id=client.id) %}
+      {% include "_thread.html" with context %}
+    </div>
+
     <div class="card">
       <div class="card-title" style="margin-bottom:18px">Case timeline</div>
       {% if events %}
@@ -144,6 +159,49 @@
 
   <!-- ---------- Right: actions ---------- -->
   <div class="stack">
+    {#  Assignment is what decides who can open this file at all, so it is an
+        administrator's control. A specialist sees who has it and nothing to
+        change it with. #}
+    <div class="card card-pad-sm">
+      <div class="card-title" style="font-size:.95rem">Working this file</div>
+      {% if is_admin %}
+        <form method="post" action="{{ url_for('admin_assign_client', user_id=client.id) }}">
+          {{ csrf_field() }}
+          <select class="select" name="specialist_id" style="margin-bottom:10px">
+            <option value="none" {{ 'selected' if not client.assigned_to }}>
+              Nobody yet
+            </option>
+            {% for s in specialists %}
+              <option value="{{ s.id }}" {{ 'selected' if client.assigned_to == s.id }}>
+                {{ s.first_name }} {{ s.last_name }}
+              </option>
+            {% endfor %}
+          </select>
+          <button class="btn btn-primary btn-sm btn-block" type="submit">
+            {{ 'Reassign' if client.assigned_to else 'Assign' }}
+          </button>
+        </form>
+        {% if not specialists %}
+          <p class="tiny faint" style="margin:10px 0 0">
+            No credit specialists yet.
+            <a href="{{ url_for('admin_team') }}" style="text-decoration:underline">Add one on the team page</a>.
+          </p>
+        {% else %}
+          <p class="tiny faint" style="margin:10px 0 0">
+            A specialist can only see the files assigned to them. The client is
+            told who is working theirs.
+          </p>
+        {% endif %}
+      {% else %}
+        <p class="small mb-0">
+          {% if assigned %}{{ assigned.first_name }} {{ assigned.last_name }}{% else %}Nobody{% endif %}
+        </p>
+        <p class="tiny faint" style="margin:8px 0 0">
+          Only an administrator can change who a file belongs to.
+        </p>
+      {% endif %}
+    </div>
+
     <div class="card card-pad-sm">
       <div class="card-title" style="font-size:.95rem">Case stage</div>
       <form method="post" action="{{ url_for('admin_set_stage', user_id=client.id) }}">
@@ -178,6 +236,9 @@
       </form>
     </div>
 
+    {#  Billing is the company's business with the client, not the case
+        worker's. A specialist has no reason to know what anyone paid. #}
+    {% if is_admin %}
     <div class="card card-pad-sm">
       <div class="card-title" style="font-size:.95rem">Payment</div>
       {% if orders %}
@@ -205,6 +266,7 @@
         <p class="small muted mb-0">No orders on file.</p>
       {% endif %}
     </div>
+    {% endif %}
 
     <div class="card card-pad-sm">
       <div class="card-title" style="font-size:.95rem">Agreement</div>

@@ -1558,3 +1558,160 @@ table.data tbody tr:hover { background: rgba(19, 100, 223, .04); }
   .challenge-grid { grid-template-columns: 1fr; gap: 10px; }
   .challenge-card { padding: 16px 18px; }
 }
+
+/* --- Messages ----------------------------------------------------------
+   One thread per client, the same component on both sides of the
+   conversation. "mine" is whoever is looking at it, so a client sees their
+   own words on the right and so does a specialist; nothing about the colour
+   encodes role, only direction. */
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+.thread-card { padding-bottom: 18px; }
+
+.thread {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  /* Capped so the composer stays on screen on a laptop, and the newest
+     message is what you land on. Below the cap the box is only as tall as
+     the conversation, so a two-message thread is not a scrolling well. */
+  max-height: 460px;
+  overflow-y: auto;
+  padding: 4px 4px 16px;
+  margin: 0 -4px 14px;
+}
+
+.msg { max-width: 78%; }
+.msg.theirs { align-self: flex-start; }
+.msg.mine   { align-self: flex-end; }
+
+.msg-meta {
+  display: flex; gap: 8px; align-items: baseline;
+  font-size: .7rem; color: var(--text-faint);
+  margin-bottom: 4px;
+}
+.msg.mine .msg-meta { justify-content: flex-end; }
+.msg-who { font-weight: 650; color: var(--text-muted); }
+
+.msg-body {
+  padding: 11px 14px;
+  font-size: .92rem;
+  line-height: 1.5;
+  /* The message is stored as typed. pre-wrap keeps the paragraph breaks a
+     person put in without letting a long unbroken string widen the page. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+}
+.msg.mine .msg-body {
+  background: var(--gradient);
+  border-color: transparent;
+  color: #fff;
+}
+
+.thread-empty {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 26px 10px;
+  font-size: .92rem;
+}
+.thread-empty-ico {
+  display: block; font-size: 1.5rem; color: var(--text-faint);
+  margin-bottom: 8px;
+}
+
+.composer { border-top: 1px solid var(--border); padding-top: 14px; }
+.composer textarea {
+  resize: vertical;
+  min-height: 76px;
+  font-family: inherit;
+  font-size: .92rem;
+  line-height: 1.5;
+}
+.composer-foot {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; margin-top: 10px;
+}
+
+/* --- Thread list (staff inbox) ---------------------------------------- */
+.thread-list { display: flex; flex-direction: column; gap: 10px; }
+
+.thread-row {
+  display: flex; gap: 14px; align-items: flex-start;
+  padding: 15px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+}
+.thread-row:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+  border-color: rgba(19,100,223,.34);
+}
+.thread-row.unread { border-left: 3px solid var(--accent); }
+
+.thread-avatar {
+  flex: none;
+  width: 38px; height: 38px;
+  display: grid; place-items: center;
+  background: var(--gradient-soft);
+  color: var(--accent-deep);
+  font-weight: 700; font-size: .95rem;
+  border: 1px solid rgba(19,100,223,.20);
+}
+/* min-width:0 or a long preview line sets the row's min-content width and
+   pushes the card wider than the column. */
+.thread-main { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
+.thread-top { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+.thread-name { font-weight: 650; font-size: .95rem; }
+.thread-row.unread .thread-name { font-weight: 750; }
+.thread-preview {
+  font-size: .86rem; color: var(--text-muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.pill-count {
+  display: inline-grid; place-items: center;
+  min-width: 19px; height: 19px; padding: 0 6px;
+  margin-left: 7px;
+  background: var(--accent); color: #fff;
+  font-size: .68rem; font-weight: 700; line-height: 1;
+  border-radius: 10px;
+  vertical-align: 1px;
+}
+.side-link .pill-count { margin-left: auto; }
+
+/* The tab bar has no room for a number, so unread is a dot on the icon. */
+.app-tab-ico { position: relative; }
+.tab-dot {
+  position: absolute; top: -2px; right: -7px;
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--accent);
+}
+
+@media (max-width: 720px) {
+  .msg { max-width: 88%; }
+  .thread { max-height: 62vh; }
+  .thread-row { padding: 13px 14px; gap: 11px; }
+  .thread-avatar { width: 32px; height: 32px; font-size: .85rem; }
+  /* A hover lift on a touch screen only ever fires as a stuck state after a
+     tap, so it comes off. */
+  .thread-row:hover { transform: none; box-shadow: none; }
+}
+
+/* A heading between two tables on the same page. Smaller than a page title,
+   heavier than a card title, so the two lists on the team page read as two
+   lists rather than one long one. */
+.section-sub {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0 0 12px;
+}

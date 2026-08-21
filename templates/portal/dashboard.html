@@ -104,6 +104,27 @@
 
   <div class="stack">
     <div class="card card-pad-sm">
+      <div class="card-title" style="font-size:.95rem">
+        Your case team
+        {% if unread %}<span class="pill-count">{{ unread }}</span>{% endif %}
+      </div>
+      <p class="small muted">
+        {% if user.assigned_to %}
+          A specialist is on your file. Ask them anything &mdash; what a bureau
+          said, what happens next, what a letter means.
+        {% else %}
+          Questions about your case go to our team here, and the answer stays
+          on your file so you can find it again.
+        {% endif %}
+      </p>
+      <a class="btn {{ 'btn-primary' if unread else 'btn-ghost' }} btn-sm btn-block"
+         href="{{ url_for('portal_messages') }}">
+        {% if unread %}Read {{ unread }} new message{{ '' if unread == 1 else 's' }}
+        {% else %}Message us{% endif %}
+      </a>
+    </div>
+
+    <div class="card card-pad-sm">
       <div class="card-title" style="font-size:.95rem">Your program</div>
       <div class="row-between small">
         <span class="muted">Paid</span>

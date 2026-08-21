@@ -4,15 +4,20 @@
 {% block body %}
 <div class="page-head row-between">
   <div>
-    <h1>Clients</h1>
+    <h1>{{ 'My clients' if is_specialist else 'Clients' }}</h1>
     <p class="muted mb-0">{{ clients | length }} client{{ '' if clients|length == 1 else 's' }}
+      {%- if is_specialist %} assigned to you{% endif %}
       {%- if q %} matching &ldquo;{{ q }}&rdquo;{% endif %}.</p>
   </div>
-  <a class="btn btn-primary btn-sm" href="{{ url_for('admin_client_new') }}">Add a client</a>
+  {% if is_admin %}
+    <a class="btn btn-primary btn-sm" href="{{ url_for('admin_client_new') }}">Add a client</a>
+  {% endif %}
 </div>
 
 {% set unreviewed = clients | sum(attribute='unreviewed_count') %}
 {% set complete = clients | selectattr('case_stage', 'equalto', 'complete') | list | length %}
+
+{% set unassigned = clients | rejectattr('assigned_to') | list | length %}
 
 <div class="grid grid-3" style="margin-bottom:26px">
   <div class="stat">
@@ -23,18 +28,40 @@
     <div class="k">Documents awaiting review</div>
     <div class="v" {% if unreviewed %}style="color:var(--warn)"{% endif %}>{{ unreviewed }}</div>
   </div>
-  <div class="stat">
-    <div class="k">Completed</div>
-    <div class="v">{{ complete }}</div>
-  </div>
+  {% if is_admin %}
+    <div class="stat">
+      <div class="k">Waiting to be assigned</div>
+      <div class="v" {% if unassigned %}style="color:var(--warn)"{% endif %}>{{ unassigned }}</div>
+    </div>
+  {% else %}
+    <div class="stat">
+      <div class="k">Completed</div>
+      <div class="v">{{ complete }}</div>
+    </div>
+  {% endif %}
 </div>
 
 <form method="get" action="{{ url_for('admin_clients') }}" class="row" style="margin-bottom:20px">
   <input class="input" name="q" value="{{ q }}" placeholder="Search name or email"
          style="max-width:320px">
   <button class="btn btn-ghost" type="submit">Search</button>
-  {% if q %}<a class="btn btn-quiet" href="{{ url_for('admin_clients') }}">Clear</a>{% endif %}
+  {% if q or assigned %}<a class="btn btn-quiet" href="{{ url_for('admin_clients') }}">Clear</a>{% endif %}
 </form>
+
+{#  A view, not a permission. A specialist never sees this because their list
+    is already filtered in the query. #}
+{% if is_admin and specialists %}
+  <div class="row" style="gap:8px;margin:-8px 0 20px;flex-wrap:wrap">
+    <a class="btn btn-sm {{ 'btn-ghost' if assigned else 'btn-quiet' }}"
+       href="{{ url_for('admin_clients', q=q or None) }}">Everyone</a>
+    <a class="btn btn-sm {{ 'btn-ghost' if assigned == 'none' else 'btn-quiet' }}"
+       href="{{ url_for('admin_clients', assigned='none', q=q or None) }}">Unassigned</a>
+    {% for s in specialists %}
+      <a class="btn btn-sm {{ 'btn-ghost' if assigned == s.id|string else 'btn-quiet' }}"
+         href="{{ url_for('admin_clients', assigned=s.id, q=q or None) }}">{{ s.first_name }}</a>
+    {% endfor %}
+  </div>
+{% endif %}
 
 {% if clients %}
   <div class="table-wrap">
@@ -43,7 +70,7 @@
         <tr>
           <th>Client</th>
           <th>Stage</th>
-          <th>Payment</th>
+          {% if is_admin %}<th>Assigned</th><th>Payment</th>{% endif %}
           <th>Documents</th>
           <th>Enrolled</th>
           <th></th>
@@ -53,19 +80,31 @@
         {% for c in clients %}
           <tr>
             <td>
-              <div class="strong">{{ c.first_name }} {{ c.last_name }}</div>
+              <div class="strong">
+                {{ c.first_name }} {{ c.last_name }}
+                {% if c.unread %}<span class="pill-count">{{ c.unread }}</span>{% endif %}
+              </div>
               <div class="tiny faint">{{ c.email }}</div>
             </td>
             <td><span class="badge badge-accent">{{ CASE_STAGE_LABELS.get(c.case_stage, c.case_stage) }}</span></td>
-            <td>
-              {% if c.order_status == 'paid' %}
-                <span class="badge badge-success">Paid</span>
-              {% elif c.order_status == 'refunded' %}
-                <span class="badge badge-danger">Refunded</span>
-              {% else %}
-                <span class="badge badge-warn">Unpaid</span>
-              {% endif %}
-            </td>
+            {% if is_admin %}
+              <td>
+                {% if c.assigned_to %}
+                  <span class="small">{{ c.spec_first }} {{ c.spec_last }}</span>
+                {% else %}
+                  <span class="badge badge-warn">Nobody</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if c.order_status == 'paid' %}
+                  <span class="badge badge-success">Paid</span>
+                {% elif c.order_status == 'refunded' %}
+                  <span class="badge badge-danger">Refunded</span>
+                {% else %}
+                  <span class="badge badge-warn">Unpaid</span>
+                {% endif %}
+              </td>
+            {% endif %}
             <td>
               {{ c.doc_count }}
               {% if c.unreviewed_count %}
@@ -82,7 +121,10 @@
 {% else %}
   <div class="card text-center">
     <p class="muted mb-0">
-      {% if q %}No clients match that search.{% else %}No clients yet. They'll appear here as soon as the first enrollment comes through.{% endif %}
+      {% if q %}No clients match that search.
+      {% elif is_specialist %}Nothing is assigned to you yet. An administrator
+        decides who works each file; the moment one lands here you'll see it.
+      {% else %}No clients yet. They'll appear here as soon as the first enrollment comes through.{% endif %}
     </p>
   </div>
 {% endif %}
