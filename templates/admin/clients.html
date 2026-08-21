@@ -48,6 +48,20 @@
   {% if q or assigned %}<a class="btn btn-quiet" href="{{ url_for('admin_clients') }}">Clear</a>{% endif %}
 </form>
 
+{% if archived %}
+  <div class="alert alert-info">
+    <strong>Closed accounts.</strong> These clients cannot sign in. Nothing has
+    been deleted — open one and reopen it to put it back.
+    <a href="{{ url_for('admin_clients') }}" style="text-decoration:underline">Back to active clients</a>.
+  </div>
+{% elif archived_count %}
+  <p class="small muted" style="margin:-10px 0 20px">
+    <a href="{{ url_for('admin_clients', show='archived') }}" style="text-decoration:underline">
+      {{ archived_count }} closed account{{ '' if archived_count == 1 else 's' }}</a>
+    — hidden from this list, not deleted.
+  </p>
+{% endif %}
+
 {#  A view, not a permission. A specialist never sees this because their list
     is already filtered in the query. #}
 {% if is_admin and specialists %}

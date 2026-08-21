@@ -283,6 +283,95 @@
   </div>
 </div>
 
+{% if is_admin %}
+  {#  Deliberately last, deliberately plain, and admin-only: a specialist can
+      work a file all day without ever being one mis-click from destroying it. #}
+  <div class="card danger-zone" style="margin-top:26px">
+    <div class="card-title" style="font-size:.95rem">Removing this client</div>
+
+    {% if client.archived_at %}
+      <p class="small muted">
+        Closed {{ client.archived_at | datetime }}.
+        {%- if client.archived_reason %} Reason given: {{ client.archived_reason }}.{% endif %}
+        They cannot sign in. Everything is still here.
+      </p>
+      <form method="post" action="{{ url_for('admin_client_archive', user_id=client.id) }}">
+        {{ csrf_field() }}
+        <button class="btn btn-ghost btn-sm" type="submit" data-busy="Reopening…">
+          Reopen this account
+        </button>
+      </form>
+    {% else %}
+      <p class="small muted">
+        Closing the account is the usual way to remove somebody. They can no
+        longer sign in and they drop out of the client list, but their file,
+        documents and messages stay exactly where they are, and you can reopen
+        it whenever you like.
+      </p>
+      <form method="post" action="{{ url_for('admin_client_archive', user_id=client.id) }}"
+            class="row" style="gap:10px;flex-wrap:wrap;align-items:flex-end">
+        {{ csrf_field() }}
+        <div class="field mb-0" style="flex:1;min-width:220px">
+          <label for="reason" class="small">Reason <span class="faint">(optional, kept on the file)</span></label>
+          <input class="input" id="reason" name="reason" maxlength="200"
+                 placeholder="Refunded, cancelled, duplicate…">
+        </div>
+        <button class="btn btn-ghost btn-sm" type="submit" data-busy="Closing…">
+          Close this account
+        </button>
+      </form>
+    {% endif %}
+
+    <hr style="border:0;border-top:1px solid var(--border);margin:22px 0">
+
+    <details class="danger-details">
+      <summary class="small strong">Permanently delete instead</summary>
+      <p class="small muted" style="margin-top:12px">
+        This erases the account, every uploaded document
+        (from the disk as well as the database), the
+        whole message thread, the case timeline and the payment record. It
+        cannot be undone and there is no copy of it anywhere except a backup
+        you took yourself. Only the audit entry survives.
+      </p>
+
+      {% if client.agreement_signed_at %}
+        <div class="alert alert-error small">
+          <strong>This client signed an agreement on
+          {{ client.agreement_signed_at | date }}.</strong>
+          Federal law (15 U.S.C. §1679c(b)) requires you to keep their signed
+          acknowledgment of the credit file rights disclosure for two years
+          from that date. Deleting the record destroys evidence you are
+          required to be able to produce. Closing the account instead keeps it
+          and does everything else you want.
+        </div>
+      {% endif %}
+
+      <form method="post" action="{{ url_for('admin_client_delete', user_id=client.id) }}"
+            data-guard>
+        {{ csrf_field() }}
+        <div class="field">
+          <label for="confirm_email" class="small">
+            Type <strong>{{ client.email }}</strong> to confirm
+          </label>
+          <input class="input" id="confirm_email" name="confirm_email" required
+                 autocomplete="off" placeholder="{{ client.email }}">
+        </div>
+        {% if client.agreement_signed_at %}
+          <label class="check small">
+            <input type="checkbox" name="accept_retention" value="yes" required>
+            <span>
+              I understand this destroys a signed record I am required to keep
+              for two years, and I am choosing to delete it anyway.
+            </span>
+          </label>
+        {% endif %}
+        <button class="btn btn-danger btn-sm mt-1" type="submit"
+                data-busy="Deleting…">Permanently delete this client</button>
+      </form>
+    </details>
+  </div>
+{% endif %}
+
 <style>
   @media (max-width: 980px) { #admin-grid { grid-template-columns: 1fr; } }
 </style>

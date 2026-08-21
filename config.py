@@ -99,11 +99,65 @@ def _inside_app_tree(path: Path) -> bool:
         return False
 
 
-# Data written inside the deployed source tree does not survive a deploy.
-# Locally that is exactly what you want, which is why the alarm is raised
-# only when this is also running on a platform that rebuilds.
-STORAGE_EPHEMERAL = _inside_app_tree(DB_PATH) or _inside_app_tree(UPLOAD_DIR)
+def read_mount_points(source: Path = Path("/proc/mounts")) -> set[str]:
+    """Every path the kernel currently has something mounted at.
+
+    Empty on anything that is not Linux, which is the signal to fall back to
+    the path heuristic rather than to guess.
+    """
+    try:
+        return {line.split()[1] for line in
+                source.read_text().splitlines() if len(line.split()) > 1}
+    except (OSError, IndexError):
+        return set()
+
+
+def nearest_mount(path: Path, mounts: set[str]) -> str | None:
+    """The mount point this path actually lives on, or None if unknown.
+
+    Pure, so it can be tested against a made-up set of mounts instead of
+    against whatever the machine running the tests happens to have.
+    """
+    if not mounts:
+        return None
+    resolved = path.resolve()
+    for candidate in (resolved, *resolved.parents):
+        if str(candidate) in mounts:
+            return str(candidate)
+    return None
+
+
+MOUNTS = read_mount_points()
+DB_MOUNT = nearest_mount(DB_PATH.parent, MOUNTS)
+
+# Two ways to lose everything, and the second one is the one that caught us.
+#
+#   1. The data sits inside the deployed source tree, which the platform
+#      rebuilds. Obvious once you look at the path.
+#   2. The data sits at a perfectly sensible-looking path like /data, and no
+#      volume is mounted there. The path looks right, the app works, and the
+#      directory is part of the container image, so it is destroyed with it.
+#      Nothing about DB_PATH tells you this. Only the mount table does.
+#
+# On a container the root filesystem is itself a mount, so "the nearest mount
+# is /" means the data is on the image, not on a volume.
+_ON_VOLUME = DB_MOUNT is not None and DB_MOUNT != "/"
+STORAGE_EPHEMERAL = (
+    _inside_app_tree(DB_PATH) or _inside_app_tree(UPLOAD_DIR) or not _ON_VOLUME
+)
 STORAGE_AT_RISK = HOSTED and STORAGE_EPHEMERAL
+
+# Said in the app's own words wherever the warning is shown, because "it is
+# not on a volume" and "it is inside the app directory" need different fixes.
+if _inside_app_tree(DB_PATH) or _inside_app_tree(UPLOAD_DIR):
+    STORAGE_REASON = ("the data is inside the application directory, which "
+                      "this host rebuilds on every deploy")
+elif not _ON_VOLUME:
+    STORAGE_REASON = (f"nothing is mounted at {DB_PATH.parent}, so it is part "
+                      f"of the container image and is destroyed with it — the "
+                      f"path looks right but no volume is attached to it")
+else:
+    STORAGE_REASON = ""
 
 # Uploads are never served from /static. They go through an auth-gated
 # route. Keep the ceiling low enough that a bad actor can't fill the disk.

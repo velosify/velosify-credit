@@ -137,10 +137,13 @@ if config.STORAGE_AT_RISK:
         "\n  DATA IS ON EPHEMERAL STORAGE AND WILL BE LOST ON THE NEXT DEPLOY"
         f"\n  database: {config.DB_PATH}"
         f"\n  uploads:  {config.UPLOAD_DIR}"
+        f"\n  mounts:   nearest mount point is {config.DB_MOUNT or 'unknown'}"
         "\n"
-        "\n  Both are inside the application directory, which this platform"
-        "\n  rebuilds on every deploy. Attach a volume and set DATA_DIR to"
-        "\n  its mount path (for example DATA_DIR=/data).\n"
+        f"\n  Why: {config.STORAGE_REASON}."
+        "\n"
+        "\n  Attach a volume in the host's dashboard, mount it at /data, and"
+        "\n  set DATA_DIR=/data. Setting the variable without attaching the"
+        "\n  volume changes nothing.\n"
         + "!" * 72 + "\n",
         flush=True,
     )
@@ -1043,6 +1046,18 @@ def login_submit():
             error="That email and password don't match an account.",
         ), 401
 
+    # Checked after the password, not before, so this cannot be used to work
+    # out which addresses have been closed.
+    if row["archived_at"]:
+        clear_failures(conn, "login:email", email)
+        audit("login.archived", detail=email, conn=conn)
+        conn.commit()
+        return render_template(
+            "login.html", email=email,
+            error=f"This account has been closed. If that's a mistake, write "
+                  f"to {config.SUPPORT_EMAIL} and we'll reopen it.",
+        ), 403
+
     clear_failures(conn, "login:email", email)
     login_user(row["id"], row["email"], row["role"])
     # A fresh CSRF token on privilege change, so a token captured before
@@ -1477,6 +1492,10 @@ def admin_clients():
         "WHERE u.role = 'client' "
     )
     params: list = []
+    # Closed accounts are out of the way by default and reachable on purpose.
+    # They are not deleted, so a client who comes back is a click away.
+    archived = (request.args.get("show") or "") == "archived"
+    sql += "AND u.archived_at IS " + ("NOT NULL " if archived else "NULL ")
     # The filter a specialist gets is not a filter. It is applied in SQL
     # before anything reaches the page, and there is no query string that
     # widens it.
@@ -1500,8 +1519,15 @@ def admin_clients():
         conn, specialist_id=int(me["id"]) if is_specialist() else None)
     for row in clients:
         row["unread"] = unread.get(int(row["id"]), 0)
+    archived_count = conn.execute(
+        "SELECT COUNT(*) AS n FROM users WHERE role = 'client' "
+        "AND archived_at IS NOT NULL" +
+        (" AND assigned_to = ?" if is_specialist() else ""),
+        (int(me["id"]),) if is_specialist() else (),
+    ).fetchone()["n"]
     return render_template("admin/clients.html", clients=clients, q=q,
-                           assigned=mine, specialists=_specialists())
+                           assigned=mine, specialists=_specialists(),
+                           archived=archived, archived_count=archived_count)
 
 
 @app.get("/admin/clients/<int:user_id>")
@@ -2074,21 +2100,21 @@ def admin_system():
     # destroys data that cannot be got back.
     if config.STORAGE_AT_RISK:
         add("Data storage", "fail",
-            f"The database is at {config.DB_PATH} and uploads at "
-            f"{config.UPLOAD_DIR}, both inside the application directory. "
-            f"This host rebuilds that directory on every deploy, so every "
-            f"client, document and message is erased each time you ship, "
-            f"with no error and nothing to restore from.",
+            f"Database {config.DB_PATH}, uploads {config.UPLOAD_DIR}. "
+            f"Every client, document and message is erased on each deploy, "
+            f"with no error and nothing to restore from, because "
+            f"{config.STORAGE_REASON}.",
             "Attach a volume in your host's dashboard, mount it at /data, "
-            "then set DATA_DIR=/data and redeploy.")
+            "then set DATA_DIR=/data and redeploy. Setting the variable "
+            "without attaching the volume changes nothing.")
     elif config.STORAGE_EPHEMERAL:
         add("Data storage", "ok",
             f"{config.DB_PATH} — inside the project, which is normal for a "
             f"local machine.")
     else:
         add("Data storage", "ok",
-            f"{config.DB_PATH}, outside the application directory, so a "
-            f"deploy leaves it alone.")
+            f"{config.DB_PATH}, on the volume mounted at {config.DB_MOUNT}, "
+            f"so a deploy leaves it alone.")
 
     if not config.SECRET_KEY_PROVIDED:
         add("Session secret", "fail",
@@ -2218,6 +2244,136 @@ def admin_test_email():
     else:
         flash(f"The mail provider refused it: {mailer.last_error}", "error")
     return redirect(url_for("admin_system"))
+
+
+# ---------------------------------------------------------------------------
+# Closing and removing a client
+#
+# Two different things, deliberately kept apart.
+#
+# Archiving is the ordinary one: the account stops working and drops out of
+# the working list, and every row stays exactly where it is. It is reversible,
+# and it is what "delete this client" almost always means in practice.
+#
+# Deleting is real deletion, and it is the one with a legal edge. 15 U.S.C.
+# 1679c(b) requires the signed acknowledgment of the credit file rights
+# disclosure to be kept for two years from the date it was signed. Destroying
+# a signed client's record inside that window removes evidence the business is
+# required to be able to produce. So deletion is available, because test rows
+# and mistyped enrollments are real, but a signed file makes you say so
+# explicitly rather than making it one click.
+# ---------------------------------------------------------------------------
+
+def _client_row(user_id: int):
+    row = get_db().execute(
+        "SELECT * FROM users WHERE id = ? AND role = 'client'", (user_id,)
+    ).fetchone()
+    if not row:
+        abort(404)
+    return row
+
+
+@app.post("/admin/clients/<int:user_id>/archive")
+@require_admin
+def admin_client_archive(user_id: int):
+    actor = current_user()
+    row = _client_row(user_id)
+    conn = get_db()
+    reason = (request.form.get("reason") or "").strip()[:200]
+
+    if row["archived_at"]:
+        conn.execute("UPDATE users SET archived_at = NULL, archived_reason = '' "
+                     "WHERE id = ?", (user_id,))
+        add_event(conn, user_id, title="Account reopened",
+                  body="An administrator reopened this account.",
+                  created_by=actor["email"])
+        audit("client.unarchived", actor=actor, target_user_id=user_id,
+              detail=row["email"], conn=conn)
+        flash(f"{row['email']} can sign in again.", "success")
+    else:
+        conn.execute("UPDATE users SET archived_at = ?, archived_reason = ? "
+                     "WHERE id = ?", (utcnow(), reason, user_id))
+        add_event(conn, user_id, title="Account closed",
+                  body=reason or "This account was closed by an administrator.",
+                  created_by=actor["email"])
+        audit("client.archived", actor=actor, target_user_id=user_id,
+              detail=f"{row['email']}{' — ' + reason if reason else ''}",
+              conn=conn)
+        flash(f"{row['email']} is closed. Nothing was deleted, and you can "
+              f"reopen the account at any time.", "success")
+    conn.commit()
+    return redirect(url_for("admin_client_detail", user_id=user_id))
+
+
+@app.post("/admin/clients/<int:user_id>/delete")
+@require_admin
+def admin_client_delete(user_id: int):
+    actor = current_user()
+    row = _client_row(user_id)
+    conn = get_db()
+
+    def refuse(message: str):
+        flash(message, "error")
+        return redirect(url_for("admin_client_detail", user_id=user_id))
+
+    # Typing the address is the confirmation. A checkbox is too easy to click
+    # on the wrong row, and every row on this screen looks the same.
+    if normalize_email(request.form.get("confirm_email")) != row["email"]:
+        return refuse("The email you typed doesn't match this client, so "
+                      "nothing was deleted. That is the check working.")
+
+    signed = bool(row["agreement_signed_at"])
+    if signed and request.form.get("accept_retention") != "yes":
+        return refuse("This client signed an agreement. Federal law requires "
+                      "the signed disclosure acknowledgment to be kept for "
+                      "two years, so you have to confirm that separately.")
+
+    documents = conn.execute(
+        "SELECT stored_name FROM documents WHERE user_id = ?", (user_id,)
+    ).fetchall()
+    counts = {
+        "documents": len(documents),
+        "messages": conn.execute("SELECT COUNT(*) AS n FROM messages "
+                                 "WHERE client_id = ?", (user_id,)).fetchone()["n"],
+        "orders": conn.execute("SELECT COUNT(*) AS n FROM orders "
+                               "WHERE user_id = ?", (user_id,)).fetchone()["n"],
+        "events": conn.execute("SELECT COUNT(*) AS n FROM case_events "
+                               "WHERE user_id = ?", (user_id,)).fetchone()["n"],
+    }
+
+    # Written before the deletion, and deliberately carrying the name, email
+    # and what was destroyed in its own text. The audit row survives the
+    # client, but its link to them does not, so anything not written down here
+    # is not recoverable from anywhere.
+    who = f"{row['first_name']} {row['last_name']}".strip() or row["email"]
+    audit("client.deleted", actor=actor,
+          detail=f"{who} <{row['email']}> — permanently deleted: "
+                 f"{counts['documents']} documents, {counts['messages']} messages, "
+                 f"{counts['orders']} orders, {counts['events']} case events; "
+                 f"agreement signed {row['agreement_signed_at'] or 'never'}",
+          conn=conn)
+
+    # Explicitly rather than by cascade, so the files on disk go too and so
+    # the counts above are the truth rather than an assumption.
+    for doc in documents:
+        try:
+            (config.UPLOAD_DIR / doc["stored_name"]).unlink(missing_ok=True)
+        except OSError:
+            app.logger.warning("could not remove %s", doc["stored_name"])
+    conn.execute("DELETE FROM documents WHERE user_id = ?", (user_id,))
+    conn.execute("DELETE FROM messages WHERE client_id = ?", (user_id,))
+    conn.execute("DELETE FROM orders WHERE user_id = ?", (user_id,))
+    conn.execute("DELETE FROM case_events WHERE user_id = ?", (user_id,))
+    conn.execute("DELETE FROM auth_tokens WHERE user_id = ?", (user_id,))
+    conn.execute("DELETE FROM auth_failures WHERE scope = 'login:email' "
+                 "AND key = ?", (row["email"],))
+    conn.execute("DELETE FROM users WHERE id = ? AND role = 'client'", (user_id,))
+    conn.commit()
+
+    flash(f"{who} has been permanently deleted, along with "
+          f"{counts['documents']} document(s) and {counts['messages']} "
+          f"message(s). Only the audit entry remains.", "success")
+    return redirect(url_for("admin_clients"))
 
 
 @app.post("/admin/system/backup")

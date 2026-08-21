@@ -153,7 +153,14 @@ CREATE TABLE IF NOT EXISTS users (
     -- thread was opened compares as "already read" and is never counted. An
     -- id is monotonic and has no such tie.
     client_read_id      INTEGER NOT NULL DEFAULT 0,
-    staff_read_id       INTEGER NOT NULL DEFAULT 0
+    staff_read_id       INTEGER NOT NULL DEFAULT 0,
+    -- Set when a client is closed out. The row and everything hanging off it
+    -- stays exactly where it is; the account simply stops working and drops
+    -- out of the working list. This is the ordinary way to remove somebody,
+    -- because the Credit Repair Organizations Act wants the signed disclosure
+    -- acknowledgment kept for two years and a deleted row cannot produce it.
+    archived_at         TEXT,
+    archived_reason     TEXT    NOT NULL DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS orders (
@@ -288,6 +295,8 @@ _ADDED_COLUMNS = [
     ("users", "assigned_at", "TEXT"),
     ("users", "client_read_id", "INTEGER NOT NULL DEFAULT 0"),
     ("users", "staff_read_id", "INTEGER NOT NULL DEFAULT 0"),
+    ("users", "archived_at", "TEXT"),
+    ("users", "archived_reason", "TEXT NOT NULL DEFAULT ''"),
 ]
 
 

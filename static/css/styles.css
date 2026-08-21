@@ -1715,3 +1715,30 @@ table.data tbody tr:hover { background: rgba(19, 100, 223, .04); }
   font-weight: 700;
   margin: 0 0 12px;
 }
+
+/* --- Removing a client ---------------------------------------------------
+   Set apart rather than styled loudly. A red panel at the bottom of every
+   client file trains people to ignore red; a quiet one with the actual
+   deletion folded away inside a <details> makes the dangerous thing take a
+   deliberate extra click. */
+.danger-zone { border-color: rgba(158,27,50,.22); }
+.danger-zone .card-title { color: var(--danger); }
+.danger-details > summary {
+  cursor: pointer;
+  color: var(--danger);
+  padding: 6px 0;
+  list-style: none;
+}
+.danger-details > summary::-webkit-details-marker { display: none; }
+.danger-details > summary::before {
+  content: "▸";
+  display: inline-block;
+  margin-right: 8px;
+  transition: transform .15s ease;
+}
+.danger-details[open] > summary::before { transform: rotate(90deg); }
+.danger-details > summary:focus-visible {
+  outline: 2px solid var(--danger);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
