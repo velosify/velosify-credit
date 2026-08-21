@@ -22,7 +22,9 @@ import logging
 import os
 import re
 import secrets
+import shutil
 import sys
+import tempfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -124,6 +126,24 @@ def _fingerprinted_url_for() -> dict:
 
 app.teardown_appcontext(database.close_db)
 database.init_db()
+
+if config.STORAGE_AT_RISK:
+    # Loud, and at boot, because the failure it describes is silent. The app
+    # starts perfectly well on an empty database; the only symptom is that
+    # everybody's clients are gone, and by then the previous container has
+    # been destroyed and there is nothing to recover.
+    print(
+        "\n" + "!" * 72 +
+        "\n  DATA IS ON EPHEMERAL STORAGE AND WILL BE LOST ON THE NEXT DEPLOY"
+        f"\n  database: {config.DB_PATH}"
+        f"\n  uploads:  {config.UPLOAD_DIR}"
+        "\n"
+        "\n  Both are inside the application directory, which this platform"
+        "\n  rebuilds on every deploy. Attach a volume and set DATA_DIR to"
+        "\n  its mount path (for example DATA_DIR=/data).\n"
+        + "!" * 72 + "\n",
+        flush=True,
+    )
 
 if config.BILLING_ENABLED and HAS_STRIPE:
     stripe.api_key = config.STRIPE_SECRET_KEY
@@ -2050,6 +2070,26 @@ def admin_system():
     else:
         add("Flask debug", "ok", "Off.")
 
+    # First in the list on purpose: it is the only check here whose failure
+    # destroys data that cannot be got back.
+    if config.STORAGE_AT_RISK:
+        add("Data storage", "fail",
+            f"The database is at {config.DB_PATH} and uploads at "
+            f"{config.UPLOAD_DIR}, both inside the application directory. "
+            f"This host rebuilds that directory on every deploy, so every "
+            f"client, document and message is erased each time you ship, "
+            f"with no error and nothing to restore from.",
+            "Attach a volume in your host's dashboard, mount it at /data, "
+            "then set DATA_DIR=/data and redeploy.")
+    elif config.STORAGE_EPHEMERAL:
+        add("Data storage", "ok",
+            f"{config.DB_PATH} — inside the project, which is normal for a "
+            f"local machine.")
+    else:
+        add("Data storage", "ok",
+            f"{config.DB_PATH}, outside the application directory, so a "
+            f"deploy leaves it alone.")
+
     if not config.SECRET_KEY_PROVIDED:
         add("Session secret", "fail",
             "No SECRET_KEY is set, so one is generated per process. Everyone "
@@ -2126,12 +2166,12 @@ def admin_system():
         f"{config.UPLOAD_DIR} ({'writable' if writable else 'NOT writable'})",
         "" if writable else "Check the mounted volume.")
 
-    on_volume = str(config.DB_PATH).startswith(("/data", "/mnt", "/var/lib"))
-    add("Database location", "ok" if on_volume else "warn",
-        str(config.DB_PATH) + ("" if on_volume else
-        " — this does not look like a mounted volume, so it may be wiped on "
-        "each deploy"),
-        "" if on_volume else "Point DB_PATH at the volume.")
+    # There used to be a second check here guessing at whether DB_PATH looked
+    # like a volume, reported as a yellow "warn" among several other yellows.
+    # It was right, and it was ignored, and the client list was wiped. "Data
+    # storage" above replaces it: same question, asked from what the platform
+    # actually does rather than from what the path looks like, and reported as
+    # a failure because that is what it is.
 
     add("Error reporting", "ok" if config.SENTRY_DSN else "warn",
         "Sentry configured." if config.SENTRY_DSN else
@@ -2178,6 +2218,51 @@ def admin_test_email():
     else:
         flash(f"The mail provider refused it: {mailer.last_error}", "error")
     return redirect(url_for("admin_system"))
+
+
+@app.post("/admin/system/backup")
+@require_admin
+def admin_backup():
+    """Download everything, right now, as one archive.
+
+    The database is copied with SQLite's own online backup API rather than by
+    reading the file, so the copy is a single consistent point in time even
+    while people are using the app. The uploads ride along, because a
+    database that references files nobody has is not a backup of anything.
+
+    This archive is every client's government ID and Social Security proof in
+    one file. Downloading it is recorded, and it belongs on an encrypted disk
+    or nowhere.
+    """
+    import backup as backup_tool
+
+    actor = current_user()
+    work = Path(tempfile.mkdtemp(prefix="vc-backup-"))
+    try:
+        archive = backup_tool.create(work)
+    except Exception as exc:                      # noqa: BLE001
+        app.logger.exception("backup failed")
+        audit("admin.backup_failed", actor=actor, detail=str(exc)[:200])
+        get_db().commit()
+        flash(f"The backup could not be made: {exc}", "error")
+        return redirect(url_for("admin_system"))
+
+    audit("admin.backup_downloaded", actor=actor,
+          detail=f"{archive.name}, {archive.stat().st_size} bytes")
+    get_db().commit()
+
+    response = send_file(str(archive), as_attachment=True,
+                         download_name=archive.name,
+                         mimetype="application/gzip")
+
+    # The file is streamed from a temporary directory, so it is removed once
+    # the response has actually been written rather than on the way out of
+    # this function.
+    @response.call_on_close
+    def _cleanup():
+        shutil.rmtree(work, ignore_errors=True)
+
+    return response
 
 
 @app.post("/admin/team/invite")

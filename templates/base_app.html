@@ -108,6 +108,24 @@
   </aside>
 
   <main class="app-main">
+    {#  Not dismissible, and on every staff page rather than tucked into
+        settings. Losing the client list is the worst thing this application
+        can do, it happens silently, and it happens on a schedule nobody
+        chooses. It stops the moment the volume is attached. #}
+    {% if is_staff and cfg.STORAGE_AT_RISK %}
+      <div class="alert alert-error" style="margin-bottom:20px">
+        <strong>Everything here will be erased by the next deploy.</strong>
+        Clients, documents and messages are being written inside the app
+        itself, and this host rebuilds that on every deploy.
+        {% if is_admin %}
+          Attach a volume and set <code>DATA_DIR</code> to its mount path.
+          <a href="{{ url_for('admin_system') }}" style="text-decoration:underline">See system status</a>.
+        {% else %}
+          Tell an administrator before you put real work in.
+        {% endif %}
+      </div>
+    {% endif %}
+
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         {% for category, message in messages %}

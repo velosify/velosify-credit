@@ -61,13 +61,49 @@ def _tel(number: str) -> str:
 SUPPORT_PHONE_TEL = _tel(SUPPORT_PHONE)
 
 # --- Storage --------------------------------------------------------------
-# DB and uploads sit under the same parent so a single mounted volume on
-# Railway persists both across redeploys.
-DB_PATH = Path(_env("DB_PATH") or (ROOT / "velosify_credit.db"))
+#
+# Everything a client gives us is in two places: rows in the database and
+# files in the upload directory. Both must live on a mounted volume, NOT
+# inside the application directory.
+#
+# A platform like Railway builds a fresh container image on every deploy and
+# throws the old one away. Anything written inside the deployed source tree
+# goes with it, silently: the app comes back up, creates an empty database,
+# and every client, document and message is gone with no error anywhere. The
+# only thing standing between that and a real client's file is DATA_DIR
+# pointing at a volume.
+#
+# Set DATA_DIR to the volume's mount path (for example /data) and both the
+# database and the uploads follow it. DB_PATH and UPLOAD_DIR still override
+# individually for anyone who needs them apart.
+DATA_DIR = Path(_env("DATA_DIR") or ROOT)
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+DB_PATH = Path(_env("DB_PATH") or (DATA_DIR / "velosify_credit.db"))
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 UPLOAD_DIR = Path(_env("UPLOAD_DIR") or (DB_PATH.parent / "uploads"))
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+# Are we running on a platform that rebuilds the filesystem on deploy?
+# Each of these is set by the platform itself, never by us.
+HOSTED = bool(_env("RAILWAY_ENVIRONMENT") or _env("RAILWAY_PROJECT_ID")
+              or _env("RENDER") or _env("FLY_APP_NAME") or _env("DYNO"))
+
+
+def _inside_app_tree(path: Path) -> bool:
+    try:
+        path.resolve().relative_to(ROOT)
+        return True
+    except ValueError:
+        return False
+
+
+# Data written inside the deployed source tree does not survive a deploy.
+# Locally that is exactly what you want, which is why the alarm is raised
+# only when this is also running on a platform that rebuilds.
+STORAGE_EPHEMERAL = _inside_app_tree(DB_PATH) or _inside_app_tree(UPLOAD_DIR)
+STORAGE_AT_RISK = HOSTED and STORAGE_EPHEMERAL
 
 # Uploads are never served from /static. They go through an auth-gated
 # route. Keep the ceiling low enough that a bad actor can't fill the disk.

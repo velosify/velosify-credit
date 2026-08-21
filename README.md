@@ -52,7 +52,11 @@ The ones that matter most:
   generated at boot, which silently signs everyone out on every restart.
 - `APP_BASE_URL`: your public URL. Used to build Stripe redirect URLs and
   links in emails, and to decide whether to set the `Secure` cookie flag.
-- `DB_PATH` / `UPLOAD_DIR`: put both on a persistent volume in production.
+- `DATA_DIR`: **the volume mount path in production.** The database and the
+  uploaded documents both live under it. Unset, they are written inside the
+  application directory, which a platform like Railway rebuilds on every
+  deploy — so every client, document and message is erased each time you
+  ship. `DB_PATH` and `UPLOAD_DIR` still override individually.
 - `PRICE_CENTS`: defaults to `99700` ($997).
 
 ### Stripe
@@ -88,8 +92,11 @@ dependencies, so anything 3.11 or newer runs it.
 
 1. Push the repo, create the service.
 2. Add a **volume** and mount it at `/data`.
-3. Set `DB_PATH=/data/velosify_credit.db` and `UPLOAD_DIR=/data/uploads`.
-   Without this, every redeploy wipes your clients and their documents.
+3. Set `DATA_DIR=/data`. Without this, every redeploy wipes your clients,
+   their documents and their message threads. This is not a warning about a
+   possibility; it is what happens, every deploy, silently. The app will tell
+   you loudly at boot and on every admin page if it is running this way, but
+   it cannot fix it from the inside.
 4. Set the rest of the environment from `.env.example`.
 5. Point your domain at the service and set `APP_BASE_URL` to match.
 

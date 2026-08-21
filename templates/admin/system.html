@@ -74,6 +74,26 @@
   </form>
 </div>
 
+<div class="card mt-2">
+  <div class="card-title" style="font-size:.95rem">Download a backup</div>
+  <p class="small muted">
+    The database and every uploaded file, in one archive, taken at a single
+    consistent moment. Do this before anything risky, and keep a copy
+    somewhere that is not this server.
+  </p>
+  <p class="small muted">
+    <strong>It contains every client's government ID and Social Security
+    proof.</strong> The download is recorded in the audit log against your
+    name. Put it on an encrypted disk or don't take it.
+  </p>
+  <form method="post" action="{{ url_for('admin_backup') }}">
+    {{ csrf_field() }}
+    <button class="btn btn-ghost btn-sm" type="submit" data-busy="Packing…">
+      Download everything now
+    </button>
+  </form>
+</div>
+
 <p class="small faint mt-2">
   Values are read at boot, so a change in the deployment environment shows up
   here only after a restart.
