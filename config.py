@@ -160,6 +160,29 @@ elif not _ON_VOLUME:
 else:
     STORAGE_REASON = ""
 
+# --- Where we ask clients to get their credit report ----------------------
+#
+# A three-bureau report with account numbers and dates is what disputes are
+# actually written from, so this is the one document where the source matters.
+CREDIT_REPORT_PROVIDER = _env("CREDIT_REPORT_PROVIDER", "IdentityIQ")
+CREDIT_REPORT_URL = _env("CREDIT_REPORT_URL", "https://www.identityiq.com/")
+
+# Whether we are paid for that referral. The FTC's endorsement guides require
+# a material connection to be disclosed where the recommendation is made, and
+# the Credit Repair Organizations Act separately forbids misleading statements
+# to clients — so claiming a payment that does not exist is no better than
+# hiding one that does.
+#
+# Deliberately three states, not two. Unset means nobody has answered yet, and
+# the system check says so rather than this quietly picking an answer and
+# putting words in your mouth either way.
+_affiliate = _env("CREDIT_REPORT_AFFILIATE").lower()
+CREDIT_REPORT_AFFILIATE = (
+    True if _affiliate in ("1", "true", "yes")
+    else False if _affiliate in ("0", "false", "no")
+    else None
+)
+
 # Uploads are never served from /static. They go through an auth-gated
 # route. Keep the ceiling low enough that a bad actor can't fill the disk.
 MAX_UPLOAD_MB = _env_int("MAX_UPLOAD_MB", 25)

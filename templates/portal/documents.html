@@ -32,6 +32,45 @@
   </div>
 </div>
 
+{#  Placed above the checklist rather than inside the credit report card,
+    because it is the one document people get stuck on and the card is a poor
+    place for four sentences. It disappears once the report is in. #}
+{% set report = checklist['items'] | selectattr('key', 'equalto', 'credit_report') | first %}
+{% if report and not report.satisfied and cfg.CREDIT_REPORT_URL %}
+  <div class="card report-source" style="margin-bottom:26px">
+    <div class="card-title">Where to get your credit report</div>
+    <p class="small muted">
+      We work from <strong>{{ cfg.CREDIT_REPORT_PROVIDER }}</strong>. Their
+      report puts all three bureaus side by side and includes the account
+      numbers, dates and balances a dispute has to quote. Reports that show
+      only a score, or only one bureau, aren't enough for us to file from, and
+      sending one usually costs you a week while we ask for another.
+    </p>
+    <p class="small muted">
+      Sign up, open your three-bureau report, and save or print it as a PDF.
+      Then upload it below.
+    </p>
+    <a class="btn btn-primary btn-sm" href="{{ cfg.CREDIT_REPORT_URL }}"
+       target="_blank" rel="noopener">
+      Get my report from {{ cfg.CREDIT_REPORT_PROVIDER }} →
+    </a>
+    <p class="tiny faint" style="margin:14px 0 0">
+      {% if cfg.CREDIT_REPORT_AFFILIATE %}
+        We may be paid a commission if you sign up through this link. It costs
+        you nothing extra, and we recommend them because their report is the
+        one we can work from.
+      {% endif %}
+      You're free to use any service you like, and you can get a free report
+      from each bureau once a week at
+      <a href="https://www.annualcreditreport.com" target="_blank" rel="noopener"
+         style="text-decoration:underline">annualcreditreport.com</a> — it just
+      arrives one bureau at a time and often leaves out the detail we need.
+      {{ cfg.BRAND_NAME }} is not affiliated with {{ cfg.CREDIT_REPORT_PROVIDER }}
+      beyond{% if cfg.CREDIT_REPORT_AFFILIATE %} that referral{% else %} recommending them{% endif %}.
+    </p>
+  </div>
+{% endif %}
+
 {% set required = checklist['items'] | selectattr('required') | list %}
 {% set optional = checklist['items'] | rejectattr('required') | list %}
 

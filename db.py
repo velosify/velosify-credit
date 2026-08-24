@@ -25,8 +25,11 @@ DOCUMENT_TYPES = [
         "key": "credit_report",
         "label": "Credit report",
         "required": True,
-        "help": "All three bureaus if you have them: Experian, Equifax and "
-                "TransUnion. A PDF export from annualcreditreport.com is ideal.",
+        # The provider is named on the documents page itself, where there is
+        # room to say why and to carry the disclosure that goes with a
+        # recommendation. This line stays about the document.
+        "help": "All three bureaus in one report: Experian, Equifax and "
+                "TransUnion, saved as a PDF. See below for where to get one.",
     },
     {
         "key": "photo_id",

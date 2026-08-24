@@ -2187,6 +2187,24 @@ def admin_system():
         config.COMPANY_ADDRESS or "Not set, and the contract has to carry it.",
         "" if config.COMPANY_ADDRESS else "Set COMPANY_ADDRESS.")
 
+    # An unanswered question, not a misconfiguration. The portal recommends a
+    # credit report provider, and whether that recommendation is paid for
+    # changes what has to be printed next to it.
+    if config.CREDIT_REPORT_URL and config.CREDIT_REPORT_AFFILIATE is None:
+        add("Credit report referral", "warn",
+            f"The portal points clients at {config.CREDIT_REPORT_PROVIDER}, "
+            f"and nothing says whether you are paid for that referral. The "
+            f"FTC requires a paid recommendation to disclose it where it is "
+            f"made; claiming one you don't have would be just as wrong.",
+            "Set CREDIT_REPORT_AFFILIATE=1 if you earn anything from the "
+            "referral, or 0 if you don't.")
+    elif config.CREDIT_REPORT_URL:
+        add("Credit report referral", "ok",
+            f"{config.CREDIT_REPORT_PROVIDER} — "
+            + ("paid referral, disclosed in the portal."
+               if config.CREDIT_REPORT_AFFILIATE else
+               "recommended, no compensation, nothing to disclose."))
+
     writable = os.access(config.UPLOAD_DIR, os.W_OK)
     add("Upload directory", "ok" if writable else "fail",
         f"{config.UPLOAD_DIR} ({'writable' if writable else 'NOT writable'})",
