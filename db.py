@@ -73,6 +73,15 @@ REQUIRED_DOCUMENT_KEYS = [d["key"] for d in DOCUMENT_TYPES if d["required"]]
 
 # Case pipeline. `key` is stored on the user row; the list drives the
 # progress bar in the portal.
+# Where a lead is in the only process it has: somebody rings them.
+LEAD_STATUSES = [
+    ("new",    "New"),
+    ("called", "Called"),
+    ("closed", "Closed"),
+]
+LEAD_STATUS_LABELS = dict(LEAD_STATUSES)
+LEAD_STATUS_KEYS = {k for k, _ in LEAD_STATUSES}
+
 CASE_STAGES = [
     ("intake", "Intake"),
     ("documents", "Collecting documents"),
@@ -234,6 +243,28 @@ CREATE INDEX IF NOT EXISTS idx_messages_client ON messages(client_id, created_at
 -- Single-use, expiring tokens for password reset and email confirmation.
 -- Only the SHA-256 of the token is stored: a stolen database backup must not
 -- hand anyone a working reset link.
+-- Someone who asked for a call. Not a user: no login, no password, no case.
+-- Stored here as well as emailed, because an email that bounces is a lead
+-- that never existed as far as anyone can tell, and a lead is the whole
+-- business.
+CREATE TABLE IF NOT EXISTS leads (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    full_name     TEXT    NOT NULL,
+    email         TEXT    NOT NULL,
+    phone         TEXT    NOT NULL,
+    goal          TEXT    NOT NULL DEFAULT '',   -- what they want removed
+    debt_amount   TEXT    NOT NULL DEFAULT '',   -- as typed; it is an estimate
+    best_time     TEXT    NOT NULL DEFAULT '',
+    status        TEXT    NOT NULL DEFAULT 'new',  -- 'new' | 'called' | 'closed'
+    note          TEXT    NOT NULL DEFAULT '',
+    source_ip     TEXT    NOT NULL DEFAULT '',
+    emailed_at    TEXT,
+    created_at    TEXT    NOT NULL,
+    handled_at    TEXT,
+    handled_by    TEXT    NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status, created_at);
+
 CREATE TABLE IF NOT EXISTS auth_tokens (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,

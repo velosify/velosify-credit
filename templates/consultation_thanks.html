@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}We'll be in touch | {{ cfg.BRAND_NAME }}{% endblock %}
+{% block head %}<meta name="robots" content="noindex">{% endblock %}
+
+{% block body %}
+<section class="section-tight">
+  <div class="container container-form">
+    <div class="card text-center" data-reveal>
+      <div class="success-mark" aria-hidden="true">✓</div>
+      <h1 style="font-size:clamp(1.7rem,3.4vw,2.3rem);margin-bottom:10px">
+        Got it, {{ (form.full_name or '').split()[0] if form.full_name else 'thanks' }}.
+      </h1>
+      <p class="lead lead-center">
+        We'll call you on <strong>{{ form.phone }}</strong>, usually within one
+        business day.
+      </p>
+
+      <div class="alert alert-info text-left" style="margin:26px 0 0">
+        <strong>Before we speak</strong>, it helps to have a recent
+        three-bureau credit report in front of you — but it's not required,
+        and we'll talk you through getting one if you don't.
+      </div>
+
+      <p class="small muted" style="margin-top:22px">
+        Nothing has been charged and no account has been created. If you'd
+        rather reach us first, call
+        <a href="tel:{{ cfg.SUPPORT_PHONE_TEL }}" class="strong">{{ cfg.SUPPORT_PHONE }}</a>
+        or email
+        <a href="mailto:{{ cfg.SUPPORT_EMAIL }}" style="text-decoration:underline">{{ cfg.SUPPORT_EMAIL }}</a>.
+      </p>
+
+      <a class="btn btn-ghost mt-2" href="{{ url_for('landing') }}">Back to the site</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

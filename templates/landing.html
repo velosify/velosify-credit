@@ -20,8 +20,8 @@
          width="1221" height="420" fetchpriority="high">
 
     <div class="hero-cta" data-reveal>
-      <a class="btn btn-primary btn-lg" href="{{ url_for('order_page') }}">
-        Start my restoration
+      <a class="btn btn-primary btn-lg" href="{{ url_for('consultation') }}">
+        Schedule a call
       </a>
       <a class="btn btn-on-dark btn-lg" href="#how">See how it works</a>
     </div>
@@ -111,8 +111,8 @@
     <ol class="flow" id="how-flow">
       <div class="flow-track" aria-hidden="true"><span class="flow-fill"></span></div>
       {% set steps = [
-        ('Enroll and upload',
-         'Pay once, create your portal login, and upload your credit report, photo ID and proof of address. Takes about ten minutes.'),
+        ('We talk it through',
+         'Tell us what is on your report and we will call you back. You hear what can be challenged, what it costs and how long it takes, before you commit to anything.'),
         ('We audit the report',
          'We read all three bureau files line by line and build a list of every item that is inaccurate, incomplete or cannot be verified.'),
         ('Disputes go out',
@@ -220,11 +220,25 @@
     <div class="price-card" data-reveal="scale">
       <div class="price-head">
         <span class="badge badge-accent">Complete program</span>
-        <div class="price-figure">
-          <span class="price-num">{{ cfg.PRICE_LABEL }}</span>
-          <span class="price-once">one time</span>
-        </div>
-        <p class="small muted mb-0">No monthly fees. No per-deletion charges.</p>
+        {#  The figure used to live here, next to a checkout button. Pricing is
+            agreed on the call now and written into that client's own
+            agreement, so the page says how we charge rather than what we
+            charge. SHOW_PUBLIC_PRICE puts the number back without a redeploy
+            if that ever changes. #}
+        {% if cfg.SHOW_PUBLIC_PRICE %}
+          <div class="price-figure">
+            <span class="price-num">{{ cfg.PRICE_LABEL }}</span>
+            <span class="price-once">one time</span>
+          </div>
+        {% else %}
+          <div class="price-figure">
+            <span class="price-num" style="font-size:1.9rem">One flat fee</span>
+          </div>
+        {% endif %}
+        <p class="small muted mb-0">
+          No monthly fees. No per-deletion charges. You hear the number on the
+          call, before you sign anything.
+        </p>
       </div>
 
       {% set includes = [
@@ -240,12 +254,13 @@
         {% endfor %}
       </ul>
 
-      <a class="btn btn-primary btn-lg btn-block" href="{{ url_for('order_page') }}">
-        Enroll now
+      <a class="btn btn-primary btn-lg btn-block" href="{{ url_for('consultation') }}">
+        Schedule a call
       </a>
       <p class="tiny faint text-center" style="margin:14px 0 0">
-        You'll review and sign the full service agreement before any payment
-        is taken. <a href="{{ url_for('agreement_preview') }}" style="text-decoration:underline">Read it first</a>.
+        Nothing is charged on this site. You'll review and sign the full
+        service agreement before any payment is taken.
+        <a href="{{ url_for('agreement_preview') }}" style="text-decoration:underline">Read it first</a>.
       </p>
     </div>
   </div>
@@ -307,14 +322,14 @@
     <div class="price-card text-center" data-reveal="scale">
       <h2 style="margin-bottom:14px">Find out what's actually on your report</h2>
       <p class="lead lead-center" style="margin-bottom:28px">
-        Enroll today, upload your documents, and we'll have your audit back to
-        you with a full list of disputable items.
+        Tell us what's on your report and we'll call you back to go through
+        it. Free, and we'll tell you if we can't help.
       </p>
-      <a class="btn btn-primary btn-lg" href="{{ url_for('order_page') }}">
-        Start my restoration for {{ cfg.PRICE_LABEL }}
+      <a class="btn btn-primary btn-lg" href="{{ url_for('consultation') }}">
+        Schedule a call
       </a>
       <p class="tiny faint" style="margin:16px 0 0">
-        Already enrolled? <a href="{{ url_for('login') }}" style="text-decoration:underline">Sign in to your portal</a>.
+        Already a client? <a href="{{ url_for('login') }}" style="text-decoration:underline">Sign in to your portal</a>.
       </p>
     </div>
   </div>

@@ -160,6 +160,17 @@ elif not _ON_VOLUME:
 else:
     STORAGE_REASON = ""
 
+# --- Leads ----------------------------------------------------------------
+# The site no longer takes money. It books a phone call, and every one of
+# those goes here. Separate from ADMIN_ALERT_EMAIL on purpose: case alerts and
+# new business do not necessarily go to the same person.
+LEAD_EMAIL = _env("LEAD_EMAIL", "nolan@velosify.ai")
+
+# Whether the public site quotes a price. With enrollment happening on a call
+# the number is agreed there and written into that client's own agreement, so
+# the marketing pages do not carry one.
+SHOW_PUBLIC_PRICE = _env("SHOW_PUBLIC_PRICE", "0") == "1"
+
 # --- Where we ask clients to get their credit report ----------------------
 #
 # A three-bureau report with account numbers and dates is what disputes are
@@ -234,7 +245,10 @@ DEV_FAKE_CHECKOUT = _FAKE_CHECKOUT_EXPLICIT or (not BILLING_ENABLED and _RUNNING
 
 # True when the site is live but can't take money. The order page says so
 # instead of pretending to sell something.
-CHECKOUT_UNAVAILABLE = not BILLING_ENABLED and not DEV_FAKE_CHECKOUT
+# The public checkout is gone: the site books calls and an administrator
+# enrolls the client afterwards. Stripe settings are kept because the webhook
+# still has to accept refunds on orders taken while the checkout existed.
+CHECKOUT_UNAVAILABLE = True
 
 if DEV_FAKE_CHECKOUT and not _RUNNING_LOCALLY:
     print("\n*** WARNING: DEV_FAKE_CHECKOUT is on and APP_BASE_URL is not "

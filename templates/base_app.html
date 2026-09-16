@@ -24,8 +24,12 @@
     taken off, and reads as a toolbar rather than navigation. Everything that
     does not earn a tab (sign out, the public site) lives in the top bar. #}
 {% if is_admin %}
+  {#  Leads sits second because it is the only list on here with a clock
+      running on it: a call request that goes unanswered for a day is usually
+      gone. Everything else keeps. #}
   {% set nav_items = [
     ('Clients',  '◫', url_for('admin_clients'),  '/admin/clients'),
+    ('Calls',    '☎', url_for('admin_leads'),    '/admin/leads'),
     ('Messages', '✉', url_for('admin_messages'), '/admin/messages'),
     ('Team',     '◎', url_for('admin_team'),     '/admin/team'),
     ('Audit',    '⧉', url_for('admin_audit'),    '/admin/audit'),

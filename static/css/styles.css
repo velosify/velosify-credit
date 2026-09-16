@@ -1742,3 +1742,39 @@ table.data tbody tr:hover { background: rgba(19, 100, 223, .04); }
   outline-offset: 3px;
   border-radius: 4px;
 }
+
+/* --- Call request --------------------------------------------------------
+   The honeypot. Off-screen rather than display:none, because some form
+   fillers skip anything that is not rendered, and aria-hidden plus a negative
+   tabindex on the markup keeps it away from screen readers and the keyboard. */
+.hp-field {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.success-mark {
+  width: 62px;
+  height: 62px;
+  background: var(--success-bg);
+  border: 1px solid rgba(6, 92, 59, .28);
+  display: grid;
+  place-items: center;
+  margin: 0 auto 22px;
+  font-size: 1.6rem;
+  color: var(--success);
+}
+
+/* Lead rows in the admin inbox. A new one has to read as new at a glance
+   across a list, which a badge alone does not manage on a phone. */
+.lead-row { border-left: 3px solid transparent; }
+.lead-row.is-new { border-left-color: var(--accent); background: var(--surface-2); }
+.lead-quote {
+  white-space: pre-wrap;
+  margin: 10px 0 0;
+  padding-left: 12px;
+  border-left: 2px solid var(--border);
+  color: var(--text-muted);
+}

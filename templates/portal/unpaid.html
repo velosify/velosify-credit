@@ -1,31 +1,36 @@
 {% extends "base_app.html" %}
-{% block title %}Finish enrolling | {{ cfg.BRAND_NAME }}{% endblock %}
+{% block title %}Your account | {{ cfg.BRAND_NAME }}{% endblock %}
 
 {% block body %}
 <div class="page-head">
   <h1>Almost there</h1>
-  <p class="muted mb-0">Your account exists, but enrollment isn't complete yet.</p>
+  <p class="muted mb-0">Your account exists, but there's no open case on it yet.</p>
 </div>
 
 <div class="card">
-  <div class="card-title">
-    {% if pending %}Your payment didn't finish{% else %}No active program{% endif %}
-  </div>
+  <div class="card-title">Nothing to do here just yet</div>
+  {#  Enrollment happens on a call now, so there is no button here that could
+      finish it. Pointing at a checkout that no longer exists would be worse
+      than saying plainly who to speak to. #}
   <p class="muted">
-    {% if pending %}
-      You started enrolling on {{ pending.created_at | date }} but checkout
-      wasn't completed, so nothing was charged. Pick it up whenever you're
-      ready. Your details are already saved.
-    {% else %}
-      There's no credit restoration program on this account yet. Enroll to
-      open a case and unlock your document portal.
-    {% endif %}
+    We open your case once we've spoken and you've signed your agreement. If
+    you've already had that conversation and you're seeing this, it means the
+    file hasn't been set up on our end — tell us and we'll sort it out the
+    same day.
   </p>
   <div class="row">
-    <a class="btn btn-primary" href="{{ url_for('order_page') }}">
-      {{ 'Finish enrolling' if pending else 'Enroll now' }} for {{ cfg.PRICE_LABEL }}
+    <a class="btn btn-primary" href="tel:{{ cfg.SUPPORT_PHONE_TEL }}">
+      Call {{ cfg.SUPPORT_PHONE }}
     </a>
-    <a class="btn btn-ghost" href="mailto:{{ cfg.SUPPORT_EMAIL }}">Ask a question</a>
+    <a class="btn btn-ghost" href="mailto:{{ cfg.SUPPORT_EMAIL }}">Email us</a>
   </div>
+</div>
+
+<div class="card mt-2">
+  <div class="card-title" style="font-size:.95rem">Haven't spoken to us yet?</div>
+  <p class="small muted mb-0">
+    <a href="{{ url_for('consultation') }}" style="text-decoration:underline">Request a call</a>
+    and we'll go through your report with you. Nothing is charged for that.
+  </p>
 </div>
 {% endblock %}

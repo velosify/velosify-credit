@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block title %}Schedule a call | {{ cfg.BRAND_NAME }}{% endblock %}
+{% block description %}Tell us what you want removed from your credit report and we'll call you back. No payment, no obligation.{% endblock %}
+
+{% block body %}
+<section class="section-tight">
+  <div class="container">
+    {#  Heading above both columns: on a phone the summary column is ordered
+        first, so a heading inside the form column would leave the page opening
+        on a list of bullet points with no context. #}
+    <div class="order-head" data-reveal>
+      <h1 style="font-size:clamp(1.9rem,3.6vw,2.6rem)">Schedule a call</h1>
+      <p class="lead mb-0">
+        Tell us what's on your report and we'll call you back to go through it.
+        No payment and no obligation — we'll tell you honestly whether we can
+        help before anyone signs anything.
+      </p>
+    </div>
+
+    <div class="order-layout">
+
+      <!-- ---------- Form ---------- -->
+      <div class="order-form-col">
+
+        {% if error %}
+          <div class="alert alert-error">{{ error }}</div>
+        {% endif %}
+
+        <form method="post" action="{{ url_for('consultation_submit') }}"
+              data-guard class="card" data-reveal>
+          {{ csrf_field() }}
+
+          {#  Hidden from people and from screen readers, and left empty by
+              anyone who can see the page. Automated form-fillers take every
+              input they find, which is what makes this worth one field. #}
+          <div class="hp-field" aria-hidden="true">
+            <label for="company">Company</label>
+            <input id="company" name="company" type="text" tabindex="-1"
+                   autocomplete="off">
+          </div>
+
+          <div class="field">
+            <label for="full_name">Full name</label>
+            <input class="input" id="full_name" name="full_name" required
+                   autocomplete="name" autofocus
+                   value="{{ form.full_name or '' }}">
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="email">Email address</label>
+              <input class="input" id="email" name="email" type="email" required
+                     autocomplete="email" value="{{ form.email or '' }}">
+            </div>
+            <div class="field">
+              <label for="phone">Phone number</label>
+              <input class="input" id="phone" name="phone" type="tel" required
+                     autocomplete="tel" placeholder="(313) 555-0142"
+                     value="{{ form.phone or '' }}">
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="goal">What do you need removed?</label>
+            <textarea class="input" id="goal" name="goal" rows="4" required
+                      placeholder="Collections, late payments, a repossession, something that isn't yours…">{{ form.goal or '' }}</textarea>
+            <div class="hint">
+              Rough is fine. You don't need your report in front of you.
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="debt_amount">Total amount on those accounts</label>
+              <input class="input" id="debt_amount" name="debt_amount" required
+                     placeholder="$12,000 or so"
+                     value="{{ form.debt_amount or '' }}">
+              <div class="hint">An estimate.</div>
+            </div>
+            <div class="field">
+              <label for="best_time">Best time to call</label>
+              <select class="select" id="best_time" name="best_time">
+                {% for key, label in best_times %}
+                  <option value="{{ key }}"
+                    {{ 'selected' if (form.best_time or 'any') == key }}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <button class="btn btn-primary btn-lg btn-block" type="submit"
+                  data-busy="Sending…">Request my call</button>
+
+          <p class="tiny faint text-center" style="margin:14px 0 0">
+            We'll use your number to call you about your credit, and for
+            nothing else. Read our
+            <a href="{{ url_for('privacy') }}" style="text-decoration:underline">privacy policy</a>.
+          </p>
+        </form>
+
+        <p class="small faint text-center mt-2">
+          Already a client?
+          <a href="{{ url_for('login') }}" style="text-decoration:underline">Sign in</a>
+        </p>
+      </div>
+
+      <!-- ---------- Summary ---------- -->
+      {#  Ordered above the form on narrow screens, so what happens next is
+          read before five fields of typing. #}
+      <div class="order-summary-col">
+        <div class="card card-glass order-summary-card" data-reveal="scale">
+          <div class="row-between" style="margin-bottom:14px">
+            <span class="strong">What happens on the call</span>
+            <span class="badge badge-accent">No cost</span>
+          </div>
+
+          <ul class="feature-list">
+            <li><span class="tick">✓</span> We go through what's on your report
+              and what can actually be challenged</li>
+            <li><span class="tick">✓</span> You get a straight answer on
+              whether we can help, including when we can't</li>
+            <li><span class="tick">✓</span> You hear the price and the timeline
+              before you decide anything</li>
+            <li><span class="tick">✓</span> If you go ahead, we set your portal
+              up for you on the spot</li>
+          </ul>
+
+          <div class="alert alert-info" style="margin:22px 0 0">
+            <strong>Nothing is charged today.</strong> You don't pay anything
+            until you've spoken to a person and signed an agreement that
+            names the price.
+          </div>
+        </div>
+
+        <div class="card card-pad-sm mt-2" data-reveal>
+          <div class="card-title" style="font-size:.95rem">Rather just call us?</div>
+          <p class="small muted mb-0">
+            <a href="tel:{{ cfg.SUPPORT_PHONE_TEL }}" class="strong"
+               style="font-size:1.05rem">{{ cfg.SUPPORT_PHONE }}</a><br>
+            Or email
+            <a href="mailto:{{ cfg.SUPPORT_EMAIL }}"
+               style="text-decoration:underline">{{ cfg.SUPPORT_EMAIL }}</a>.
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+{% endblock %}

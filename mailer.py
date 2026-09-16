@@ -296,6 +296,29 @@ def send_case_assigned(staff: dict, client: dict) -> bool:
     )
 
 
+def send_lead(lead: dict) -> bool:
+    """A new call request, to whoever is selling.
+
+    Carries the whole thing rather than a "you have a new lead" nudge with a
+    link, because this one is meant to be read on a phone between other jobs
+    and acted on by pressing the number in it.
+    """
+    return send_email(
+        to=config.LEAD_EMAIL,
+        subject=f"Call request: {lead['full_name']} — {lead['debt_amount']}",
+        text=(
+            f"{lead['full_name']} asked for a call.\n\n"
+            f"Phone:      {lead['phone']}\n"
+            f"Email:      {lead['email']}\n"
+            f"Best time:  {lead.get('best_time_label') or 'Any time'}\n"
+            f"Debt:       {lead['debt_amount']}\n\n"
+            f"What they want removed:\n{lead['goal']}\n\n"
+            f"---\n"
+            f"All call requests: {config.APP_BASE_URL}/admin/leads\n"
+        ),
+    )
+
+
 def send_admin_new_client(user: dict) -> bool:
     name = f"{user.get('first_name','')} {user.get('last_name','')}".strip() or user["email"]
     return send_email(

@@ -65,10 +65,23 @@
   during the engagement. Delays in providing these will delay the work.
 </p>
 
+{#  15 U.S.C. 1679d(b)(2) requires the contract to state the total amount the
+    consumer will pay. Enrollment happens on a call now and the figure is
+    agreed there, so the real number is passed in from that client's own
+    record rather than read from a site-wide setting that may not match what
+    they were quoted. The public preview has no client, and says so. #}
 <p>
-  <strong>6. Fee.</strong> The total fee for the program described above is
-  {{ cfg.PRICE_LABEL }}. This is a one-time charge. There are no monthly
-  fees, no per-deletion charges and no renewal.
+  <strong>6. Fee.</strong>
+  {% if agreement_amount %}
+    The total fee for the program described above is
+    <strong>{{ agreement_amount }}</strong>. This is a one-time charge. There
+    are no monthly fees, no per-deletion charges and no renewal.
+  {% else %}
+    The total fee for the program described above is the one-time amount
+    agreed with you before signing, which is stated in full on the copy of
+    this agreement you sign and on your receipt. There are no monthly fees,
+    no per-deletion charges and no renewal.
+  {% endif %}
 </p>
 
 <p>

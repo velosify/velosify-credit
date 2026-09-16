@@ -44,6 +44,7 @@ from security import (audit, client_ip, clear_failures, consume_token,
                       csrf_ok, csrf_token, issue_token, record_failure,
                       retry_after_minutes, sweep_failures, throttled)
 from db import (CASE_STAGE_KEYS, CASE_STAGE_LABELS, CASE_STAGES, DOC_STATUSES,
+                LEAD_STATUS_KEYS, LEAD_STATUS_LABELS, LEAD_STATUSES,
                 DOCUMENT_TYPE_KEYS, DOCUMENT_TYPES, MESSAGE_MAX, add_event,
                 document_status_for, get_db, mark_thread_read, post_message,
                 row_to_dict, thread_for, unread_by_client, unread_for_client,
@@ -619,7 +620,7 @@ def sitemap():
     """Only pages a stranger can actually open, so search engines are never
     pointed at something that will bounce them to a login."""
     endpoints = [
-        ("landing", "1.0"), ("order_page", "0.9"), ("legal_index", "0.4"),
+        ("landing", "1.0"), ("consultation", "0.9"), ("legal_index", "0.4"),
         ("credit_file_rights", "0.5"), ("notice_of_cancellation", "0.5"),
         ("agreement_preview", "0.4"), ("terms", "0.3"), ("privacy", "0.3"),
         ("refunds", "0.3"), ("disclaimer", "0.3"), ("esign", "0.2"),
@@ -710,144 +711,112 @@ def state_disclosures():
 
 
 # ---------------------------------------------------------------------------
-# Order flow
+# Booking a call
+#
+# This site used to take $997 through Stripe before anyone had spoken to a
+# human. It does not take money at all any more. Somebody asks for a call, we
+# ring them, and an administrator creates the account afterwards through
+# /admin/clients/new.
+#
+# That is also the end of a problem flagged repeatedly while the checkout
+# existed: 15 U.S.C. 1679b(b) forbids a credit repair organization from
+# charging for a service before it has been fully performed, and an online
+# checkout that collected the whole fee on day one ran straight into it. A
+# consultation collects nothing, so the question does not arise here.
 # ---------------------------------------------------------------------------
 
+BEST_TIMES = [
+    ("morning",   "Morning (8am – 12pm)"),
+    ("afternoon", "Afternoon (12pm – 5pm)"),
+    ("evening",   "Evening (5pm – 8pm)"),
+    ("any",       "Any time is fine"),
+]
+BEST_TIME_LABELS = dict(BEST_TIMES)
+
+
 @app.get("/order")
+@app.get("/enroll")
 def order_page():
-    user = current_user()
-    # Someone who already paid has nothing to buy, so send them to the portal.
-    if user and _paid_order(user["id"]):
-        return redirect(url_for("portal"))
-    if config.CHECKOUT_UNAVAILABLE:
-        return render_template("order_unavailable.html"), 503
-    return render_template("order.html", form={}, error=None)
+    """The old checkout. Kept as a redirect rather than a 404 because it is
+    printed on things we do not control and linked from old emails."""
+    return redirect(url_for("consultation"))
 
 
-@app.post("/order")
-def order_submit():
-    if config.CHECKOUT_UNAVAILABLE:
-        return render_template("order_unavailable.html"), 503
+@app.get("/consultation")
+def consultation():
+    return render_template("consultation.html", form={}, error=None,
+                           best_times=BEST_TIMES)
+
+
+@app.post("/consultation")
+def consultation_submit():
     form = {
-        "first_name": (request.form.get("first_name") or "").strip(),
-        "last_name": (request.form.get("last_name") or "").strip(),
+        "full_name": (request.form.get("full_name") or "").strip()[:120],
         "email": normalize_email(request.form.get("email")),
-        "phone": (request.form.get("phone") or "").strip(),
-        "signature": (request.form.get("signature") or "").strip(),
+        "phone": (request.form.get("phone") or "").strip()[:40],
+        "goal": (request.form.get("goal") or "").strip()[:2000],
+        "debt_amount": (request.form.get("debt_amount") or "").strip()[:60],
+        "best_time": (request.form.get("best_time") or "any").strip(),
     }
-    password = request.form.get("password") or ""
-    accepted = request.form.get("accept_agreement") == "yes"
-    # The Credit Repair Organizations Act requires the credit file rights
-    # disclosure to be given as a separate document BEFORE the contract is
-    # signed, and requires us to keep the consumer's signed acknowledgment
-    # that they received it for two years (15 U.S.C. 1679c). This is that
-    # acknowledgment, and it is recorded separately from agreement consent so
-    # the audit trail shows two distinct acts, not one.
-    disclosure_ack = request.form.get("accept_disclosure") == "yes"
 
     def fail(message: str):
-        return render_template("order.html", form=form, error=message), 400
+        return render_template("consultation.html", form=form, error=message,
+                               best_times=BEST_TIMES), 400
 
-    if not form["first_name"] or not form["last_name"]:
+    # A field positioned off-screen and hidden from screen readers. A person
+    # never sees it; the kind of bot that fills every input on a page does.
+    # Answered with a thank-you rather than an error, so whatever is doing it
+    # has nothing to learn and nothing to retry.
+    if (request.form.get("company") or "").strip():
+        app.logger.info("lead honeypot tripped from %s", client_ip())
+        return render_template("consultation_thanks.html", form=form)
+
+    conn = get_db()
+    ip = client_ip()
+    if security.throttled(conn, "lead:ip", ip):
+        return fail("We have had several requests from this connection "
+                    f"already. Call us on {config.SUPPORT_PHONE} and we will "
+                    f"take your details over the phone.")
+
+    if len(form["full_name"].split()) < 2:
         return fail("Please enter your first and last name.")
     if not valid_email(form["email"]):
         return fail("That email address doesn't look right.")
     problem = phone_problem(form["phone"])
     if problem:
         return fail(problem)
-    problem = password_problem(password)
-    if problem:
-        return fail(problem)
-    if not disclosure_ack:
-        return fail("Please confirm you have read your credit file rights. "
-                    "Federal law requires us to give you that disclosure "
-                    "before you sign anything.")
-    if not accepted:
-        return fail("You'll need to accept the service agreement to continue.")
-    if form["signature"].lower() != f"{form['first_name']} {form['last_name']}".lower():
-        return fail("Type your full name exactly as entered above to sign the agreement.")
-
-    conn = get_db()
-    existing = conn.execute(
-        "SELECT * FROM users WHERE email = ?", (form["email"],)
-    ).fetchone()
-
-    if existing:
-        # An account already exists. If it's paid, this is a returning
-        # client who should just sign in. If it isn't, they abandoned
-        # checkout earlier and we let them pick up where they left off, but
-        # but only with the right password, so an email address alone
-        # can't be used to take over a half-finished signup.
-        if _paid_order(existing["id"]):
-            return fail("You already have an account. Sign in to reach your portal.")
-        if not verify_password(password, existing["password_hash"]):
-            return fail("An account with that email already exists. "
-                        "Sign in, or use the password you chose the first time.")
-        user_id = existing["id"]
-        conn.execute(
-            "UPDATE users SET first_name = ?, last_name = ?, phone = ?, "
-            "agreement_signed_at = ?, agreement_name = ?, agreement_ip = ?, "
-            "disclosure_ack_at = ? "
-            "WHERE id = ?",
-            (form["first_name"], form["last_name"], form["phone"],
-             utcnow(), form["signature"], _client_ip(), utcnow(), user_id),
-        )
-    else:
-        cur = conn.execute(
-            "INSERT INTO users (email, password_hash, first_name, last_name, "
-            "phone, role, case_stage, created_at, agreement_signed_at, "
-            "agreement_name, agreement_ip, disclosure_ack_at) "
-            "VALUES (?, ?, ?, ?, ?, 'client', 'intake', ?, ?, ?, ?, ?)",
-            (form["email"], hash_password(password), form["first_name"],
-             form["last_name"], form["phone"], utcnow(), utcnow(),
-             form["signature"], _client_ip(), utcnow()),
-        )
-        user_id = int(cur.lastrowid)
+    if len(form["goal"]) < 10:
+        return fail("Tell us a little about what you want removed, even "
+                    "roughly. It is what makes the call useful.")
+    if not form["debt_amount"]:
+        return fail("Roughly how much is on the accounts you want removed? "
+                    "An estimate is fine.")
+    if form["best_time"] not in BEST_TIME_LABELS:
+        form["best_time"] = "any"
 
     cur = conn.execute(
-        "INSERT INTO orders (user_id, amount_cents, currency, status, created_at) "
-        "VALUES (?, ?, ?, 'pending', ?)",
-        (user_id, config.PRICE_CENTS, config.CURRENCY, utcnow()),
+        "INSERT INTO leads (full_name, email, phone, goal, debt_amount, "
+        "best_time, source_ip, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        (form["full_name"], form["email"], form["phone"], form["goal"],
+         form["debt_amount"], form["best_time"], ip, utcnow()),
     )
-    order_id = int(cur.lastrowid)
+    lead_id = int(cur.lastrowid)
+    # Counted whether or not it was spam, so a flood cannot be turned into an
+    # unlimited mailer by simply being well-formed.
+    record_failure(conn, "lead:ip", ip)
+    audit("lead.received", detail=f"{form['full_name']} <{form['email']}>",
+          conn=conn)
     conn.commit()
 
-    # No Stripe configured, so simulate a successful payment and the rest of
-    # the product is reachable in development.
-    if config.DEV_FAKE_CHECKOUT:
-        _mark_order_paid(order_id, payment_intent="dev_simulated")
-        return redirect(url_for("order_success", dev="1", order_id=order_id))
+    # The row is already saved, so a mail failure costs us the alert and not
+    # the lead. The inbox at /admin/leads is the record either way.
+    if mailer.send_lead(dict(form, id=lead_id,
+                             best_time_label=BEST_TIME_LABELS[form["best_time"]])):
+        conn.execute("UPDATE leads SET emailed_at = ? WHERE id = ?",
+                     (utcnow(), lead_id))
+        conn.commit()
 
-    try:
-        line_item = ({"price": config.STRIPE_PRICE_ID, "quantity": 1}
-                     if config.STRIPE_PRICE_ID else
-                     {"price_data": {
-                         "currency": config.CURRENCY,
-                         "unit_amount": config.PRICE_CENTS,
-                         "product_data": {
-                             "name": f"{config.BRAND_NAME} Credit Restoration Program",
-                             "description": "Full-service credit restoration, one-time fee.",
-                         },
-                      },
-                      "quantity": 1})
-        checkout = stripe.checkout.Session.create(
-            mode="payment",
-            line_items=[line_item],
-            customer_email=form["email"],
-            client_reference_id=str(order_id),
-            metadata={"order_id": str(order_id), "user_id": str(user_id)},
-            success_url=f"{config.APP_BASE_URL}/order/success?session_id={{CHECKOUT_SESSION_ID}}",
-            cancel_url=f"{config.APP_BASE_URL}/order/cancel?order_id={order_id}",
-        )
-    except Exception as exc:  # pragma: no cover. surfaces Stripe outages
-        app.logger.exception("stripe checkout failed")
-        return fail(f"We couldn't reach our payment processor ({exc.__class__.__name__}). "
-                    "Please try again in a moment.")
-
-    conn.execute("UPDATE orders SET stripe_session_id = ? WHERE id = ?",
-                 (checkout.id, order_id))
-    conn.commit()
-    return redirect(checkout.url, code=303)
+    return render_template("consultation_thanks.html", form=form)
 
 
 def _mark_order_paid(order_id: int, payment_intent: str = "") -> dict | None:
@@ -1460,7 +1429,9 @@ def portal_password():
 @app.get("/portal/agreement")
 @require_login
 def portal_agreement():
-    return render_template("legal/agreement.html", signed=current_user())
+    user = current_user()
+    return render_template("legal/agreement.html", signed=user,
+                           agreement_amount=_agreed_fee(int(user["id"])))
 
 
 # ---------------------------------------------------------------------------
@@ -1735,6 +1706,20 @@ def admin_client_create():
                            mail_error=mailer.last_error)
 
 
+def _agreed_fee(user_id: int) -> str:
+    """The amount actually recorded against this client, formatted.
+
+    The contract has to state what they will pay (15 U.S.C. 1679d(b)(2)), and
+    since the figure is agreed on a call it lives on their order rather than
+    in a site-wide setting. Empty when there is nothing on file, which the
+    agreement text handles rather than printing a number nobody agreed to.
+    """
+    row = get_db().execute(
+        "SELECT amount_cents FROM orders WHERE user_id = ? "
+        "ORDER BY created_at DESC LIMIT 1", (user_id,)).fetchone()
+    return money_filter(row["amount_cents"]) if row else ""
+
+
 @app.get("/activate/<token>")
 def activate_client(token: str):
     """Set a password, read the disclosure, sign the agreement.
@@ -1742,7 +1727,9 @@ def activate_client(token: str):
     Validity is not checked on GET, so a mail client prefetching the link
     cannot burn it before the client has read anything.
     """
-    return render_template("activate.html", token=token, error=None)
+    pending = security.peek_token(get_db(), token, security.CLIENT_ACTIVATE)
+    return render_template("activate.html", token=token, error=None,
+                           agreement_amount=_agreed_fee(pending) if pending else "")
 
 
 @app.post("/activate/<token>")
@@ -1752,9 +1739,13 @@ def activate_client_submit(token: str):
     signature = (request.form.get("signature") or "").strip()
     conn = get_db()
 
+    pending_for_form = security.peek_token(conn, token, security.CLIENT_ACTIVATE)
+
     def fail(message: str, code: int = 400):
-        return render_template("activate.html", token=token,
-                               error=message), code
+        return render_template(
+            "activate.html", token=token, error=message,
+            agreement_amount=_agreed_fee(pending_for_form) if pending_for_form else "",
+        ), code
 
     if request.form.get("accept_disclosure") != "yes":
         return fail("Please confirm you have read your credit file rights. "
@@ -2392,6 +2383,59 @@ def admin_client_delete(user_id: int):
           f"{counts['documents']} document(s) and {counts['messages']} "
           f"message(s). Only the audit entry remains.", "success")
     return redirect(url_for("admin_clients"))
+
+
+@app.get("/admin/leads")
+@require_admin
+def admin_leads():
+    """Everyone who asked for a call.
+
+    Admin-only rather than staff-wide: a specialist works the files they are
+    given, and new business is not one of them.
+    """
+    status = (request.args.get("status") or "new").strip()
+    conn = get_db()
+    sql = "SELECT * FROM leads "
+    params: list = []
+    if status in LEAD_STATUS_KEYS:
+        sql += "WHERE status = ? "
+        params.append(status)
+    sql += "ORDER BY created_at DESC, id DESC LIMIT 300"
+    leads = [dict(r) for r in conn.execute(sql, params).fetchall()]
+    counts = {k: 0 for k, _ in LEAD_STATUSES}
+    for row in conn.execute("SELECT status, COUNT(*) AS n FROM leads "
+                            "GROUP BY status"):
+        counts[row["status"]] = row["n"]
+    return render_template("admin/leads.html", leads=leads, status=status,
+                           counts=counts, statuses=LEAD_STATUSES,
+                           time_labels=BEST_TIME_LABELS)
+
+
+@app.post("/admin/leads/<int:lead_id>/status")
+@require_admin
+def admin_lead_status(lead_id: int):
+    actor = current_user()
+    new_status = (request.form.get("status") or "").strip()
+    note = (request.form.get("note") or "").strip()[:500]
+    if new_status not in LEAD_STATUS_KEYS:
+        abort(400)
+    conn = get_db()
+    row = conn.execute("SELECT * FROM leads WHERE id = ?", (lead_id,)).fetchone()
+    if not row:
+        abort(404)
+    conn.execute(
+        "UPDATE leads SET status = ?, note = ?, handled_at = ?, handled_by = ? "
+        "WHERE id = ?",
+        (new_status, note or row["note"], utcnow(), actor["email"], lead_id),
+    )
+    audit("lead.updated", actor=actor,
+          detail=f"{row['email']} → {LEAD_STATUS_LABELS[new_status]}", conn=conn)
+    conn.commit()
+    flash(f"{row['full_name']} marked {LEAD_STATUS_LABELS[new_status].lower()}.",
+          "success")
+    return redirect(url_for("admin_leads", status=request.form.get("return_to")
+                            if request.form.get("return_to") in LEAD_STATUS_KEYS
+                            else "new"))
 
 
 @app.post("/admin/system/backup")

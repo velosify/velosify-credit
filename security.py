@@ -166,6 +166,9 @@ LIMITS = {
     # scope:            (max failures, window minutes)
     "login:email":      (6, 15),
     "login:ip":         (20, 15),
+    # Not an attack limit. One person asking for a call five times in an hour
+    # has a problem the form cannot solve, and the number on the page can.
+    "lead:ip":          (5, 60),
     "reset:email":      (4, 60),
     "reset:ip":         (12, 60),
 }

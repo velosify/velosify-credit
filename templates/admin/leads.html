@@ -1,0 +1,115 @@
+{% extends "base_app.html" %}
+{% block title %}Call requests | {{ cfg.BRAND_NAME }} admin{% endblock %}
+
+{% block body %}
+<div class="page-head">
+  <h1>Call requests</h1>
+  <p class="muted mb-0">
+    Everyone who asked us to ring them. Also emailed to
+    <strong>{{ cfg.LEAD_EMAIL }}</strong> as they come in.
+  </p>
+</div>
+
+<div class="row" style="gap:8px;margin-bottom:20px;flex-wrap:wrap">
+  {% for key, label in statuses %}
+    <a class="btn btn-sm {{ 'btn-ghost' if status == key else 'btn-quiet' }}"
+       href="{{ url_for('admin_leads', status=key) }}">
+      {{ label }}{% if counts[key] %} ({{ counts[key] }}){% endif %}
+    </a>
+  {% endfor %}
+  <a class="btn btn-sm {{ 'btn-ghost' if status == 'all' else 'btn-quiet' }}"
+     href="{{ url_for('admin_leads', status='all') }}">All</a>
+</div>
+
+{% if leads %}
+  <div class="stack">
+    {% for lead in leads %}
+      <div class="card lead-row {{ 'is-new' if lead.status == 'new' }}">
+        <div class="row-between" style="gap:14px;flex-wrap:wrap;align-items:flex-start">
+          <div>
+            <div class="card-title mb-0">{{ lead.full_name }}</div>
+            <p class="small muted mb-0" style="margin-top:4px">
+              <a href="tel:{{ lead.phone }}" class="strong">{{ lead.phone }}</a>
+              · <a href="mailto:{{ lead.email }}">{{ lead.email }}</a>
+            </p>
+          </div>
+          <div class="text-right">
+            <div class="strong">{{ lead.debt_amount }}</div>
+            <div class="tiny faint">
+              {{ time_labels.get(lead.best_time, 'Any time') }}
+            </div>
+          </div>
+        </div>
+
+        <p class="small lead-quote">{{ lead.goal }}</p>
+
+        <div class="row-between" style="margin-top:16px;gap:12px;flex-wrap:wrap;align-items:center">
+          <span class="tiny faint">
+            {{ lead.created_at | datetime }}
+            {%- if lead.status != 'new' %} · {{ lead.status }}
+              {%- if lead.handled_by %} by {{ lead.handled_by }}{% endif %}
+            {%- endif %}
+            {%- if not lead.emailed_at %}
+              · <span style="color:var(--warn)">the alert email didn't go out</span>
+            {%- endif %}
+          </span>
+
+          {#  Two buttons rather than a dropdown. On a phone, between calls,
+              the whole interaction should be one tap. #}
+          <div class="row" style="gap:8px">
+            {% if lead.status != 'called' %}
+              <form method="post"
+                    action="{{ url_for('admin_lead_status', lead_id=lead.id) }}">
+                {{ csrf_field() }}
+                <input type="hidden" name="status" value="called">
+                <input type="hidden" name="return_to" value="{{ status }}">
+                <button class="btn btn-ghost btn-sm" type="submit">Called</button>
+              </form>
+            {% endif %}
+            {% if lead.status != 'closed' %}
+              <form method="post"
+                    action="{{ url_for('admin_lead_status', lead_id=lead.id) }}">
+                {{ csrf_field() }}
+                <input type="hidden" name="status" value="closed">
+                <input type="hidden" name="return_to" value="{{ status }}">
+                <button class="btn btn-quiet btn-sm" type="submit">Close</button>
+              </form>
+            {% endif %}
+            {% if lead.status != 'new' %}
+              <form method="post"
+                    action="{{ url_for('admin_lead_status', lead_id=lead.id) }}">
+                {{ csrf_field() }}
+                <input type="hidden" name="status" value="new">
+                <input type="hidden" name="return_to" value="{{ status }}">
+                <button class="btn btn-quiet btn-sm" type="submit">Reopen</button>
+              </form>
+            {% endif %}
+          </div>
+        </div>
+
+        {% if lead.note %}
+          <p class="tiny faint" style="margin:10px 0 0">{{ lead.note }}</p>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+
+  {% if status == 'new' %}
+    <p class="small faint mt-2">
+      Spoken to someone and signed them up?
+      <a href="{{ url_for('admin_client_new') }}" style="text-decoration:underline">Create their client account</a>
+      — they'll get a link to set a password and sign the agreement.
+    </p>
+  {% endif %}
+{% else %}
+  <div class="card text-center">
+    <p class="muted mb-0">
+      {% if status == 'new' %}
+        No new call requests. They'll appear here the moment someone asks.
+      {% else %}
+        Nothing here.
+      {% endif %}
+    </p>
+  </div>
+{% endif %}
+{% endblock %}
