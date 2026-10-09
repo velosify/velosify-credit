@@ -407,6 +407,8 @@ def staff_list(user_id: int):
 
 
 DEFAULT_PACKET_TITLE = "Credit report dispute letters"
+# Staff address that is emailed when a client signs. Override with LETTER_NOTIFY_EMAIL.
+NOTIFY_EMAIL = os.environ.get("LETTER_NOTIFY_EMAIL", "nolan@velosify.ai")
 
 
 @bp.route("/admin/clients/<int:user_id>/letters/new", methods=["GET", "POST"])
@@ -594,6 +596,16 @@ def portal_sign(packet_id: int):
                 except OSError:
                     pass
             raise
+        try:
+            who = f"{user['first_name'] or ''} {user['last_name'] or ''}".strip() or user["email"]
+            mailer.send_email(
+                NOTIFY_EMAIL, f"{who} signed their letters",
+                f"{who} just signed \"{packet['title']}\" ({len(pairs)} letter(s)).\n\n"
+                f"Download the signed PDFs here:\n"
+                f"{config.APP_BASE_URL.rstrip('/')}"
+                f"{url_for('letters.staff_view', user_id=int(user['id']), packet_id=packet_id)}\n")
+        except Exception:  # a notification failure must not affect the signing
+            pass
         flash("Signed. We'll mail your letters and update your timeline.", "success")
         return redirect(url_for("letters.portal_sign", packet_id=packet_id))
 
