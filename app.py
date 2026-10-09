@@ -128,6 +128,9 @@ def _fingerprinted_url_for() -> dict:
 app.teardown_appcontext(database.close_db)
 database.init_db()
 
+import letters  # noqa: E402  e-signed letters; needs the tables init_db just made
+app.register_blueprint(letters.bp)
+
 if config.STORAGE_AT_RISK:
     # Loud, and at boot, because the failure it describes is silent. The app
     # starts perfectly well on an empty database; the only symptom is that
@@ -2369,6 +2372,7 @@ def admin_client_delete(user_id: int):
             (config.UPLOAD_DIR / doc["stored_name"]).unlink(missing_ok=True)
         except OSError:
             app.logger.warning("could not remove %s", doc["stored_name"])
+    letters.purge_client(conn, user_id)
     conn.execute("DELETE FROM documents WHERE user_id = ?", (user_id,))
     conn.execute("DELETE FROM messages WHERE client_id = ?", (user_id,))
     conn.execute("DELETE FROM orders WHERE user_id = ?", (user_id,))

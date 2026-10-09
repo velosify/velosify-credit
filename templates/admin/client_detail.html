@@ -269,6 +269,12 @@
     {% endif %}
 
     <div class="card card-pad-sm">
+      <div class="card-title" style="font-size:.95rem">Letters</div>
+      <p class="small muted">Dispute letters the client reviews and e-signs in the portal.</p>
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('letters.staff_list', user_id=client.id) }}">Open letters</a>
+    </div>
+
+    <div class="card card-pad-sm">
       <div class="card-title" style="font-size:.95rem">Agreement</div>
       {% if client.agreement_signed_at %}
         <p class="small muted mb-0">

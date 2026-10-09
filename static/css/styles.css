@@ -1778,3 +1778,28 @@ table.data tbody tr:hover { background: rgba(19, 100, 223, .04); }
   border-left: 2px solid var(--border);
   color: var(--text-muted);
 }
+
+/* --- Letters: e-signature ---------------------------------------------- */
+.letter-sheet {
+  background: #fff;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  padding: 44px 48px;
+  margin-bottom: 22px;
+  font-family: Charter, "Iowan Old Style", Georgia, serif;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--text);
+}
+.letter-sheet p { margin: 0 0 .9em; }
+.letter-name { font: 600 .8rem/1.2 var(--font); color: var(--text-faint); margin-bottom: 18px !important; }
+.letter-li { padding-left: 1.5em; text-indent: -1.5em; margin-bottom: .35em !important; }
+.letter-li span { display: inline-block; width: 1.5em; text-indent: 0; }
+.letter-sigline { margin-top: 1.6em !important; padding-top: 1.6em; border-bottom: 1px solid var(--border-strong); max-width: 18em; color: var(--text-faint); }
+.letter-sigline em { font: .8rem/1 system-ui, sans-serif; }
+
+.sign-pad-wrap { position: relative; background: var(--surface-2); border: 1px solid var(--border-strong); }
+#sign-pad { display: block; width: 100%; height: 170px; touch-action: none; cursor: crosshair; }
+.sign-pad-line { position: absolute; left: 16px; right: 16px; bottom: 38px; border-bottom: 1px solid var(--border-strong); pointer-events: none; }
+.sign-pad-hint { position: absolute; left: 16px; bottom: 12px; font-size: .78rem; color: var(--text-faint); pointer-events: none; }
+@media (max-width: 560px) { .letter-sheet { padding: 28px 22px; } }

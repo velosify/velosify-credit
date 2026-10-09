@@ -1,0 +1,77 @@
+{% extends "base_app.html" %}
+{% block title %}{{ packet.title }} | {{ cfg.BRAND_NAME }}{% endblock %}
+
+{% block body %}
+<div class="page-head">
+  <h1>{{ packet.title }}</h1>
+  {% if packet.status == 'signed' %}
+    <p class="muted mb-0">You signed these on {{ packet.signed_at | datetime }}. Your signed copies are below.</p>
+  {% else %}
+    <p class="muted mb-0">
+      Read every letter. They'll be dated {{ today }} and mailed once you sign.
+      If anything is wrong, don't sign. Send us a message and we'll fix it first.
+    </p>
+  {% endif %}
+</div>
+
+{% if packet.status == 'signed' %}
+  <div class="card" style="margin-bottom:22px">
+    <div class="card-title">Signed letters</div>
+    <div class="stack">
+      {% for f in files %}
+        <div><a href="{{ url_for('letters.download', fid=f.id) }}">{{ f.label }}</a></div>
+      {% endfor %}
+    </div>
+  </div>
+  <a class="btn btn-ghost" href="{{ url_for('letters.portal_list') }}">Back to letters</a>
+{% else %}
+  {% if error %}<div class="alert alert-error" role="alert">{{ error }}</div>{% endif %}
+
+  {% for it in items %}
+    <article class="letter-sheet" aria-label="{{ it.title }}">
+      <p class="letter-name">{{ it.title }}</p>
+      {{ it.body | letter_html(today) }}
+    </article>
+  {% endfor %}
+
+  <form method="post" id="sign-form" class="card" data-guard autocomplete="off">
+    {{ csrf_field() }}
+    <input type="hidden" name="content_hash" value="{{ packet.content_hash }}">
+    <input type="hidden" name="signature" id="sign-data">
+
+    <div class="card-title">Sign {{ items|length }} letter{{ '' if items|length == 1 else 's' }}</div>
+
+    <label class="check" style="margin-bottom:12px">
+      <input type="checkbox" name="consent" id="sign-consent"><span>{{ consent }}</span>
+    </label>
+    <label class="check" style="margin-bottom:20px">
+      <input type="checkbox" name="approve" id="sign-approve"><span>{{ approve }}</span>
+    </label>
+
+    <div class="field">
+      <label for="signer_name">Your full legal name</label>
+      <input class="input" id="signer_name" name="signer_name" type="text"
+             value="{{ name }}" autocomplete="name">
+    </div>
+
+    <div class="field">
+      <label id="sign-label">Draw your signature</label>
+      <div class="sign-pad-wrap">
+        <canvas id="sign-pad" role="img" aria-labelledby="sign-label"></canvas>
+        <span class="sign-pad-line"></span>
+        <span class="sign-pad-hint" id="sign-hint">Sign with your finger or mouse</span>
+      </div>
+      <div class="hint">Your signature is saved with the time, your IP address and the exact text above.</div>
+    </div>
+
+    <div class="row">
+      <button class="btn btn-primary" id="sign-go" type="submit" disabled data-busy="Signing…">Sign letters</button>
+      <button class="btn btn-ghost" id="sign-clear" type="button">Clear</button>
+    </div>
+  </form>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if packet.status != 'signed' %}<script src="{{ url_for('static', filename='js/sign.js') }}"></script>{% endif %}
+{% endblock %}

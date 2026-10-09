@@ -1,6 +1,8 @@
 Flask>=3.0,<4.0
 stripe>=10.0
 gunicorn>=21.2
+reportlab>=4.0
+pillow>=10.0
 
 # Optional. Only imported when SENTRY_DSN is set; the app runs without it.
 # sentry-sdk[flask]>=2.0

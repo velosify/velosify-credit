@@ -1,0 +1,40 @@
+{% extends "base_app.html" %}
+{% block title %}Letters | {{ cfg.BRAND_NAME }}{% endblock %}
+
+{% block body %}
+<div class="page-head">
+  <h1>Letters</h1>
+  <p class="muted mb-0">
+    Letters we've prepared for you. Read each one, then sign once to approve
+    them. We don't send anything until you do.
+  </p>
+</div>
+
+{% if not packets %}
+  <div class="card">
+    <p class="muted mb-0">Nothing is waiting for you right now. When we've
+    prepared letters, they show up here and we'll email you.</p>
+  </div>
+{% endif %}
+
+<div class="stack">
+  {% for p in packets %}
+    <div class="card">
+      <div class="row-between">
+        <div>
+          <div class="card-title">{{ p.title }}</div>
+          <p class="small muted mb-0">
+            {% if p.status == 'signed' %}Signed {{ p.signed_at | datetime }}
+            {% else %}Waiting for your signature{% endif %}
+          </p>
+        </div>
+        {% if p.status == 'signed' %}
+          <a class="btn btn-ghost btn-sm" href="{{ url_for('letters.portal_sign', packet_id=p.id) }}">View signed letters</a>
+        {% else %}
+          <a class="btn btn-primary btn-sm" href="{{ url_for('letters.portal_sign', packet_id=p.id) }}">Review and sign</a>
+        {% endif %}
+      </div>
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}

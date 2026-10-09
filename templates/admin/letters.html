@@ -1,0 +1,35 @@
+{% extends "base_app.html" %}
+{% block title %}Letters | {{ client.first_name }} {{ client.last_name }}{% endblock %}
+
+{% block body %}
+<div class="page-head">
+  <p class="small"><a href="{{ url_for('admin_client_detail', user_id=client.id) }}">← {{ client.first_name }} {{ client.last_name }}</a></p>
+  <h1>Letters</h1>
+  <p class="muted mb-0">Letters for this client to review and e-sign in their portal.</p>
+</div>
+
+<p><a class="btn btn-primary" href="{{ url_for('letters.staff_new', user_id=client.id) }}">New packet</a></p>
+
+{% if packets %}
+<div class="table-wrap">
+  <table class="data">
+    <thead><tr><th>Packet</th><th>Status</th><th>Created</th></tr></thead>
+    <tbody>
+    {% for p in packets %}
+      <tr>
+        <td><a href="{{ url_for('letters.staff_view', user_id=client.id, packet_id=p.id) }}">{{ p.title }}</a></td>
+        <td>
+          {% if p.status == 'signed' %}<span class="badge badge-success">Signed</span>
+          {% elif p.status == 'void' %}<span class="badge">Voided</span>
+          {% else %}<span class="badge badge-warn">Waiting on client</span>{% endif %}
+        </td>
+        <td>{{ p.created_at | datetime }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+  <div class="card"><p class="muted mb-0">No packets yet.</p></div>
+{% endif %}
+{% endblock %}

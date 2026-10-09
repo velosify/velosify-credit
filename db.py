@@ -360,6 +360,9 @@ def init_db() -> None:
     conn = sqlite3.connect(str(config.DB_PATH))
     try:
         conn.executescript(SCHEMA)
+        # Imported here, not at the top: letters.py imports this module.
+        from letters import SCHEMA as _LETTERS_SCHEMA
+        conn.executescript(_LETTERS_SCHEMA)
         _apply_added_columns(conn)
         conn.executescript(LATE_INDEXES)
         conn.commit()

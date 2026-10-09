@@ -1,0 +1,37 @@
+{% extends "base_app.html" %}
+{% block title %}New letter packet | {{ cfg.BRAND_NAME }}{% endblock %}
+
+{% block body %}
+<div class="page-head">
+  <p class="small"><a href="{{ url_for('letters.staff_list', user_id=client.id) }}">← Letters for {{ client.first_name }} {{ client.last_name }}</a></p>
+  <h1>New letter packet</h1>
+  <p class="muted mb-0">
+    Paste the final letters. Once created, the text is locked. To change a
+    letter, void the packet and make a new one.
+  </p>
+</div>
+
+{% for e in errors %}<div class="alert alert-error" role="alert">{{ e }}</div>{% endfor %}
+
+<form method="post" class="card" data-guard>
+  {{ csrf_field() }}
+  <div class="field">
+    <label for="title">Packet title (the client sees this)</label>
+    <input class="input" id="title" name="title" type="text" value="{{ form.title }}"
+           placeholder="Credit report dispute letters">
+  </div>
+  <div class="field">
+    <label for="letters">Letters</label>
+    <textarea class="textarea" id="letters" name="letters" rows="22"
+              style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.85rem">{{ form.letters }}</textarea>
+    <div class="hint">
+      Separate letters with a line of <code>===</code>. Start a letter with
+      <code># Title</code> to name it. Use <code>[DATE]</code> where the signing
+      date goes and a line of underscores where the signature goes. Bullets start
+      with <code>- </code>, numbered items with <code>1. </code>, bold is
+      <code>**text**</code>. Every other [bracket] must be filled in first.
+    </div>
+  </div>
+  <button class="btn btn-primary" type="submit" data-busy="Creating…">Create packet and email client</button>
+</form>
+{% endblock %}

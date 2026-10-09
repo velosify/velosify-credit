@@ -1,0 +1,50 @@
+{% extends "base_app.html" %}
+{% block title %}{{ packet.title }} | {{ cfg.BRAND_NAME }}{% endblock %}
+
+{% block body %}
+<div class="page-head">
+  <p class="small"><a href="{{ url_for('letters.staff_list', user_id=client.id) }}">← Letters for {{ client.first_name }} {{ client.last_name }}</a></p>
+  <h1>{{ packet.title }}</h1>
+  <p class="muted mb-0">
+    {% if packet.status == 'signed' %}<span class="badge badge-success">Signed</span> {{ packet.signed_at | datetime }}
+    {% elif packet.status == 'void' %}<span class="badge">Voided</span>
+    {% else %}<span class="badge badge-warn">Waiting on client</span>{% endif %}
+  </p>
+</div>
+
+{% if sig %}
+  <div class="card" style="margin-bottom:22px">
+    <div class="card-title">Signature record</div>
+    <p class="small muted mb-0">
+      <strong style="color:var(--text)">{{ sig.signer_name }}</strong> · {{ sig.signed_at | datetime }}
+      · IP {{ sig.ip or 'unknown' }}<br>
+      <span class="tiny faint" style="word-break:break-all">SHA-256 {{ sig.content_hash }}</span>
+    </p>
+  </div>
+  <div class="card" style="margin-bottom:22px">
+    <div class="card-title">Files</div>
+    <div class="stack">
+      {% for f in files %}
+        <div>
+          <a href="{{ url_for('letters.download', fid=f.id) }}">{{ f.label }}</a>
+          {% if f.kind == 'record' %}<span class="tiny faint"> keep in the file, don't mail</span>{% endif %}
+        </div>
+      {% endfor %}
+    </div>
+    <p class="tiny faint" style="margin:14px 0 0">Print the signed letters, then mail each one certified with return receipt.</p>
+  </div>
+{% endif %}
+
+<div class="card" style="margin-bottom:22px">
+  <div class="card-title">Letters in this packet</div>
+  <div class="stack">{% for it in items %}<div>{{ it.title }}</div>{% endfor %}</div>
+</div>
+
+{% if packet.status == 'pending' %}
+  <form method="post" data-confirm="Void this packet? The client will no longer be able to sign it.">
+    {{ csrf_field() }}
+    <input type="hidden" name="action" value="void">
+    <button class="btn btn-ghost" type="submit">Void packet</button>
+  </form>
+{% endif %}
+{% endblock %}

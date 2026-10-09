@@ -48,6 +48,7 @@
     ('Documents', '▤', url_for('portal_documents'),  '/portal/documents'),
     ('Messages',  '✉', url_for('portal_messages'),   '/portal/messages'),
     ('Account',   '◉', url_for('portal_account'),    '/portal/account'),
+    ('Letters',   '✎', url_for('letters.portal_list'), '/portal/letters'),
     ('Agreement', '§', url_for('portal_agreement'),  '/portal/agreement')
   ] %}
 {% endif %}
@@ -94,6 +95,9 @@
         <span class="ico">{{ icon }}</span> {{ label }}
         {% if label == 'Messages' and unread %}
           <span class="pill-count">{{ unread }}</span>
+        {% endif %}
+        {% if label == 'Letters' and letters_pending %}
+          <span class="pill-count">{{ letters_pending }}</span>
         {% endif %}
       </a>
     {% endfor %}
