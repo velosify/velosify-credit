@@ -406,14 +406,17 @@ def staff_list(user_id: int):
     return render_template("admin/letters.html", client=client, packets=packets)
 
 
+DEFAULT_PACKET_TITLE = "Credit report dispute letters"
+
+
 @bp.route("/admin/clients/<int:user_id>/letters/new", methods=["GET", "POST"])
 @require_staff
 def staff_new(user_id: int):
     client = _visible_client(user_id)
-    form = {"title": "", "letters": ""}
+    form = {"title": DEFAULT_PACKET_TITLE, "letters": ""}
     errors = []
     if request.method == "POST":
-        form["title"] = (request.form.get("title") or "").strip()
+        form["title"] = (request.form.get("title") or "").strip() or DEFAULT_PACKET_TITLE
         form["letters"] = request.form.get("letters") or ""
         pairs = parse_letters(form["letters"])
         if not form["title"]:
