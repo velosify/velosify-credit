@@ -209,6 +209,14 @@ def filesize_filter(num: int) -> str:
     return f"{value:.1f} GB"
 
 
+try:
+    from zoneinfo import ZoneInfo
+    _DISPLAY_TZ = ZoneInfo(os.environ.get("DISPLAY_TIMEZONE")
+                           or os.environ.get("LETTER_TIMEZONE") or "America/Detroit")
+except Exception:  # missing tz database: fall back to showing UTC
+    _DISPLAY_TZ = None
+
+
 @app.template_filter("datetime")
 def datetime_filter(iso: str | None, fmt: str = "%b %-d, %Y at %-I:%M %p") -> str:
     if not iso:
@@ -217,6 +225,11 @@ def datetime_filter(iso: str | None, fmt: str = "%b %-d, %Y at %-I:%M %p") -> st
         dt = datetime.fromisoformat(iso)
     except ValueError:
         return iso
+    # Stored timestamps are UTC with an offset. Show them in the business's own
+    # time zone (DISPLAY_TIMEZONE, default America/Detroit). Date-only strings
+    # carry no offset and are left exactly as written.
+    if dt.tzinfo is not None and _DISPLAY_TZ is not None:
+        dt = dt.astimezone(_DISPLAY_TZ)
     return dt.strftime(fmt)
 
 
