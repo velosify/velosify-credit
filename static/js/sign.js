@@ -62,7 +62,7 @@
   function end() {
     if (!drawing) return;
     drawing = false;
-    out.value = travelled > 60 ? pad.toDataURL("image/png") : "";
+    out.value = travelled > 220 ? pad.toDataURL("image/png") : "";
     refresh();
   }
   pad.addEventListener("pointerup", end);

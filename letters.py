@@ -311,6 +311,12 @@ def decode_signature(data_url: str) -> bytes:
         inked = sum(1 for v in img.convert("L").getdata() if v < 200)
     if inked < 150:
         raise ValueError("Your signature looks blank. Please sign in the box.")
+    # A real signature spans a good part of the box; one stray mark does not.
+    alpha = img.getchannel("A") if "A" in img.getbands() else img.convert("L").point(
+        lambda v: 255 if v < 200 else 0)
+    box = alpha.point(lambda a: 255 if a > 40 else 0).getbbox()
+    if not box or (box[2] - box[0]) < img.width * 0.2:
+        raise ValueError("Please draw your full signature across the box.")
     return raw
 
 
@@ -476,13 +482,16 @@ def staff_view(user_id: int, packet_id: int):
         abort(404)
     packet = dict(row)
     if request.method == "POST":
-        if request.form.get("action") == "void" and packet["status"] == "pending":
+        if request.form.get("action") == "void" and packet["status"] in ("pending", "signed"):
+            # A signed packet can be voided too (a bad signature, say). Its files and
+            # signature record stay on disk for the audit trail; the client loses access.
+            was = packet["status"]
             conn.execute("UPDATE letter_packets SET status = 'void', voided_at = ? "
-                         "WHERE id = ? AND status = 'pending'", (utcnow(), packet_id))
+                         "WHERE id = ? AND status IN ('pending', 'signed')", (utcnow(), packet_id))
             audit("letters.voided", actor=current_user(), target_user_id=user_id,
-                  detail=f"packet {packet_id}: {packet['title']}", conn=conn)
+                  detail=f"packet {packet_id}: {packet['title']} (was {was})", conn=conn)
             conn.commit()
-            flash("Packet voided. Create a new one to send revised letters.", "success")
+            flash("Packet voided. Create a new one to have the client sign again.", "success")
         return redirect(url_for("letters.staff_view", user_id=user_id, packet_id=packet_id))
     items = [dict(r) for r in conn.execute(
         "SELECT * FROM letter_items WHERE packet_id = ? ORDER BY position", (packet_id,)).fetchall()]
@@ -628,6 +637,11 @@ def download(fid: str):
         abort(404)
     if row["kind"] == "record" and is_owner:      # the audit record is staff's copy
         abort(404)
+    if is_owner:
+        pk = get_db().execute("SELECT status FROM letter_packets WHERE id = ?",
+                              (row["packet_id"],)).fetchone()
+        if not pk or pk["status"] == "void":     # a voided packet is no longer the client's
+            abort(404)
     path = _dir("signed") / row["stored_name"]
     if not path.is_file():
         abort(404)

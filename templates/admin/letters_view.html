@@ -40,8 +40,8 @@
   <div class="stack">{% for it in items %}<div>{{ it.title }}</div>{% endfor %}</div>
 </div>
 
-{% if packet.status == 'pending' %}
-  <form method="post" data-confirm="Void this packet? The client will no longer be able to sign it.">
+{% if packet.status in ('pending', 'signed') %}
+  <form method="post" data-confirm="{% if packet.status == 'signed' %}Void this SIGNED packet? The client will lose access to it and will need to sign a new one. The old files stay in the audit record.{% else %}Void this packet? The client will no longer be able to sign it.{% endif %}">
     {{ csrf_field() }}
     <input type="hidden" name="action" value="void">
     <button class="btn btn-ghost" type="submit">Void packet</button>
