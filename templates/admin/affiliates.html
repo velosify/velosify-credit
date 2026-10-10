@@ -74,13 +74,6 @@
                     <input type="hidden" name="action" value="reactivate">
                     <button class="btn btn-ghost btn-sm" type="submit">Reactivate</button>
                   </form>
-                {% else %}
-                  <form method="post" action="{{ url_for('affiliates.admin_set_status', user_id=a.id) }}"
-                        data-confirm="Deactivate {{ a.email }}? Their link stops crediting them and they can't sign in. Past referrals stay on record.">
-                    {{ csrf_field() }}
-                    <input type="hidden" name="action" value="deactivate">
-                    <button class="btn btn-danger btn-sm" type="submit">Deactivate</button>
-                  </form>
                 {% endif %}
               </div>
             </td>
