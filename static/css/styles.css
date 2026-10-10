@@ -403,8 +403,10 @@ p  { margin: 0 0 1em; }
 }
 .hero .container { position: relative; z-index: 2; }
 
+/* The stacked logo (mark above the wordmark) is taller than the old
+   wordmark-only one, so it runs a little narrower to keep the hero's height. */
 .hero-logo {
-  width: min(560px, 84vw);
+  width: min(500px, 80vw);
   height: auto;
   margin: 0 auto;
 }
