@@ -1878,3 +1878,23 @@ a.stat-link:hover { border-color: var(--accent); }
   .adoc-review { grid-template-columns: 1fr auto; }
   .adoc-review .input { grid-column: 1 / -1; grid-row: 2; }
 }
+
+/* --- Document preview -----------------------------------------------------
+   The file fills the width and stops short of the bottom of the window, so
+   a tall photo of an ID can be read without scrolling past it. */
+.doc-preview {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  display: grid;
+  place-items: center;
+  min-height: 300px;
+}
+.doc-preview img {
+  display: block;
+  max-width: 100%;
+  max-height: calc(100vh - 230px);
+  width: auto;
+  height: auto;
+}
+.doc-preview iframe { width: 100%; height: calc(100vh - 230px); min-height: 480px; border: 0; background: #fff; }
+.doc-preview-empty { padding: 48px 20px; text-align: center; }

@@ -88,7 +88,7 @@
                 <div class="adoc-head">
                   <span class="file-ico">{{ f.original_name.rsplit('.', 1)[-1][:4] | upper }}</span>
                   <div class="adoc-name">
-                    <a href="{{ url_for('download_document', doc_id=f.id) }}" target="_blank"
+                    <a href="{{ url_for('preview_document', doc_id=f.id) }}"
                        title="{{ f.original_name }}">{{ f.original_name }}</a>
                     <div class="tiny faint">
                       {{ f.size_bytes | filesize }} · uploaded {{ f.uploaded_at | datetime }}

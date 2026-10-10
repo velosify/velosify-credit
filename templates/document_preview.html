@@ -1,0 +1,43 @@
+{% extends "base_app.html" %}
+{% block title %}{{ doc.original_name }} | {{ cfg.BRAND_NAME }}{% endblock %}
+
+{% block body %}
+<a class="small" href="{{ back }}" style="text-decoration:underline">
+  &larr; {% if is_staff and client %}Back to {{ client.first_name }} {{ client.last_name }}{% else %}Back to documents{% endif %}
+</a>
+
+<div class="row-between" style="margin:14px 0 18px;gap:14px;flex-wrap:wrap;align-items:flex-end">
+  <div style="min-width:0">
+    <div class="small muted">{{ label }}</div>
+    <h1 style="font-size:1.35rem;margin:2px 0 4px;overflow-wrap:anywhere">{{ doc.original_name }}</h1>
+    <div class="tiny faint">
+      {{ doc.size_bytes | filesize }} · uploaded {{ doc.uploaded_at | datetime }}
+      ·
+      {% if doc.status == 'accepted' %}<span class="badge badge-success">Accepted</span>
+      {% elif doc.status == 'rejected' %}<span class="badge badge-danger">Rejected</span>
+      {% else %}<span class="badge badge-warn">New</span>{% endif %}
+    </div>
+  </div>
+  <a class="btn btn-ghost btn-sm" href="{{ url_for('download_document', doc_id=doc.id, download=1) }}">Download</a>
+</div>
+
+<div class="doc-preview">
+  {% if kind == 'image' %}
+    <img src="{{ url_for('download_document', doc_id=doc.id) }}" alt="{{ doc.original_name }}">
+  {% elif kind == 'heic' %}
+    <img src="{{ url_for('preview_document_image', doc_id=doc.id) }}" alt="{{ doc.original_name }}">
+  {% elif kind == 'pdf' %}
+    <iframe src="{{ url_for('download_document', doc_id=doc.id, embed=1) }}"
+            title="{{ doc.original_name }}"></iframe>
+  {% else %}
+    <div class="doc-preview-empty">
+      <p class="muted">This kind of file can't be shown in the browser.</p>
+      <a class="btn btn-primary btn-sm" href="{{ url_for('download_document', doc_id=doc.id, download=1) }}">Download it instead</a>
+    </div>
+  {% endif %}
+</div>
+
+{% if doc.review_note %}
+  <p class="small" style="margin-top:14px"><strong>Note to client:</strong> {{ doc.review_note }}</p>
+{% endif %}
+{% endblock %}

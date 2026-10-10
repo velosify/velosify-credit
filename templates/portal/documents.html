@@ -99,7 +99,7 @@
           <div class="file-row">
             <span class="file-ico">{{ f.original_name.rsplit('.', 1)[-1][:4] | upper }}</span>
             <span class="name">
-              <a href="{{ url_for('download_document', doc_id=f.id) }}" target="_blank">{{ f.original_name }}</a>
+              <a href="{{ url_for('preview_document', doc_id=f.id) }}">{{ f.original_name }}</a>
               <span class="tiny faint"> · {{ f.size_bytes | filesize }} · {{ f.uploaded_at | date }}</span>
             </span>
 

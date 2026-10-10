@@ -1397,12 +1397,101 @@ def download_document(doc_id: int):
     # A document is somebody's ID or credit file. It must never be cached by
     # a proxy, and it must never be framed by another site.
     resp.headers["Cache-Control"] = "private, no-store"
-    resp.headers["Content-Security-Policy"] = "sandbox; default-src 'none'"
+    if mime == "application/pdf" and request.args.get("embed") == "1":
+        # Shown inside our own preview page. Chrome's PDF viewer refuses to
+        # run under a sandbox or default-src 'none' policy, so the PDF gets
+        # only what it needs: framed by this site and nobody else.
+        resp.headers["Content-Security-Policy"] = "frame-ancestors 'self'"
+        resp.headers["X-Frame-Options"] = "SAMEORIGIN"
+    else:
+        resp.headers["Content-Security-Policy"] = "sandbox; default-src 'none'"
     # These files are government IDs, Social Security proofs and full credit
     # reports. Who opened whose, and when, has to have an answer.
     audit("document.viewed", actor=user, target_user_id=int(row["user_id"]),
           target_doc_id=doc_id, detail=row["original_name"])
     get_db().commit()
+    return resp
+
+
+# What the preview page can show in place, by stored extension.
+_PREVIEW_KIND = {".png": "image", ".jpg": "image", ".jpeg": "image",
+                 ".webp": "image", ".heic": "heic", ".pdf": "pdf"}
+
+try:
+    from pillow_heif import register_heif_opener
+    register_heif_opener()
+    HAS_HEIF = True
+except Exception:  # pragma: no cover. preview falls back to a download
+    HAS_HEIF = False
+
+
+def _document_for_viewer(doc_id: int) -> dict:
+    """The document row, if the signed-in person may see it. Same rule, and
+    the same 404, as the file route itself."""
+    user = current_user()
+    row = row_to_dict(get_db().execute(
+        "SELECT * FROM documents WHERE id = ?", (doc_id,)).fetchone())
+    if not row:
+        abort(404)
+    if row["user_id"] != user["id"] and not _can_see_client(int(row["user_id"])):
+        abort(404)
+    return row
+
+
+@app.get("/files/<int:doc_id>/preview")
+@require_login
+def preview_document(doc_id: int):
+    """Look at a document without downloading it.
+
+    The page itself shows nothing sensitive beyond the filename; the file is
+    fetched by the image or frame inside it, through the gated routes, which
+    is where the view is recorded in the audit log.
+    """
+    row = _document_for_viewer(doc_id)
+    kind = _PREVIEW_KIND.get(os.path.splitext(row["stored_name"])[1].lower(), "")
+    if kind == "heic" and not HAS_HEIF:
+        kind = ""
+    client = row_to_dict(get_db().execute(
+        "SELECT id, first_name, last_name FROM users WHERE id = ?",
+        (row["user_id"],)).fetchone())
+    label = next((d["label"] for d in DOCUMENT_TYPES if d["key"] == row["doc_type"]),
+                 row["doc_type"])
+    back = (url_for("admin_client_detail", user_id=row["user_id"])
+            if is_staff() else url_for("portal_documents"))
+    return render_template("document_preview.html", doc=row, kind=kind,
+                           client=client, label=label, back=back)
+
+
+@app.get("/files/<int:doc_id>/preview.jpg")
+@require_login
+def preview_document_image(doc_id: int):
+    """A HEIC photo as a JPEG a browser can show. Made on the fly and never
+    stored, so there is no second copy of anyone's ID sitting on disk."""
+    row = _document_for_viewer(doc_id)
+    if not HAS_HEIF or not row["stored_name"].lower().endswith(".heic"):
+        abort(404)
+    path = config.UPLOAD_DIR / row["stored_name"]
+    if not path.exists():
+        abort(404)
+    from io import BytesIO
+    from PIL import Image, ImageOps
+    try:
+        with Image.open(path) as im:
+            im = ImageOps.exif_transpose(im).convert("RGB")
+            im.thumbnail((2400, 2400))
+            buf = BytesIO()
+            im.save(buf, "JPEG", quality=88)
+    except Exception:
+        app.logger.exception("could not convert document %s for preview", doc_id)
+        abort(415)
+    buf.seek(0)
+    audit("document.viewed", actor=current_user(), target_user_id=int(row["user_id"]),
+          target_doc_id=doc_id, detail=f"{row['original_name']} (preview)")
+    get_db().commit()
+    resp = send_file(buf, mimetype="image/jpeg", max_age=0)
+    resp.headers["X-Content-Type-Options"] = "nosniff"
+    resp.headers["Cache-Control"] = "private, no-store"
+    resp.headers["Content-Security-Policy"] = "sandbox; default-src 'none'"
     return resp
 
 

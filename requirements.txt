@@ -3,6 +3,9 @@ stripe>=10.0
 gunicorn>=21.2
 reportlab>=4.0
 pillow>=10.0
+# Phone photos arrive as HEIC, which no browser can display. Converted to
+# JPEG on the fly for the in-page preview.
+pillow-heif>=0.18
 
 # Optional. Only imported when SENTRY_DSN is set; the app runs without it.
 # sentry-sdk[flask]>=2.0
