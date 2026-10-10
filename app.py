@@ -842,6 +842,7 @@ def consultation_submit():
         conn.execute("UPDATE leads SET emailed_at = ? WHERE id = ?",
                      (utcnow(), lead_id))
         conn.commit()
+    mailer.send_lead_confirmation(form)
 
     return render_template("consultation_thanks.html", form=form)
 

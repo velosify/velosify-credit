@@ -327,6 +327,44 @@ def send_lead(lead: dict) -> bool:
     )
 
 
+def send_lead_confirmation(lead: dict) -> bool:
+    """To the person who asked for a call: we have it, and the one thing to do
+    before we ring. Sent whether or not the staff alert went out."""
+    first = (lead.get("full_name") or "").split()[0] if lead.get("full_name") else "there"
+    report = ""
+    if config.CREDIT_REPORT_URL:
+        disclosure = (
+            "We may be paid a commission if you sign up through this link. It "
+            "costs you nothing extra."
+            if config.CREDIT_REPORT_AFFILIATE else
+            f"{config.BRAND_NAME} is not affiliated with "
+            f"{config.CREDIT_REPORT_PROVIDER} beyond recommending them."
+        )
+        report = (
+            "Before your call: get your 3-bureau credit report\n\n"
+            f"We work from {config.CREDIT_REPORT_PROVIDER}'s report, which shows "
+            "Experian, Equifax and TransUnion side by side. To sign up with "
+            f"{config.BRAND_NAME}, you'll need to get your report through this "
+            "link. It's how your report reaches us, and we can't work from "
+            "reports from other sources:\n\n"
+            f"{config.CREDIT_REPORT_URL}\n\n"
+            f"({disclosure} {config.CREDIT_REPORT_PROVIDER} sets its own price "
+            "and terms.)\n\n"
+        )
+    return send_email(
+        to=lead["email"],
+        subject=f"We got your call request, {first}",
+        text=(
+            f"Hi {first},\n\n"
+            f"Thanks for reaching out to {config.BRAND_NAME}. We'll call you at "
+            f"{lead['phone']}, usually within one business day.\n\n"
+            f"{report}"
+            f"Questions before then? Reply to this email or call {config.SUPPORT_PHONE}.\n\n"
+            f"The {config.BRAND_NAME} team"
+        ),
+    )
+
+
 def send_admin_new_client(user: dict) -> bool:
     name = f"{user.get('first_name','')} {user.get('last_name','')}".strip() or user["email"]
     return send_email(

@@ -16,11 +16,40 @@
         business day.
       </p>
 
-      <div class="alert alert-info text-left" style="margin:26px 0 0">
-        <strong>Before we speak</strong>, it helps to have a recent
-        three-bureau credit report in front of you — but it's not required,
-        and we'll talk you through getting one if you don't.
-      </div>
+      {% if cfg.CREDIT_REPORT_URL %}
+        {#  The one thing to do before the call. Through this link
+            specifically: it is how the report reaches our dashboard. #}
+        <div class="card card-pad-sm text-left" style="margin:26px 0 0;border-color:var(--accent)">
+          <div class="card-title" style="font-size:1rem">Before your call: get your 3-bureau credit report</div>
+          <p class="small muted">
+            We work from {{ cfg.CREDIT_REPORT_PROVIDER }}'s report, which puts
+            Experian, Equifax and TransUnion side by side with the account
+            numbers and dates a dispute needs. Having it ready means we can go
+            through your actual report on the call.
+          </p>
+          <p class="small" style="margin-bottom:16px">
+            <strong>To sign up with {{ cfg.BRAND_NAME }}, you'll need to get
+            your report through the link below.</strong> It's how your report
+            reaches us, and we can't work from reports from other sources.
+          </p>
+          <a class="btn btn-primary btn-block" href="{{ cfg.CREDIT_REPORT_URL }}"
+             target="_blank" rel="noopener">
+            Get my 3-bureau report from {{ cfg.CREDIT_REPORT_PROVIDER }} &rarr;
+          </a>
+          <p class="tiny faint" style="margin:12px 0 0">
+            {% if cfg.CREDIT_REPORT_AFFILIATE %}
+              We may be paid a commission if you sign up through this link. It
+              costs you nothing extra. {{ cfg.BRAND_NAME }} is not affiliated
+              with {{ cfg.CREDIT_REPORT_PROVIDER }} beyond that referral.
+            {% else %}
+              {{ cfg.BRAND_NAME }} is not affiliated with
+              {{ cfg.CREDIT_REPORT_PROVIDER }} beyond recommending them.
+            {% endif %}
+            {{ cfg.CREDIT_REPORT_PROVIDER }} sets its own price and terms; check
+            them before you enroll.
+          </p>
+        </div>
+      {% endif %}
 
       <p class="small muted" style="margin-top:22px">
         Nothing has been charged and no account has been created. If you'd

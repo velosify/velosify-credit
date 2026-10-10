@@ -176,7 +176,11 @@ SHOW_PUBLIC_PRICE = _env("SHOW_PUBLIC_PRICE", "0") == "1"
 # A three-bureau report with account numbers and dates is what disputes are
 # actually written from, so this is the one document where the source matters.
 CREDIT_REPORT_PROVIDER = _env("CREDIT_REPORT_PROVIDER", "IdentityIQ")
-CREDIT_REPORT_URL = _env("CREDIT_REPORT_URL", "https://www.identityiq.com/")
+# The affiliate sign-up link. Clients are asked to enroll through this one so
+# their report shows up on our IdentityIQ dashboard.
+CREDIT_REPORT_URL = _env(
+    "CREDIT_REPORT_URL",
+    "https://enroll.identityiq.com?plancode=PLAN4DCB&offercode=431300F4")
 
 # Whether we are paid for that referral. The FTC's endorsement guides require
 # a material connection to be disclosed where the recommendation is made, and
