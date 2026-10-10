@@ -260,7 +260,21 @@
             <p class="tiny faint" style="margin:0 0 8px">
               Enrolled by an administrator{% if o.note %} &mdash; {{ o.note }}{% endif %}
             </p>
+          {% elif o.note %}
+            <p class="tiny faint" style="margin:0 0 8px">{{ o.note }}</p>
           {% endif %}
+          {#  Corrects the record only. Nothing is charged or refunded. #}
+          <details style="margin:0 0 8px">
+            <summary class="tiny" style="cursor:pointer;color:var(--text-muted)">Change amount</summary>
+            <form method="post" action="{{ url_for('admin_order_amount', order_id=o.id) }}"
+                  class="row" style="gap:8px;margin-top:8px;align-items:stretch">
+              {{ csrf_field() }}
+              <input class="input" name="amount" inputmode="decimal" required
+                     value="{{ '%.2f' | format(o.amount_cents / 100) }}"
+                     style="flex:1;min-width:0;padding:9px 12px" aria-label="Amount in dollars">
+              <button class="btn btn-ghost btn-sm" type="submit">Save</button>
+            </form>
+          </details>
         {% endfor %}
       {% else %}
         <p class="small muted mb-0">No orders on file.</p>

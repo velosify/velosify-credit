@@ -1735,6 +1735,47 @@ def admin_client_create():
                            mail_error=mailer.last_error)
 
 
+@app.post("/admin/orders/<int:order_id>/amount")
+@require_admin
+def admin_order_amount(order_id: int):
+    """Correct the amount recorded on an order.
+
+    Records only: nothing is charged or refunded here. The change, and what
+    it was before, is written onto the order's note and into the audit log,
+    because this figure is also the fee the client's agreement states.
+    """
+    conn = get_db()
+    order = row_to_dict(conn.execute("SELECT * FROM orders WHERE id = ?",
+                                     (order_id,)).fetchone())
+    if not order:
+        abort(404)
+    _visible_client(int(order["user_id"]))
+    back = redirect(url_for("admin_client_detail", user_id=order["user_id"]))
+    raw = (request.form.get("amount") or "").replace("$", "").replace(",", "").strip()
+    try:
+        cents = int(round(float(raw) * 100))
+    except ValueError:
+        flash("Enter the amount as a number, like 1000.", "error")
+        return back
+    if cents < 0:
+        flash("The amount can't be negative.", "error")
+        return back
+    if cents == order["amount_cents"]:
+        return back
+
+    actor = current_user()
+    change = (f"Amount changed from {money_filter(order['amount_cents'])} to "
+              f"{money_filter(cents)} by {actor['email']} on {utcnow()[:10]}")
+    note = f"{order['note']} · {change}" if order.get("note") else change
+    conn.execute("UPDATE orders SET amount_cents = ?, note = ? WHERE id = ?",
+                 (cents, note[:1000], order_id))
+    audit("order.amount_changed", actor=actor,
+          target_user_id=int(order["user_id"]), detail=change, conn=conn)
+    conn.commit()
+    flash(f"Payment updated to {money_filter(cents)}.", "success")
+    return back
+
+
 def _agreed_fee(user_id: int) -> str:
     """The amount actually recorded against this client, formatted.
 
