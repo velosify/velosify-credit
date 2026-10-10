@@ -68,9 +68,22 @@ CREATE TABLE IF NOT EXISTS affiliate_clicks (
     created_at   TEXT    NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_aff_clicks ON affiliate_clicks(affiliate_id, created_at);
+
+-- Codes an affiliate used before renaming their link. Kept so a link already
+-- posted somewhere, and any visitor already carrying the old code in their
+-- cookie, still credit the same person. A code here is never handed to
+-- anyone else.
+CREATE TABLE IF NOT EXISTS affiliate_code_aliases (
+    code         TEXT    PRIMARY KEY,
+    affiliate_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at   TEXT    NOT NULL
+);
 """
 
 _CODE_OK = re.compile(r"^[a-z0-9]{3,32}$")
+# What an affiliate may choose: 3 to 30 letters, numbers and single hyphens,
+# not starting or ending with one. Stored lower-case.
+_CHOSEN_CODE_OK = re.compile(r"^[a-z0-9](?:[a-z0-9]|-(?=[a-z0-9])){2,29}$")
 _BLOCKED_PREFIXES = ("/portal", "/admin", "/files", "/letters")
 
 
@@ -91,10 +104,21 @@ def _new_code(conn, first_name: str) -> str:
     stem = re.sub(r"[^a-z]", "", (first_name or "").lower())[:12] or "ref"
     for _ in range(60):
         code = f"{stem}{secrets.randbelow(9000) + 1000}"
-        if not conn.execute("SELECT 1 FROM users WHERE affiliate_code = ?",
-                            (code,)).fetchone():
+        if not _code_taken(conn, code):
             return code
     return secrets.token_hex(6)
+
+
+def _code_taken(conn, code: str, *, by_other_than: int | None = None) -> bool:
+    """True if `code` is anyone's current or former link. An affiliate taking
+    back one of their own old codes is the one exception."""
+    other = by_other_than if by_other_than is not None else -1
+    return bool(
+        conn.execute("SELECT 1 FROM users WHERE affiliate_code = ? AND id != ?",
+                     (code, other)).fetchone()
+        or conn.execute("SELECT 1 FROM affiliate_code_aliases "
+                        "WHERE code = ? AND affiliate_id != ?",
+                        (code, other)).fetchone())
 
 
 def affiliate_by_code(conn, code: str | None) -> dict | None:
@@ -104,13 +128,21 @@ def affiliate_by_code(conn, code: str | None) -> dict | None:
     quietly stop attributing rather than erroring at a visitor.
     """
     code = (code or "").strip().lower()
-    if not _CODE_OK.match(code):
+    if not (_CODE_OK.match(code) or _CHOSEN_CODE_OK.match(code)):
         return None
-    return row_to_dict(conn.execute(
+    row = conn.execute(
         "SELECT * FROM users WHERE affiliate_code = ? AND role = ? "
         "AND archived_at IS NULL AND email_verified_at IS NOT NULL",
-        (code, ROLE),
-    ).fetchone())
+        (code, ROLE)).fetchone()
+    if row is None:
+        # A link from before they renamed it still counts for them.
+        row = conn.execute(
+            "SELECT u.* FROM affiliate_code_aliases a "
+            "JOIN users u ON u.id = a.affiliate_id "
+            "WHERE a.code = ? AND u.role = ? AND u.archived_at IS NULL "
+            "AND u.email_verified_at IS NOT NULL",
+            (code, ROLE)).fetchone()
+    return row_to_dict(row)
 
 
 def referrer_for_request(conn) -> dict | None:
@@ -341,6 +373,52 @@ def dashboard():
         terms=TERMS_TEXT,
         ref_days=REF_DAYS,
     )
+
+
+# Words that would make a link look like it comes from us rather than from
+# the affiliate, or that are just confusing to see in a URL.
+_RESERVED_CODES = {"admin", "velosify", "velosifycredit", "support", "help",
+                   "official", "staff", "team", "login", "portal", "affiliate",
+                   "affiliates", "ref", "referral"}
+
+
+@bp.post("/affiliate/link")
+@require_login
+def change_code():
+    user = current_user()
+    if not is_affiliate(user):
+        return redirect(url_for("portal"))
+    wanted = (request.form.get("code") or "").strip().lower()
+    current = user["affiliate_code"]
+    if wanted == current:
+        return redirect(url_for("affiliates.dashboard"))
+    if not _CHOSEN_CODE_OK.match(wanted):
+        flash("Your link name can be 3 to 30 letters and numbers, with "
+              "hyphens between words. No spaces or other symbols.", "error")
+        return redirect(url_for("affiliates.dashboard"))
+    if wanted in _RESERVED_CODES or wanted.startswith("velosify"):
+        flash("That name is reserved. Try something with your own name in it.", "error")
+        return redirect(url_for("affiliates.dashboard"))
+    conn = get_db()
+    if _code_taken(conn, wanted, by_other_than=int(user["id"])):
+        flash(f"Someone already has /r/{wanted}. Try another.", "error")
+        return redirect(url_for("affiliates.dashboard"))
+
+    now = utcnow()
+    # The old code keeps working for them; the new one stops being an alias
+    # if they are taking back a name they used before.
+    conn.execute("INSERT OR IGNORE INTO affiliate_code_aliases "
+                 "(code, affiliate_id, created_at) VALUES (?, ?, ?)",
+                 (current, user["id"], now))
+    conn.execute("DELETE FROM affiliate_code_aliases WHERE code = ?", (wanted,))
+    conn.execute("UPDATE users SET affiliate_code = ? WHERE id = ?",
+                 (wanted, user["id"]))
+    audit("affiliate.code_changed", actor=user, target_user_id=int(user["id"]),
+          detail=f"{current} -> {wanted}", conn=conn)
+    conn.commit()
+    flash(f"Your link is now {referral_link(wanted)}. Your old link still "
+          f"works and still credits you.", "success")
+    return redirect(url_for("affiliates.dashboard"))
 
 
 @bp.post("/affiliate/confirm/resend")

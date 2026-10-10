@@ -26,11 +26,28 @@
     <button class="btn btn-primary btn-sm" type="button"
             data-copy="#ref-link" data-copied="Copied">Copy link</button>
   </div>
+  <form method="post" action="{{ url_for('affiliates.change_code') }}"
+        class="row" style="gap:10px;flex-wrap:wrap;align-items:flex-end;margin-top:16px">
+    {{ csrf_field() }}
+    <div class="field" style="flex:1 1 260px;margin:0">
+      <label for="code">Customize your link</label>
+      <div class="row" style="gap:0;align-items:stretch">
+        <span class="token-box" style="flex:none;user-select:none;border-right:0">/r/</span>
+        <input class="input" id="code" name="code" required minlength="3" maxlength="30"
+               pattern="[A-Za-z0-9]+(-[A-Za-z0-9]+)*" autocomplete="off" spellcheck="false"
+               title="Letters and numbers, with hyphens between words"
+               value="{{ user.affiliate_code }}" style="flex:1">
+      </div>
+    </div>
+    <button class="btn btn-ghost btn-sm" type="submit">Save</button>
+  </form>
+
   <p class="tiny faint" style="margin:12px 0 0">
     Want to send people straight to the call form? Add
     <code>?ref={{ user.affiliate_code }}</code> to any page on the site, like
     <span class="nowrap">{{ link.rsplit('/r/', 1)[0] }}/consultation?ref={{ user.affiliate_code }}</span>.
     Anyone who arrives through your link is credited to you for {{ ref_days }} days.
+    If you change your link, the old one keeps working too.
   </p>
 </div>
 
