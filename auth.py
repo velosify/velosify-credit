@@ -91,7 +91,7 @@ def password_problem(password: str, *, admin: bool = False) -> str | None:
     bar as a personal login. That applies to a specialist exactly as much as
     to an administrator: they open the same documents.
     """
-    floor = 14 if admin else 10
+    floor = 14 if admin else 8
     if len(password) < floor:
         return (f"Staff passwords must be at least {floor} characters."
                 if admin else
