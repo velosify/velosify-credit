@@ -48,7 +48,7 @@ COMPANY_LEGAL_NAME = _env("COMPANY_LEGAL_NAME", "VelosifyCredit LLC")
 # string that would silently render a contract without it. Still overridable
 # per environment.
 COMPANY_ADDRESS = _env("COMPANY_ADDRESS",
-                       "901 Tower Dr, Suite 250, Troy, MI 48098")
+                       "1046 Princeton Dr, Waterford, MI 48327")
 
 
 def _tel(number: str) -> str:
