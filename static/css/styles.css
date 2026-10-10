@@ -1852,3 +1852,27 @@ a.stat-link:hover { border-color: var(--accent); }
 .dash-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 9px 0; border-top: 1px solid var(--border); }
 .dash-row:first-of-type { border-top: 0; }
 @media (max-width: 1100px) { .dash-cols { grid-template-columns: 1fr; } }
+
+/* --- Admin: a client's uploaded documents --------------------------------
+   One box per file. The header row truncates a long filename rather than
+   pushing the badge out; the review row keeps its three controls the same
+   height so they read as one form. */
+.adoc { border: 1px solid var(--border); background: var(--surface); margin-bottom: 10px; }
+.adoc-head { display: flex; align-items: center; gap: 12px; padding: 12px 14px; }
+.adoc-name { flex: 1; min-width: 0; }
+.adoc-name > a {
+  display: block; font-weight: 600; font-size: .92rem;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.adoc-head .badge { flex: none; }
+.adoc-review {
+  display: grid; grid-template-columns: 150px minmax(0, 1fr) auto;
+  gap: 8px; align-items: stretch;
+  padding: 10px 14px; border-top: 1px solid var(--border); background: var(--bg-soft);
+}
+.adoc-review .select, .adoc-review .input { padding-top: 9px; padding-bottom: 9px; font-size: .88rem; background-color: var(--surface); }
+.adoc-review .select { padding-right: 34px; background-position: right 12px center; }
+@media (max-width: 640px) {
+  .adoc-review { grid-template-columns: 1fr auto; }
+  .adoc-review .input { grid-column: 1 / -1; grid-row: 2; }
+}
