@@ -1,0 +1,133 @@
+{% extends "base_app.html" %}
+{% block title %}Dashboard | {{ cfg.BRAND_NAME }} admin{% endblock %}
+
+{% macro trend(now, before, money=False) -%}
+  {%- if before or now -%}
+    {%- set diff = now - before -%}
+    <span class="{{ 'dash-up' if diff > 0 else ('dash-down' if diff < 0 else 'faint') }}">
+      {{ '+' if diff > 0 }}{{ (diff | money) if money else diff }}
+    </span> vs last month
+  {%- else -%}
+    <span class="faint">nothing last month</span>
+  {%- endif -%}
+{%- endmacro %}
+
+{% block body %}
+<div class="page-head">
+  <h1>Dashboard</h1>
+  <p class="muted mb-0">The business at a glance. "This month" means since {{ month_label }} 1st.</p>
+</div>
+
+{#  Things a person here has to act on. First, because the numbers below
+    keep, and a client waiting on a reply does not. #}
+{% set todo = leads.new + waiting.documents + waiting.messages + clients.unassigned %}
+{% if todo %}
+  <div class="dash-todo">
+    <span class="strong">Waiting on you:</span>
+    {% if leads.new %}<a href="{{ url_for('admin_leads') }}">{{ leads.new }} call request{{ '' if leads.new == 1 else 's' }} to return</a>{% endif %}
+    {% if waiting.messages %}<a href="{{ url_for('admin_messages') }}">{{ waiting.messages }} unread message{{ '' if waiting.messages == 1 else 's' }}</a>{% endif %}
+    {% if waiting.documents %}<a href="{{ url_for('admin_clients') }}">{{ waiting.documents }} document{{ '' if waiting.documents == 1 else 's' }} to review</a>{% endif %}
+    {% if clients.unassigned %}<a href="{{ url_for('admin_clients') }}">{{ clients.unassigned }} client{{ '' if clients.unassigned == 1 else 's' }} not assigned</a>{% endif %}
+  </div>
+{% endif %}
+
+<div class="grid grid-4" style="margin-bottom:16px">
+  <a class="stat stat-link" href="{{ url_for('admin_leads', status='all') }}">
+    <div class="k">Leads this month</div>
+    <div class="v">{{ leads.month }}</div>
+    <div class="s">{{ trend(leads.month, leads.last_month) }}</div>
+  </a>
+  <div class="stat">
+    <div class="k">Collected this month</div>
+    <div class="v">{{ revenue.month | money }}</div>
+    <div class="s">{{ trend(revenue.month, revenue.last_month, money=True) }}</div>
+  </div>
+  <a class="stat stat-link" href="{{ url_for('admin_clients') }}">
+    <div class="k">Active clients</div>
+    <div class="v">{{ clients.active }}</div>
+    <div class="s">{{ clients.month }} enrolled this month</div>
+  </a>
+  <a class="stat stat-link" href="{{ url_for('affiliates.admin_list') }}">
+    <div class="k">Affiliates</div>
+    <div class="v">{{ affiliates.active }}</div>
+    <div class="s">{% if affiliates.pending %}{{ affiliates.pending }} awaiting email confirmation{% else %}{{ affiliates.visitors }} visitor{{ '' if affiliates.visitors == 1 else 's' }} sent{% endif %}</div>
+  </a>
+</div>
+
+<div class="grid grid-4" style="margin-bottom:30px">
+  <div class="stat">
+    <div class="k">Leads all time</div>
+    <div class="v">{{ leads.total }}</div>
+    <div class="s">{{ leads.referred }} from affiliates</div>
+  </div>
+  <div class="stat">
+    <div class="k">Collected all time</div>
+    <div class="v">{{ revenue.total | money }}</div>
+    <div class="s">{{ revenue.payments }} payment{{ '' if revenue.payments == 1 else 's' }}{% if revenue.refunded %} · {{ revenue.refunded | money }} refunded{% endif %}</div>
+  </div>
+  <div class="stat">
+    <div class="k">Completed cases</div>
+    <div class="v">{{ clients.complete }}</div>
+    <div class="s">cases taken all the way through</div>
+  </div>
+  <div class="stat">
+    <div class="k">Letters awaiting signature</div>
+    <div class="v">{{ waiting.letters }}</div>
+    <div class="s">sent to clients, not yet signed</div>
+  </div>
+</div>
+
+<div class="dash-cols">
+  <div class="card card-pad-sm">
+    <div class="row-between" style="margin-bottom:10px">
+      <div class="card-title mb-0" style="font-size:.95rem">Clients by stage</div>
+      <a class="tiny" href="{{ url_for('admin_clients') }}" style="text-decoration:underline">All clients</a>
+    </div>
+    {% set biggest = [stage_counts.values() | max, 1] | max %}
+    {% for key, label in CASE_STAGES %}
+      <div class="dash-stage">
+        <span class="small">{{ label }}</span>
+        <span class="dash-bar"><span style="width:{{ (stage_counts[key] / biggest * 100) | round | int }}%"></span></span>
+        <span class="small strong" style="text-align:right">{{ stage_counts[key] }}</span>
+      </div>
+    {% endfor %}
+  </div>
+
+  <div class="card card-pad-sm">
+    <div class="row-between" style="margin-bottom:10px">
+      <div class="card-title mb-0" style="font-size:.95rem">Latest call requests</div>
+      <a class="tiny" href="{{ url_for('admin_leads', status='all') }}" style="text-decoration:underline">All calls</a>
+    </div>
+    {% for l in recent_leads %}
+      <div class="dash-row">
+        <div>
+          <div class="small strong">{{ l.full_name }}</div>
+          <div class="tiny faint">
+            {{ l.created_at | date }} · {{ l.debt_amount }}
+            {%- if l.aff_first %} · via {{ l.aff_first }} {{ (l.aff_last or '')[:1] }}.{% endif %}
+          </div>
+        </div>
+        <span class="badge {{ 'badge-accent' if l.status == 'new' }}">{{ lead_status_labels.get(l.status, l.status) }}</span>
+      </div>
+    {% else %}
+      <p class="small muted mb-0">No call requests yet.</p>
+    {% endfor %}
+  </div>
+
+  <div class="card card-pad-sm">
+    <div class="card-title" style="font-size:.95rem;margin-bottom:10px">Latest payments</div>
+    {% for p in recent_payments %}
+      <div class="dash-row">
+        <div>
+          <a class="small strong" href="{{ url_for('admin_client_detail', user_id=p.user_id) }}">
+            {{ ((p.first_name or '') ~ ' ' ~ (p.last_name or '')) | trim or p.email }}</a>
+          <div class="tiny faint">{{ p.paid_at | date }}</div>
+        </div>
+        <span class="small strong">{{ p.amount_cents | money }}</span>
+      </div>
+    {% else %}
+      <p class="small muted mb-0">No payments recorded yet.</p>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

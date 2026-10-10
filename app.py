@@ -1066,7 +1066,9 @@ def login_submit():
     # Only ever redirect within this site.
     if nxt.startswith("/") and not nxt.startswith("//"):
         return redirect(nxt)
-    if row["role"] in ("admin", "specialist"):
+    if row["role"] == "admin":
+        return redirect(url_for("admin_dashboard"))
+    if row["role"] == "specialist":
         return redirect(url_for("admin_clients"))
     if row["role"] == affiliates.ROLE:
         return redirect(url_for("affiliates.dashboard"))
@@ -1470,7 +1472,102 @@ def portal_agreement():
 @app.get("/admin")
 @require_staff
 def admin_home():
+    if is_admin():
+        return redirect(url_for("admin_dashboard"))
     return redirect(url_for("admin_clients"))
+
+
+def _month_start_utc(months_back: int = 0) -> str:
+    """Start of a calendar month in the business's own time zone, as the UTC
+    ISO string the database stores, so "this month" means what it means in
+    Detroit rather than in Greenwich."""
+    now = datetime.now(_DISPLAY_TZ) if _DISPLAY_TZ else datetime.now(timezone.utc)
+    year, month = now.year, now.month - months_back
+    while month < 1:
+        month += 12
+        year -= 1
+    start = now.replace(year=year, month=month, day=1, hour=0, minute=0,
+                        second=0, microsecond=0)
+    return start.astimezone(timezone.utc).isoformat(timespec="seconds")
+
+
+@app.get("/admin/dashboard")
+@require_admin
+def admin_dashboard():
+    """The whole business on one screen: what came in, what was collected,
+    who is being worked, and what is waiting on somebody here."""
+    conn = get_db()
+    this_month = _month_start_utc(0)
+    last_month = _month_start_utc(1)
+
+    def one(sql: str, *params) -> int:
+        return int(conn.execute(sql, params).fetchone()[0] or 0)
+
+    leads = {
+        "total": one("SELECT COUNT(*) FROM leads"),
+        "new": one("SELECT COUNT(*) FROM leads WHERE status = 'new'"),
+        "month": one("SELECT COUNT(*) FROM leads WHERE created_at >= ?", this_month),
+        "last_month": one("SELECT COUNT(*) FROM leads WHERE created_at >= ? "
+                          "AND created_at < ?", last_month, this_month),
+        "referred": one("SELECT COUNT(*) FROM leads WHERE affiliate_id IS NOT NULL"),
+    }
+    # Collected means paid and not since refunded. A refunded order changes
+    # status, so it simply drops out of these sums.
+    revenue = {
+        "total": one("SELECT SUM(amount_cents) FROM orders WHERE status = 'paid'"),
+        "month": one("SELECT SUM(amount_cents) FROM orders WHERE status = 'paid' "
+                     "AND paid_at >= ?", this_month),
+        "last_month": one("SELECT SUM(amount_cents) FROM orders WHERE status = 'paid' "
+                          "AND paid_at >= ? AND paid_at < ?", last_month, this_month),
+        "payments": one("SELECT COUNT(*) FROM orders WHERE status = 'paid'"),
+        "refunded": one("SELECT SUM(amount_cents) FROM orders WHERE status = 'refunded'"),
+    }
+    active_clients = ("FROM users WHERE role = 'client' AND archived_at IS NULL "
+                      "AND EXISTS (SELECT 1 FROM orders o WHERE o.user_id = users.id "
+                      "AND o.status = 'paid')")
+    clients = {
+        "active": one(f"SELECT COUNT(*) {active_clients} AND case_stage != 'complete'"),
+        "complete": one(f"SELECT COUNT(*) {active_clients} AND case_stage = 'complete'"),
+        "month": one("SELECT COUNT(DISTINCT user_id) FROM orders WHERE status = 'paid' "
+                     "AND paid_at >= ?", this_month),
+        "unassigned": one(f"SELECT COUNT(*) {active_clients} "
+                          "AND case_stage != 'complete' AND assigned_to IS NULL"),
+    }
+    stage_counts = {k: 0 for k in CASE_STAGE_KEYS}
+    for row in conn.execute(f"SELECT case_stage, COUNT(*) AS n {active_clients} "
+                            "GROUP BY case_stage"):
+        stage_counts[row["case_stage"]] = row["n"]
+    affiliates_summary = {
+        "active": one("SELECT COUNT(*) FROM users WHERE role = 'affiliate' "
+                      "AND archived_at IS NULL AND email_verified_at IS NOT NULL"),
+        "pending": one("SELECT COUNT(*) FROM users WHERE role = 'affiliate' "
+                       "AND archived_at IS NULL AND email_verified_at IS NULL"),
+        "visitors": one("SELECT COUNT(*) FROM affiliate_clicks"),
+    }
+    waiting = {
+        "documents": one("SELECT COUNT(*) FROM documents d JOIN users u ON u.id = d.user_id "
+                         "WHERE d.status = 'received' AND u.archived_at IS NULL"),
+        "messages": sum(unread_by_client(conn).values()),
+        "letters": one("SELECT COUNT(*) FROM letter_packets WHERE status = 'pending'"),
+    }
+    recent_leads = [dict(r) for r in conn.execute(
+        "SELECT l.id, l.full_name, l.debt_amount, l.status, l.created_at, "
+        "a.first_name AS aff_first, a.last_name AS aff_last "
+        "FROM leads l LEFT JOIN users a ON a.id = l.affiliate_id "
+        "ORDER BY l.created_at DESC, l.id DESC LIMIT 5").fetchall()]
+    recent_payments = [dict(r) for r in conn.execute(
+        "SELECT o.amount_cents, o.paid_at, u.id AS user_id, u.first_name, "
+        "u.last_name, u.email FROM orders o JOIN users u ON u.id = o.user_id "
+        "WHERE o.status = 'paid' ORDER BY o.paid_at DESC, o.id DESC LIMIT 5").fetchall()]
+
+    return render_template(
+        "admin/dashboard.html", leads=leads, revenue=revenue, clients=clients,
+        stage_counts=stage_counts, affiliates=affiliates_summary, waiting=waiting,
+        recent_leads=recent_leads, recent_payments=recent_payments,
+        month_label=(datetime.now(_DISPLAY_TZ) if _DISPLAY_TZ
+                     else datetime.now(timezone.utc)).strftime("%B"),
+        lead_status_labels=LEAD_STATUS_LABELS,
+    )
 
 
 @app.get("/admin/clients")

@@ -28,6 +28,7 @@
       running on it: a call request that goes unanswered for a day is usually
       gone. Everything else keeps. #}
   {% set nav_items = [
+    ('Dashboard', '▦', url_for('admin_dashboard'), '/admin/dashboard'),
     ('Clients',  '◫', url_for('admin_clients'),  '/admin/clients'),
     ('Calls',    '☎', url_for('admin_leads'),    '/admin/leads'),
     ('Messages', '✉', url_for('admin_messages'), '/admin/messages'),
