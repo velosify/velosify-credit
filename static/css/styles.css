@@ -1803,3 +1803,31 @@ table.data tbody tr:hover { background: rgba(19, 100, 223, .04); }
 .sign-pad-line { position: absolute; left: 16px; right: 16px; bottom: 38px; border-bottom: 1px solid var(--border-strong); pointer-events: none; }
 .sign-pad-hint { position: absolute; left: 16px; bottom: 12px; font-size: .78rem; color: var(--text-faint); pointer-events: none; }
 @media (max-width: 560px) { .letter-sheet { padding: 28px 22px; } }
+
+
+/* --- Affiliate link editor --------------------------------------------
+   A fixed prefix, the editable part and the button, stretched to one height
+   so they line up as a single control. Same padding and type as the
+   .token-box above it, so the two rows match. */
+.link-edit { display: flex; align-items: stretch; gap: 0; }
+.link-edit-prefix {
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  border-right: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: .82rem;
+  color: var(--text-muted);
+  flex: none;
+}
+.link-edit .input {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+  padding: 12px 14px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: .82rem;
+}
+.link-edit .btn { margin-left: 10px; flex: none; }
