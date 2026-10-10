@@ -32,6 +32,7 @@
     ('Calls',    '☎', url_for('admin_leads'),    '/admin/leads'),
     ('Messages', '✉', url_for('admin_messages'), '/admin/messages'),
     ('Team',     '◎', url_for('admin_team'),     '/admin/team'),
+    ('Affiliates', '⇄', url_for('affiliates.admin_list'), '/admin/affiliates'),
     ('Audit',    '⧉', url_for('admin_audit'),    '/admin/audit'),
     ('System',   '◇', url_for('admin_system'),   '/admin/system')
   ] %}
@@ -41,6 +42,10 @@
   {% set nav_items = [
     ('My clients', '◫', url_for('admin_clients'),  '/admin/clients'),
     ('Messages',   '✉', url_for('admin_messages'), '/admin/messages')
+  ] %}
+{% elif user and user.role == 'affiliate' %}
+  {% set nav_items = [
+    ('Referrals', '⇄', url_for('affiliates.dashboard'), '/affiliate')
   ] %}
 {% else %}
   {% set nav_items = [

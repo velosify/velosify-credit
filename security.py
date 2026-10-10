@@ -169,6 +169,9 @@ LIMITS = {
     # Not an attack limit. One person asking for a call five times in an hour
     # has a problem the form cannot solve, and the number on the page can.
     "lead:ip":          (5, 60),
+    # Affiliate sign-ups. Counted per attempt, not per failure, for the same
+    # reason as leads: a well-formed flood is still a flood.
+    "affiliate:ip":     (5, 60),
     "reset:email":      (4, 60),
     "reset:ip":         (12, 60),
 }

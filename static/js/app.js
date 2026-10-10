@@ -3,6 +3,29 @@
 (function () {
   "use strict";
 
+  /* ---- Copy buttons --------------------------------------------------
+     <button data-copy="#target"> copies the target's text. Without JS the
+     text is still there and selectable (the box is user-select: all). */
+  document.querySelectorAll("[data-copy]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var target = document.querySelector(btn.getAttribute("data-copy"));
+      if (!target) return;
+      var text = target.textContent.trim();
+      var label = btn.textContent;
+      function done() {
+        btn.textContent = btn.getAttribute("data-copied") || "Copied";
+        setTimeout(function () { btn.textContent = label; }, 1800);
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done, function () {
+          window.getSelection().selectAllChildren(target);
+        });
+      } else {
+        window.getSelection().selectAllChildren(target);
+      }
+    });
+  });
+
   /* ---- Mobile nav ---------------------------------------------------- */
   var toggle = document.getElementById("nav-toggle");
   var links = document.getElementById("nav-links");

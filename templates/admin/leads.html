@@ -10,15 +10,23 @@
   </p>
 </div>
 
+{% if affiliate %}
+  <div class="alert alert-info" style="margin-bottom:16px">
+    Showing only call requests referred by
+    <strong>{{ (affiliate.first_name ~ ' ' ~ affiliate.last_name) | trim or affiliate.email }}</strong>.
+    <a href="{{ url_for('admin_leads', status=status) }}" style="text-decoration:underline">Show everyone</a>
+  </div>
+{% endif %}
+
 <div class="row" style="gap:8px;margin-bottom:20px;flex-wrap:wrap">
   {% for key, label in statuses %}
     <a class="btn btn-sm {{ 'btn-ghost' if status == key else 'btn-quiet' }}"
-       href="{{ url_for('admin_leads', status=key) }}">
-      {{ label }}{% if counts[key] %} ({{ counts[key] }}){% endif %}
+       href="{{ url_for('admin_leads', status=key, affiliate=affiliate.id if affiliate else None) }}">
+      {{ label }}{% if counts[key] and not affiliate %} ({{ counts[key] }}){% endif %}
     </a>
   {% endfor %}
   <a class="btn btn-sm {{ 'btn-ghost' if status == 'all' else 'btn-quiet' }}"
-     href="{{ url_for('admin_leads', status='all') }}">All</a>
+     href="{{ url_for('admin_leads', status='all', affiliate=affiliate.id if affiliate else None) }}">All</a>
 </div>
 
 {% if leads %}
@@ -32,6 +40,13 @@
               <a href="tel:{{ lead.phone }}" class="strong">{{ lead.phone }}</a>
               · <a href="mailto:{{ lead.email }}">{{ lead.email }}</a>
             </p>
+            {% if lead.affiliate_id %}
+              <a class="badge badge-accent" style="margin-top:8px;display:inline-block"
+                 href="{{ url_for('admin_leads', status='all', affiliate=lead.affiliate_id) }}"
+                 title="{{ lead.aff_email or '' }}">
+                Referred by {{ ((lead.aff_first or '') ~ ' ' ~ (lead.aff_last or '')) | trim or lead.aff_email or 'a removed affiliate' }}
+              </a>
+            {% endif %}
           </div>
           <div class="text-right">
             <div class="strong">{{ lead.debt_amount }}</div>

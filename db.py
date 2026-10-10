@@ -331,6 +331,10 @@ _ADDED_COLUMNS = [
     ("users", "staff_read_id", "INTEGER NOT NULL DEFAULT 0"),
     ("users", "archived_at", "TEXT"),
     ("users", "archived_reason", "TEXT NOT NULL DEFAULT ''"),
+    # Affiliate program. The code is what goes in their link; affiliate_id on
+    # a lead is who sent it. Plain integer for the same reason as assigned_to.
+    ("users", "affiliate_code", "TEXT"),
+    ("leads", "affiliate_id", "INTEGER"),
 ]
 
 
@@ -339,6 +343,9 @@ _ADDED_COLUMNS = [
 # not have yet is an error rather than a no-op.
 LATE_INDEXES = """
 CREATE INDEX IF NOT EXISTS idx_users_assigned ON users(assigned_to);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_affiliate_code
+    ON users(affiliate_code) WHERE affiliate_code IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_leads_affiliate ON leads(affiliate_id, created_at);
 """
 
 
@@ -363,6 +370,8 @@ def init_db() -> None:
         # Imported here, not at the top: letters.py imports this module.
         from letters import SCHEMA as _LETTERS_SCHEMA
         conn.executescript(_LETTERS_SCHEMA)
+        from affiliates import SCHEMA as _AFFILIATES_SCHEMA
+        conn.executescript(_AFFILIATES_SCHEMA)
         _apply_added_columns(conn)
         conn.executescript(LATE_INDEXES)
         conn.commit()

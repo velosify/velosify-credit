@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}Become an affiliate | {{ cfg.BRAND_NAME }}{% endblock %}
+{% block description %}Know people who need their credit fixed? Get your own {{ cfg.BRAND_NAME }} referral link and see every call request you send our way.{% endblock %}
+
+{% block body %}
+<section class="section-tight">
+  <div class="container">
+    <div class="order-head" data-reveal>
+      <h1 style="font-size:clamp(1.9rem,3.6vw,2.6rem)">Become an affiliate</h1>
+      <p class="lead mb-0">
+        Know people who need their credit fixed? Get your own link, share it,
+        and watch every call request it brings in from your dashboard.
+      </p>
+    </div>
+
+    <div class="order-layout">
+
+      <!-- ---------- Form ---------- -->
+      <div class="order-form-col">
+        {% if error %}
+          <div class="alert alert-error">{{ error }}</div>
+        {% endif %}
+
+        <form method="post" action="{{ url_for('affiliates.signup_submit') }}"
+              data-guard class="card" data-reveal>
+          {{ csrf_field() }}
+
+          <div class="hp-field" aria-hidden="true">
+            <label for="company">Company</label>
+            <input id="company" name="company" type="text" tabindex="-1"
+                   autocomplete="off">
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="first_name">First name</label>
+              <input class="input" id="first_name" name="first_name" required
+                     autocomplete="given-name" autofocus
+                     value="{{ form.first_name or '' }}">
+            </div>
+            <div class="field">
+              <label for="last_name">Last name</label>
+              <input class="input" id="last_name" name="last_name" required
+                     autocomplete="family-name" value="{{ form.last_name or '' }}">
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="email">Email address</label>
+              <input class="input" id="email" name="email" type="email" required
+                     autocomplete="email" value="{{ form.email or '' }}">
+            </div>
+            <div class="field">
+              <label for="phone">Phone number</label>
+              <input class="input" id="phone" name="phone" type="tel" required
+                     autocomplete="tel" placeholder="(313) 555-0142"
+                     value="{{ form.phone or '' }}">
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="password">Choose a password</label>
+            <input class="input" id="password" name="password" type="password"
+                   required minlength="10" autocomplete="new-password">
+            <div class="hint">At least 10 characters. You'll use it to sign in and see your referrals.</div>
+          </div>
+
+          <label class="check" style="margin:6px 0 20px">
+            <input type="checkbox" name="agree" value="yes" required>
+            <span class="small">{{ terms }}</span>
+          </label>
+
+          <button class="btn btn-primary btn-lg btn-block" type="submit"
+                  data-busy="Signing you up…">Get my referral link</button>
+        </form>
+
+        <p class="small faint text-center mt-2">
+          Already an affiliate?
+          <a href="{{ url_for('login') }}" style="text-decoration:underline">Sign in</a>
+        </p>
+      </div>
+
+      <!-- ---------- Summary ---------- -->
+      <div class="order-summary-col">
+        <div class="card card-glass order-summary-card" data-reveal="scale">
+          <div class="row-between" style="margin-bottom:14px">
+            <span class="strong">How it works</span>
+            <span class="badge badge-accent">Free to join</span>
+          </div>
+
+          <ul class="feature-list">
+            <li><span class="tick">✓</span> Sign up and confirm your email</li>
+            <li><span class="tick">✓</span> Copy your personal link from your
+              dashboard and share it anywhere</li>
+            <li><span class="tick">✓</span> When someone uses it to schedule a
+              call, they're credited to you for {{ ref_days }} days</li>
+            <li><span class="tick">✓</span> See each referral and where it
+              stands, any time</li>
+          </ul>
+
+          <div class="alert alert-info" style="margin:22px 0 0">
+            <strong>Keep it honest.</strong> Credit repair has strict rules
+            about what can be promised. Share your link, tell people we'll go
+            through their report with them, and leave the specifics to us.
+          </div>
+        </div>
+
+        <div class="card card-pad-sm mt-2" data-reveal>
+          <div class="card-title" style="font-size:.95rem">Questions first?</div>
+          <p class="small muted mb-0">
+            Email
+            <a href="mailto:{{ cfg.SUPPORT_EMAIL }}"
+               style="text-decoration:underline">{{ cfg.SUPPORT_EMAIL }}</a>
+            {% if cfg.SUPPORT_PHONE %} or call
+              <a href="tel:{{ cfg.SUPPORT_PHONE_TEL }}" class="strong">{{ cfg.SUPPORT_PHONE }}</a>{% endif %}.
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+{% endblock %}

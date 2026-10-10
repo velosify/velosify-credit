@@ -303,11 +303,19 @@ def send_lead(lead: dict) -> bool:
     link, because this one is meant to be read on a phone between other jobs
     and acted on by pressing the number in it.
     """
+    ref = lead.get("referrer")
+    referred = ""
+    if ref:
+        ref_name = f"{ref.get('first_name', '')} {ref.get('last_name', '')}".strip()
+        referred = (f"Referred by: {ref_name or ref['email']} <{ref['email']}> "
+                    f"(affiliate code {ref['affiliate_code']})\n\n")
     return send_email(
         to=config.LEAD_EMAIL,
-        subject=f"Call request: {lead['full_name']} — {lead['debt_amount']}",
+        subject=(f"Call request: {lead['full_name']} — {lead['debt_amount']}"
+                 + (" (affiliate referral)" if ref else "")),
         text=(
             f"{lead['full_name']} asked for a call.\n\n"
+            f"{referred}"
             f"Phone:      {lead['phone']}\n"
             f"Email:      {lead['email']}\n"
             f"Best time:  {lead.get('best_time_label') or 'Any time'}\n"
@@ -342,5 +350,66 @@ def send_documents_complete(user: dict) -> bool:
             f"{name} has uploaded every required document. The case is ready "
             f"for analysis.\n\n"
             f"{config.APP_BASE_URL}/admin/clients/{user['id']}\n"
+        ),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Affiliate program
+# ---------------------------------------------------------------------------
+
+def send_affiliate_confirm(user: dict, link: str) -> bool:
+    first = user.get("first_name") or "there"
+    return send_email(
+        to=user["email"],
+        subject=f"Confirm your email to get your {config.BRAND_NAME} referral link",
+        text=(
+            f"Hi {first},\n\n"
+            f"Thanks for joining the {config.BRAND_NAME} affiliate program. "
+            "Confirm your email address and your referral link goes live:\n\n"
+            f"{link}\n\n"
+            "After that, sign in any time to copy your link and see who you've "
+            "sent our way.\n\n"
+            "If you didn't sign up, ignore this message and nothing further "
+            "will be sent.\n\n"
+            f"The {config.BRAND_NAME} team"
+        ),
+    )
+
+
+def send_affiliate_existing(user: dict) -> bool:
+    """Someone tried to sign up as an affiliate with an address that already
+    has an account here. Told to the owner of that address, and only them."""
+    first = user.get("first_name") or "there"
+    return send_email(
+        to=user["email"],
+        subject=f"About your {config.BRAND_NAME} affiliate sign-up",
+        text=(
+            f"Hi {first},\n\n"
+            "Someone just tried to join our affiliate program with this email "
+            "address, but it already has an account with us, so nothing new "
+            "was created.\n\n"
+            "If that was you and you want to be an affiliate, sign up again "
+            f"with a different email address, or write to {config.SUPPORT_EMAIL} "
+            "and we'll sort it out.\n\n"
+            "If it wasn't you, you don't need to do anything.\n\n"
+            f"The {config.BRAND_NAME} team"
+        ),
+    )
+
+
+def send_admin_new_affiliate(user: dict, admin_link: str) -> bool:
+    name = f"{user.get('first_name', '')} {user.get('last_name', '')}".strip()
+    return send_email(
+        to=config.LEAD_EMAIL,
+        subject=f"New affiliate sign-up: {name or user['email']}",
+        text=(
+            f"{name or user['email']} signed up as an affiliate.\n\n"
+            f"Email:  {user['email']}\n"
+            f"Phone:  {user.get('phone') or 'n/a'}\n"
+            f"Code:   {user['affiliate_code']}\n\n"
+            "Their link starts working once they confirm their email. You can "
+            "deactivate anyone from the affiliates page:\n"
+            f"{admin_link}\n"
         ),
     )

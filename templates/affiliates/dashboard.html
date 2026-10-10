@@ -1,0 +1,81 @@
+{% extends "base_app.html" %}
+{% block title %}Your referrals | {{ cfg.BRAND_NAME }}{% endblock %}
+
+{% block body %}
+<div class="page-head">
+  <h1>Your referrals</h1>
+  <p class="muted mb-0">Share your link. Everyone who schedules a call through it shows up here.</p>
+</div>
+
+{% if not verified %}
+  <div class="alert alert-warn" style="margin-bottom:24px">
+    <strong>Confirm your email to switch on your link.</strong>
+    We sent a confirmation to {{ user.email }}. Until it's confirmed, people who
+    use your link won't be credited to you.
+    <form method="post" action="{{ url_for('affiliates.resend_confirm') }}" style="margin-top:12px">
+      {{ csrf_field() }}
+      <button class="btn btn-ghost btn-sm" type="submit">Send it again</button>
+    </form>
+  </div>
+{% endif %}
+
+<div class="card" style="margin-bottom:26px">
+  <div class="card-title">Your referral link</div>
+  <div class="row" style="gap:10px;flex-wrap:wrap;align-items:stretch">
+    <div class="token-box" id="ref-link" style="flex:1 1 260px">{{ link }}</div>
+    <button class="btn btn-primary btn-sm" type="button"
+            data-copy="#ref-link" data-copied="Copied">Copy link</button>
+  </div>
+  <p class="tiny faint" style="margin:12px 0 0">
+    Want to send people straight to the call form? Add
+    <code>?ref={{ user.affiliate_code }}</code> to any page on the site, like
+    <span class="nowrap">{{ link.rsplit('/r/', 1)[0] }}/consultation?ref={{ user.affiliate_code }}</span>.
+    Anyone who arrives through your link is credited to you for {{ ref_days }} days.
+  </p>
+</div>
+
+<div class="grid grid-3" style="margin-bottom:26px">
+  <div class="stat">
+    <div class="k">Visitors</div>
+    <div class="v">{{ clicks }}</div>
+  </div>
+  <div class="stat">
+    <div class="k">Call requests</div>
+    <div class="v">{{ referrals | length }}</div>
+  </div>
+  <div class="stat">
+    <div class="k">Spoken to</div>
+    <div class="v">{{ spoken_to }}</div>
+  </div>
+</div>
+
+{% if referrals %}
+  <div class="table-wrap" style="margin-bottom:26px">
+    <table class="data">
+      <thead><tr><th>Referral</th><th>Requested a call</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for r in referrals %}
+          <tr>
+            <td class="strong">{{ r.name }}</td>
+            <td class="small nowrap">{{ r.created_at | date }}</td>
+            <td>
+              <span class="badge {{ 'badge-success' if r.status == 'called' else ('badge-accent' if r.status == 'new' else '') }}">
+                {{ r.status_label }}
+              </span>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  <div class="card text-center" style="margin-bottom:26px">
+    <p class="muted mb-0">No call requests yet. They'll appear here as soon as someone uses your link.</p>
+  </div>
+{% endif %}
+
+<p class="tiny faint">
+  To protect their privacy, we only show first names and last initials.
+  The rules you agreed to: {{ terms }}
+</p>
+{% endblock %}

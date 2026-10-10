@@ -131,6 +131,9 @@ database.init_db()
 import letters  # noqa: E402  e-signed letters; needs the tables init_db just made
 app.register_blueprint(letters.bp)
 
+import affiliates  # noqa: E402  referral links, sign-up and dashboards
+app.register_blueprint(affiliates.bp)
+
 if config.STORAGE_AT_RISK:
     # Loud, and at boot, because the failure it describes is silent. The app
     # starts perfectly well on an empty database; the only symptom is that
@@ -637,6 +640,7 @@ def sitemap():
     pointed at something that will bounce them to a login."""
     endpoints = [
         ("landing", "1.0"), ("consultation", "0.9"), ("legal_index", "0.4"),
+        ("affiliates.signup", "0.5"),
         ("credit_file_rights", "0.5"), ("notice_of_cancellation", "0.5"),
         ("agreement_preview", "0.4"), ("terms", "0.3"), ("privacy", "0.3"),
         ("refunds", "0.3"), ("disclaimer", "0.3"), ("esign", "0.2"),
@@ -810,24 +814,31 @@ def consultation_submit():
     if form["best_time"] not in BEST_TIME_LABELS:
         form["best_time"] = "any"
 
+    # Who sent them, if anyone: the cookie set when they arrived through an
+    # affiliate's link. Gone or no longer valid simply means nobody.
+    referrer = affiliates.referrer_for_request(conn)
     cur = conn.execute(
         "INSERT INTO leads (full_name, email, phone, goal, debt_amount, "
-        "best_time, source_ip, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        "best_time, source_ip, created_at, affiliate_id) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (form["full_name"], form["email"], form["phone"], form["goal"],
-         form["debt_amount"], form["best_time"], ip, utcnow()),
+         form["debt_amount"], form["best_time"], ip, utcnow(),
+         referrer["id"] if referrer else None),
     )
     lead_id = int(cur.lastrowid)
     # Counted whether or not it was spam, so a flood cannot be turned into an
     # unlimited mailer by simply being well-formed.
     record_failure(conn, "lead:ip", ip)
-    audit("lead.received", detail=f"{form['full_name']} <{form['email']}>",
+    audit("lead.received", detail=f"{form['full_name']} <{form['email']}>"
+          + (f" via affiliate {referrer['affiliate_code']}" if referrer else ""),
           conn=conn)
     conn.commit()
 
     # The row is already saved, so a mail failure costs us the alert and not
     # the lead. The inbox at /admin/leads is the record either way.
     if mailer.send_lead(dict(form, id=lead_id,
-                             best_time_label=BEST_TIME_LABELS[form["best_time"]])):
+                             best_time_label=BEST_TIME_LABELS[form["best_time"]],
+                             referrer=referrer)):
         conn.execute("UPDATE leads SET emailed_at = ? WHERE id = ?",
                      (utcnow(), lead_id))
         conn.commit()
@@ -1055,9 +1066,11 @@ def login_submit():
     # Only ever redirect within this site.
     if nxt.startswith("/") and not nxt.startswith("//"):
         return redirect(nxt)
-    return redirect(url_for("admin_clients")
-                    if row["role"] in ("admin", "specialist")
-                    else url_for("portal"))
+    if row["role"] in ("admin", "specialist"):
+        return redirect(url_for("admin_clients"))
+    if row["role"] == affiliates.ROLE:
+        return redirect(url_for("affiliates.dashboard"))
+    return redirect(url_for("portal"))
 
 
 # ---------------------------------------------------------------------------
@@ -2411,13 +2424,30 @@ def admin_leads():
     given, and new business is not one of them.
     """
     status = (request.args.get("status") or "new").strip()
+    try:
+        affiliate_id = int(request.args.get("affiliate") or 0)
+    except ValueError:
+        affiliate_id = 0
     conn = get_db()
-    sql = "SELECT * FROM leads "
+    # The affiliate who sent each lead rides along, so the list can say so.
+    sql = ("SELECT l.*, a.first_name AS aff_first, a.last_name AS aff_last, "
+           "a.email AS aff_email, a.affiliate_code AS aff_code "
+           "FROM leads l LEFT JOIN users a ON a.id = l.affiliate_id ")
+    where: list[str] = []
     params: list = []
     if status in LEAD_STATUS_KEYS:
-        sql += "WHERE status = ? "
+        where.append("l.status = ?")
         params.append(status)
-    sql += "ORDER BY created_at DESC, id DESC LIMIT 300"
+    affiliate = None
+    if affiliate_id:
+        affiliate = row_to_dict(conn.execute(
+            "SELECT id, first_name, last_name, email FROM users "
+            "WHERE id = ? AND role = ?", (affiliate_id, affiliates.ROLE)).fetchone())
+        where.append("l.affiliate_id = ?")
+        params.append(affiliate_id)
+    if where:
+        sql += "WHERE " + " AND ".join(where) + " "
+    sql += "ORDER BY l.created_at DESC, l.id DESC LIMIT 300"
     leads = [dict(r) for r in conn.execute(sql, params).fetchall()]
     counts = {k: 0 for k, _ in LEAD_STATUSES}
     for row in conn.execute("SELECT status, COUNT(*) AS n FROM leads "
@@ -2425,6 +2455,7 @@ def admin_leads():
         counts[row["status"]] = row["n"]
     return render_template("admin/leads.html", leads=leads, status=status,
                            counts=counts, statuses=LEAD_STATUSES,
+                           affiliate=affiliate,
                            time_labels=BEST_TIME_LABELS)
 
 

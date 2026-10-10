@@ -1,0 +1,106 @@
+{% extends "base_app.html" %}
+{% block title %}Affiliates | {{ cfg.BRAND_NAME }} admin{% endblock %}
+
+{% block body %}
+<div class="page-head row-between">
+  <div>
+    <h1>Affiliates</h1>
+    <p class="muted mb-0">
+      People sending you call requests through their own link. Anyone can
+      join at
+      <a href="{{ url_for('affiliates.signup') }}" style="text-decoration:underline">{{ url_for('affiliates.signup') }}</a>.
+    </p>
+  </div>
+</div>
+
+{% set active = affiliates | rejectattr('archived_at') | list %}
+<div class="grid grid-3" style="margin-bottom:26px">
+  <div class="stat">
+    <div class="k">Active affiliates</div>
+    <div class="v">{{ active | length }}</div>
+  </div>
+  <div class="stat">
+    <div class="k">Referred call requests</div>
+    <div class="v">{{ affiliates | sum(attribute='referrals') }}</div>
+  </div>
+  <div class="stat">
+    <div class="k">Waiting for a call</div>
+    {% set waiting = affiliates | sum(attribute='waiting') %}
+    <div class="v" {% if waiting %}style="color:var(--warn)"{% endif %}>{{ waiting }}</div>
+  </div>
+</div>
+
+{% if affiliates %}
+  <div class="table-wrap" style="margin-bottom:26px">
+    <table class="data">
+      <thead>
+        <tr><th>Affiliate</th><th>Link</th><th>Visitors</th><th>Referrals</th><th>Joined</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for a in affiliates %}
+          <tr {% if a.archived_at %}style="opacity:.55"{% endif %}>
+            <td>
+              <div class="strong">{{ (a.first_name ~ ' ' ~ a.last_name) | trim or a.email }}</div>
+              <div class="small muted">{{ a.email }}</div>
+              {% if a.phone %}<div class="small muted"><a href="tel:{{ a.phone }}">{{ a.phone }}</a></div>{% endif %}
+              {% if a.archived_at %}<span class="badge badge-danger">deactivated</span>
+              {% elif not a.email_verified_at %}<span class="badge badge-warn">email not confirmed</span>{% endif %}
+            </td>
+            <td class="small"><code>{{ a.affiliate_code }}</code></td>
+            <td>{{ a.clicks }}</td>
+            <td>
+              {% if a.referrals %}
+                <a href="{{ url_for('admin_leads', status='all', affiliate=a.id) }}" style="text-decoration:underline">
+                  {{ a.referrals }}</a>
+                {% if a.waiting %}<span class="tiny" style="color:var(--warn)">· {{ a.waiting }} new</span>{% endif %}
+                <div class="tiny faint">last {{ a.last_referral | date }}</div>
+              {% else %}
+                <span class="faint">0</span>
+              {% endif %}
+            </td>
+            <td class="small nowrap">{{ a.created_at | date }}</td>
+            <td style="text-align:right">
+              <div class="row" style="gap:6px;justify-content:flex-end;flex-wrap:wrap">
+                {% if not a.email_verified_at and not a.archived_at %}
+                  <form method="post" action="{{ url_for('affiliates.admin_set_status', user_id=a.id) }}">
+                    {{ csrf_field() }}
+                    <input type="hidden" name="action" value="confirm">
+                    <button class="btn btn-quiet btn-sm" type="submit">Mark confirmed</button>
+                  </form>
+                {% endif %}
+                {% if a.archived_at %}
+                  <form method="post" action="{{ url_for('affiliates.admin_set_status', user_id=a.id) }}">
+                    {{ csrf_field() }}
+                    <input type="hidden" name="action" value="reactivate">
+                    <button class="btn btn-ghost btn-sm" type="submit">Reactivate</button>
+                  </form>
+                {% else %}
+                  <form method="post" action="{{ url_for('affiliates.admin_set_status', user_id=a.id) }}"
+                        data-confirm="Deactivate {{ a.email }}? Their link stops crediting them and they can't sign in. Past referrals stay on record.">
+                    {{ csrf_field() }}
+                    <input type="hidden" name="action" value="deactivate">
+                    <button class="btn btn-danger btn-sm" type="submit">Deactivate</button>
+                  </form>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  <div class="card text-center">
+    <p class="muted mb-0">No affiliates yet. Share
+      <a href="{{ url_for('affiliates.signup') }}" style="text-decoration:underline">the sign-up page</a>
+      with anyone who wants to send you clients.</p>
+  </div>
+{% endif %}
+
+<p class="tiny faint">
+  A visitor is credited to the first affiliate whose link they used, for
+  {{ ref_days }} days. Affiliates see their referrals' first names and last
+  initials and whether they've been called, never phone numbers, emails or
+  what's on their report.
+</p>
+{% endblock %}

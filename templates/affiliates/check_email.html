@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Check your email | {{ cfg.BRAND_NAME }}{% endblock %}
+{% block head %}<meta name="robots" content="noindex">{% endblock %}
+
+{% block body %}
+<section class="section-tight">
+  <div class="container container-form">
+    <div class="card text-center" data-reveal>
+      <div class="success-mark" aria-hidden="true">✓</div>
+      <h1 style="font-size:clamp(1.7rem,3.4vw,2.3rem);margin-bottom:10px">
+        Check your email
+      </h1>
+      <p class="lead lead-center">
+        We've sent a message to <strong>{{ email }}</strong>. Click the link in
+        it to confirm your address and switch on your referral link.
+      </p>
+      <p class="small muted" style="margin-top:22px">
+        Nothing there after a few minutes? Check your spam folder, or email
+        <a href="mailto:{{ cfg.SUPPORT_EMAIL }}" style="text-decoration:underline">{{ cfg.SUPPORT_EMAIL }}</a>.
+      </p>
+      <a class="btn btn-ghost mt-2" href="{{ url_for('login') }}">Sign in</a>
+    </div>
+  </div>
+</section>
+{% endblock %}
