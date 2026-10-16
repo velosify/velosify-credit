@@ -13,7 +13,12 @@
     <div class="text-center" style="margin-bottom:26px">
       <h1 style="font-size:clamp(1.7rem,3.4vw,2.3rem)">Activate your account</h1>
       <p class="lead lead-center mb-0">
-        Choose a password and sign your agreement. Nothing to pay here.
+        {% if temp_login %}
+          You're signed in with a temporary password. Choose your own and sign
+          your agreement to continue. Nothing to pay here.
+        {% else %}
+          Choose a password and sign your agreement. Nothing to pay here.
+        {% endif %}
       </p>
     </div>
 
@@ -29,7 +34,8 @@
       </div>
     {% endif %}
 
-    <form method="post" action="{{ url_for('activate_client', token=token) }}"
+    <form method="post"
+          action="{{ form_action or url_for('activate_client', token=token) }}"
           data-guard class="card">
       {{ csrf_field() }}
 

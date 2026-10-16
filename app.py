@@ -545,6 +545,26 @@ def _staff_out_of_the_portal():
     return None
 
 
+_SETUP_OPEN_ENDPOINTS = {"finish_setup", "finish_setup_submit", "logout", "static",
+                         "credit_file_rights", "agreement_preview", "terms",
+                         "privacy", "esign", "notice_of_cancellation"}
+
+
+@app.before_request
+def _finish_setup_gate():
+    """Hold a temporary-password client on the setup page.
+
+    The temporary password only gets them in the door. Until they have chosen
+    their own and signed the agreement (the same two things the emailed link
+    asks for) nothing else in the portal is reachable.
+    """
+    user = current_user()
+    if (user and user["role"] == "client" and user.get("needs_setup")
+            and request.endpoint not in _SETUP_OPEN_ENDPOINTS):
+        return redirect(url_for("finish_setup"))
+    return None
+
+
 @app.before_request
 def _csrf_gate():
     """Reject any unsafe request that does not carry this session's token.
@@ -1724,7 +1744,7 @@ def admin_client_detail(user_id: int):
 
 
 def _client_detail_page(user_id: int, activation_link: str | None = None,
-                        mail_error: str = ""):
+                        mail_error: str = "", temp_password: str | None = None):
     """One renderer for the client file.
 
     Takes the activation link as an argument for the same reason the team page
@@ -1760,6 +1780,7 @@ def _client_detail_page(user_id: int, activation_link: str | None = None,
         checklist=document_status_for(conn, user_id),
         activation_link=activation_link,
         mail_error=mail_error,
+        temp_password=temp_password,
     )
 
 
@@ -1845,6 +1866,115 @@ def admin_client_change_email(user_id: int):
         return redirect(url_for("admin_client_detail", user_id=user_id))
     return _client_detail_page(user_id, activation_link=link,
                                mail_error=mailer.last_error)
+
+
+_TEMP_PW_ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789"  # no 0/o, 1/l/i
+
+
+def _temp_password() -> str:
+    raw = "".join(secrets.choice(_TEMP_PW_ALPHABET) for _ in range(12))
+    return "-".join(raw[i:i + 4] for i in range(0, 12, 4))
+
+
+@app.post("/admin/clients/<int:user_id>/temp-password")
+@require_admin
+def admin_client_temp_password(user_id: int):
+    """Give a client who never got the email a way in anyway.
+
+    Sets a one-time-use style password shown once to the administrator. The
+    client signs in with it and is held on the finish-setup page until they
+    pick their own password and sign the agreement, so the contract and the
+    credit-file-rights disclosure are not skipped.
+    """
+    actor = current_user()
+    conn = get_db()
+    row = conn.execute("SELECT * FROM users WHERE id = ? AND role = 'client'",
+                       (user_id,)).fetchone()
+    if not row:
+        abort(404)
+    if row["agreement_signed_at"]:
+        flash(f"{row['email']} has already signed and activated. Send them to "
+              f"the password reset page instead.", "error")
+        return redirect(url_for("admin_client_detail", user_id=user_id))
+
+    temp = _temp_password()
+    conn.execute("UPDATE users SET password_hash = ?, needs_setup = 1 "
+                 "WHERE id = ?", (hash_password(temp), user_id))
+    clear_failures(conn, "login:email", row["email"])
+    audit("client.temp_password_set", actor=actor, target_user_id=user_id,
+          detail=row["email"], conn=conn)
+    conn.commit()
+    return _client_detail_page(user_id, temp_password=temp)
+
+
+@app.get("/finish-setup")
+@require_login
+def finish_setup():
+    user = current_user()
+    if user["role"] != "client" or not user.get("needs_setup"):
+        return redirect(url_for("portal"))
+    return render_template("activate.html", token="", error=None,
+                           form_action=url_for("finish_setup_submit"),
+                           temp_login=True,
+                           agreement_amount=_agreed_fee(int(user["id"])))
+
+
+@app.post("/finish-setup")
+@require_login
+def finish_setup_submit():
+    user = current_user()
+    if user["role"] != "client" or not user.get("needs_setup"):
+        return redirect(url_for("portal"))
+    user_id = int(user["id"])
+    conn = get_db()
+    password = request.form.get("password") or ""
+    confirm = request.form.get("password_confirm") or ""
+    signature = (request.form.get("signature") or "").strip()
+
+    def fail(message: str):
+        return render_template(
+            "activate.html", token="", error=message, temp_login=True,
+            form_action=url_for("finish_setup_submit"),
+            agreement_amount=_agreed_fee(user_id)), 400
+
+    if request.form.get("accept_disclosure") != "yes":
+        return fail("Please confirm you have read your credit file rights. "
+                    "Federal law requires that disclosure before you sign.")
+    if request.form.get("accept_agreement") != "yes":
+        return fail("You'll need to accept the service agreement to continue.")
+    if password != confirm:
+        return fail("Those two passwords don't match.")
+    problem = password_problem(password)
+    if problem:
+        return fail(problem)
+    if verify_password(password, user["password_hash"]):
+        return fail("Choose a different password than the temporary one.")
+    expected = f"{user['first_name']} {user['last_name']}".strip()
+    if signature.lower() != expected.lower():
+        return fail(f"Type your full name exactly as \u201c{expected}\u201d to sign.")
+
+    conn.execute(
+        "UPDATE users SET password_hash = ?, password_changed_at = ?, "
+        "agreement_signed_at = ?, agreement_name = ?, agreement_ip = ?, "
+        "disclosure_ack_at = ?, email_verified_at = ?, case_stage = 'documents', "
+        "needs_setup = 0 WHERE id = ?",
+        (hash_password(password), utcnow(), utcnow(), signature, client_ip(),
+         utcnow(), utcnow(), user_id),
+    )
+    # Any emailed link that turns up later is now pointless, and should not be
+    # able to reset the password this client just chose.
+    conn.execute("UPDATE auth_tokens SET used_at = ? WHERE user_id = ? "
+                 "AND kind = ? AND used_at IS NULL",
+                 (utcnow(), user_id, security.CLIENT_ACTIVATE))
+    add_event(conn, user_id, title="Agreement signed",
+              body="Signed electronically after first sign-in with a temporary "
+                   "password.",
+              stage="documents", created_by="client")
+    audit("client.activated", target_user_id=user_id,
+          detail=f"{signature} (temporary password)", conn=conn)
+    conn.commit()
+    flash("You're all set. Upload your documents to get started.", "success")
+    return redirect(url_for("portal"))
 
 
 # ---------------------------------------------------------------------------
@@ -2084,8 +2214,8 @@ def activate_client_submit(token: str):
     conn.execute(
         "UPDATE users SET password_hash = ?, password_changed_at = ?, "
         "agreement_signed_at = ?, agreement_name = ?, agreement_ip = ?, "
-        "disclosure_ack_at = ?, email_verified_at = ?, case_stage = 'documents' "
-        "WHERE id = ?",
+        "disclosure_ack_at = ?, email_verified_at = ?, case_stage = 'documents', "
+        "needs_setup = 0 WHERE id = ?",
         (hash_password(password), utcnow(), utcnow(), signature, client_ip(),
          utcnow(), utcnow(), user_id),
     )

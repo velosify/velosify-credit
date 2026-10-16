@@ -31,6 +31,21 @@
   </div>
 {% endif %}
 
+{% if temp_password %}
+  <div class="notice-strong">
+    <h3>Temporary password for {{ client.first_name }}</h3>
+    <p>
+      Give them this and tell them to sign in at the login page with
+      <strong>{{ client.email }}</strong>. They will be asked to choose their
+      own password and sign the agreement before they can do anything else.
+    </p>
+    <div class="token-box">{{ temp_password }}</div>
+    <p class="small faint mb-0">
+      Shown once. Leave this page and you will need to make another.
+    </p>
+  </div>
+{% endif %}
+
 {#  An account that exists but has never been signed for is a client sitting
     on a link they may never have received. It should be visible on the file
     rather than deduced from an empty document list. #}
@@ -56,6 +71,19 @@
         </form>
       {% endif %}
     </div>
+    {#  When the email will not arrive at all: a password to hand over
+        directly, which they replace on first sign-in. #}
+    {% if is_admin %}
+      <form method="post" style="margin-top:12px"
+            action="{{ url_for('admin_client_temp_password', user_id=client.id) }}">
+        {{ csrf_field() }}
+        <button class="btn btn-quiet btn-sm" type="submit"
+                data-busy="Creating…">Create a temporary password instead</button>
+        <span class="small muted">
+          They sign in with it, then pick their own and sign the agreement.
+        </span>
+      </form>
+    {% endif %}
     {#  A wrong or abandoned inbox is the usual reason a link goes unused.
         Changing the address sends a new link there and retires the old one. #}
     {% if is_admin %}

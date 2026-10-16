@@ -319,6 +319,10 @@ _ADDED_COLUMNS = [
     ("users", "disclosure_ack_at", "TEXT"),
     ("users", "email_verified_at", "TEXT"),
     ("users", "password_changed_at", "TEXT"),
+    # Set when an administrator hands a client a temporary password. Such a
+    # client can sign in but is held on the finish-setup page until they have
+    # chosen their own password and signed the agreement.
+    ("users", "needs_setup", "INTEGER NOT NULL DEFAULT 0"),
     ("orders", "source", "TEXT NOT NULL DEFAULT 'stripe'"),
     ("orders", "note", "TEXT NOT NULL DEFAULT ''"),
     # SQLite cannot add a column with a REFERENCES clause to an existing
