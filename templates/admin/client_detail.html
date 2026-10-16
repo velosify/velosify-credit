@@ -56,6 +56,20 @@
         </form>
       {% endif %}
     </div>
+    {#  A wrong or abandoned inbox is the usual reason a link goes unused.
+        Changing the address sends a new link there and retires the old one. #}
+    {% if is_admin %}
+      <form method="post" class="row" style="gap:8px;flex-wrap:wrap;margin-top:12px"
+            action="{{ url_for('admin_client_change_email', user_id=client.id) }}">
+        {{ csrf_field() }}
+        <label for="new_email" class="small muted">Send it to a different address</label>
+        <input class="input" id="new_email" name="email" type="email" required
+               autocomplete="off" placeholder="new@example.com"
+               style="flex:1;min-width:220px">
+        <button class="btn btn-quiet btn-sm" type="submit"
+                data-busy="Sending…">Change email and send</button>
+      </form>
+    {% endif %}
   </div>
 {% endif %}
 

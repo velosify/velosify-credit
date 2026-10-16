@@ -1796,6 +1796,57 @@ def admin_client_resend_activation(user_id: int):
                                mail_error=mailer.last_error)
 
 
+@app.post("/admin/clients/<int:user_id>/change-email")
+@require_admin
+def admin_client_change_email(user_id: int):
+    """Point a pending client at a different inbox and send the link there.
+
+    Only while they have not activated: after that the address is their
+    sign-in, and changing it is an account-recovery decision, not a typo fix.
+    Issuing the new link retires the one sent to the old address.
+    """
+    actor = current_user()
+    conn = get_db()
+    row = conn.execute("SELECT * FROM users WHERE id = ? AND role = 'client'",
+                       (user_id,)).fetchone()
+    if not row:
+        abort(404)
+    if row["agreement_signed_at"]:
+        flash(f"{row['email']} has already activated, so the address is their "
+              f"sign-in and can't be changed from here.", "error")
+        return redirect(url_for("admin_client_detail", user_id=user_id))
+
+    old = row["email"]
+    new = normalize_email(request.form.get("email", ""))
+    if not valid_email(new):
+        flash("That email address doesn't look right.", "error")
+        return redirect(url_for("admin_client_detail", user_id=user_id))
+    if new == old:
+        flash("That is already the address on file. Use \"Send their link "
+              "again\" to resend it.", "error")
+        return redirect(url_for("admin_client_detail", user_id=user_id))
+    if conn.execute("SELECT 1 FROM users WHERE email = ? AND id != ?",
+                    (new, user_id)).fetchone():
+        flash(f"{new} already belongs to another account.", "error")
+        return redirect(url_for("admin_client_detail", user_id=user_id))
+
+    conn.execute("UPDATE users SET email = ?, email_verified_at = NULL "
+                 "WHERE id = ?", (new, user_id))
+    token = issue_token(conn, user_id, security.CLIENT_ACTIVATE)
+    audit("client.email_changed", actor=actor, target_user_id=user_id,
+          detail=f"{old} -> {new}", conn=conn)
+    conn.commit()
+
+    row = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+    link = absolute_url(url_for("activate_client", token=token))
+    if mailer.send_client_activation(row_to_dict(row), link):
+        flash(f"Email changed to {new}. A fresh activation link is on its way "
+              f"there, and the one sent to {old} no longer works.", "success")
+        return redirect(url_for("admin_client_detail", user_id=user_id))
+    return _client_detail_page(user_id, activation_link=link,
+                               mail_error=mailer.last_error)
+
+
 # ---------------------------------------------------------------------------
 # Enrolling a client by hand
 #
