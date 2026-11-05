@@ -11,6 +11,22 @@
     {% if client.phone %} · {{ client.phone }}{% endif %}
     · enrolled {{ client.created_at | date }}
   </p>
+  {% if is_admin %}
+    <details style="margin-top:10px">
+      <summary class="small" style="cursor:pointer;color:var(--text-muted)">Edit name</summary>
+      <form method="post" class="row" style="gap:8px;flex-wrap:wrap;margin-top:8px;align-items:stretch"
+            action="{{ url_for('admin_client_rename', user_id=client.id) }}">
+        {{ csrf_field() }}
+        <input class="input" name="first_name" required maxlength="60"
+               value="{{ client.first_name }}" aria-label="First name"
+               style="flex:1;min-width:140px">
+        <input class="input" name="last_name" required maxlength="60"
+               value="{{ client.last_name }}" aria-label="Last name"
+               style="flex:1;min-width:140px">
+        <button class="btn btn-ghost btn-sm" type="submit" data-busy="Saving…">Save name</button>
+      </form>
+    </details>
+  {% endif %}
 </div>
 
 {% if activation_link %}

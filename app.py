@@ -1868,6 +1868,42 @@ def admin_client_change_email(user_id: int):
                                mail_error=mailer.last_error)
 
 
+@app.post("/admin/clients/<int:user_id>/name")
+@require_admin
+def admin_client_rename(user_id: int):
+    """Fix a misspelled client name.
+
+    Changes the name on the account only. The name typed on a signed
+    agreement is part of that signed record and stays as it was signed.
+    """
+    actor = current_user()
+    conn = get_db()
+    row = conn.execute("SELECT * FROM users WHERE id = ? AND role = 'client'",
+                       (user_id,)).fetchone()
+    if not row:
+        abort(404)
+
+    first = (request.form.get("first_name") or "").strip()[:60]
+    last = (request.form.get("last_name") or "").strip()[:60]
+    if not first or not last:
+        flash("Enter both a first and last name.", "error")
+        return redirect(url_for("admin_client_detail", user_id=user_id))
+
+    old = f"{row['first_name']} {row['last_name']}"
+    new = f"{first} {last}"
+    if old == new:
+        flash("That's already the name on file.", "error")
+        return redirect(url_for("admin_client_detail", user_id=user_id))
+
+    conn.execute("UPDATE users SET first_name = ?, last_name = ? WHERE id = ?",
+                 (first, last, user_id))
+    audit("client.name_changed", actor=actor, target_user_id=user_id,
+          detail=f"{old} -> {new}", conn=conn)
+    conn.commit()
+    flash(f"Name changed to {new}.", "success")
+    return redirect(url_for("admin_client_detail", user_id=user_id))
+
+
 _TEMP_PW_ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789"  # no 0/o, 1/l/i
 
 
