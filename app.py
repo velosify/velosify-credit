@@ -141,6 +141,9 @@ notify.start_reminder_loop(app)
 import casework  # noqa: E402  scores, dispute items, follow-ups, staff tools
 app.register_blueprint(casework.bp)
 
+import enroll  # noqa: E402  the private sign-up link and approving sign-ups
+app.register_blueprint(enroll.bp)
+
 if config.STORAGE_AT_RISK:
     # Loud, and at boot, because the failure it describes is silent. The app
     # starts perfectly well on an empty database; the only symptom is that
@@ -192,10 +195,11 @@ def _client_doc_status() -> dict:
     try:
         user = current_user()
         if user and user["role"] == "client":
-            return {"doc_status": document_status_for(get_db(), int(user["id"]))}
+            return {"doc_status": document_status_for(get_db(), int(user["id"])),
+                    "client_open": bool(_paid_order(user["id"]))}
     except Exception:  # pragma: no cover - a nav button must never break a page
         pass
-    return {"doc_status": None}
+    return {"doc_status": None, "client_open": True}
 
 
 def _nav_unread() -> int:
@@ -672,6 +676,7 @@ def robots():
         "Disallow: /order/success",
         "Disallow: /forgot-password",
         "Disallow: /reset-password",
+        "Disallow: /join",
         "Allow: /",
         "",
         f"Sitemap: {absolute_url(url_for('sitemap'))}",
@@ -1782,6 +1787,7 @@ def admin_dashboard():
         "letters": one("SELECT COUNT(*) FROM letter_packets WHERE status = 'pending'"),
     }
     follow = casework.followups(conn)
+    approvals = enroll.awaiting_approval(conn)
     recent_leads = [dict(r) for r in conn.execute(
         "SELECT l.id, l.full_name, l.debt_amount, l.status, l.created_at, "
         "a.first_name AS aff_first, a.last_name AS aff_last "
@@ -1796,6 +1802,7 @@ def admin_dashboard():
         "admin/dashboard.html", leads=leads, revenue=revenue, clients=clients,
         stage_counts=stage_counts, affiliates=affiliates_summary, waiting=waiting,
         recent_leads=recent_leads, recent_payments=recent_payments, follow=follow,
+        approvals=approvals,
         month_label=(datetime.now(_DISPLAY_TZ) if _DISPLAY_TZ
                      else datetime.now(timezone.utc)).strftime("%B"),
         lead_status_labels=LEAD_STATUS_LABELS,

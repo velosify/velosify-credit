@@ -172,6 +172,9 @@ LIMITS = {
     # Affiliate sign-ups. Counted per attempt, not per failure, for the same
     # reason as leads: a well-formed flood is still a flood.
     "affiliate:ip":     (5, 60),
+    # The private sign-up link. Generous for a family signing up together on
+    # one connection, but a script stops quickly.
+    "join:ip":          (8, 60),
     "reset:email":      (4, 60),
     "reset:ip":         (12, 60),
 }

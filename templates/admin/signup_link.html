@@ -1,0 +1,80 @@
+{% extends "base_app.html" %}
+{% block title %}Sign-up link | {{ cfg.BRAND_NAME }} admin{% endblock %}
+
+{% block body %}
+<div class="page-head">
+  <h1>Private sign-up link</h1>
+  <p class="muted mb-0">
+    Text or email this to a new client. They enter their details, set a password
+    and sign the agreement. Their portal stays locked until you approve them below.
+  </p>
+</div>
+
+<section class="hero-card link-card" aria-label="Your sign-up link">
+  <div class="hero-card-top">
+    <span class="hero-card-kicker">Your private link</span>
+    <span class="hero-chip">{{ 'On' if link.enabled else 'Off' }}</span>
+  </div>
+  {% if link.enabled %}
+    <div class="link-url" id="signup-url">{{ link.url }}</div>
+    <div class="link-actions">
+      <button class="btn btn-light" type="button" data-copy="#signup-url" data-copied="Copied!">Copy link</button>
+      <button class="btn btn-light-ghost" type="button" data-share="{{ link.url }}"
+              data-share-text="Here's your private link to enroll with {{ cfg.BRAND_NAME }}:">Share</button>
+      <a class="btn btn-light-ghost" href="{{ link.url }}" target="_blank" rel="noopener">Preview</a>
+    </div>
+  {% else %}
+    <div class="hero-card-stage" style="font-size:1.2rem">The link is switched off</div>
+    <p style="opacity:.85;margin:0">Anyone who opens it sees a not-found page. Turn it back on to start enrolling again.</p>
+  {% endif %}
+</section>
+
+<div class="link-controls">
+  <form method="post">
+    {{ csrf_field() }}
+    <input type="hidden" name="action" value="{{ 'off' if link.enabled else 'on' }}">
+    <button class="btn {{ 'btn-ghost' if link.enabled else 'btn-primary' }} btn-sm" type="submit">
+      {{ 'Turn link off' if link.enabled else 'Turn link on' }}
+    </button>
+  </form>
+  <form method="post" data-confirm="Make a new link? The current one stops working immediately, so anyone you've already sent it to will need the new one.">
+    {{ csrf_field() }}
+    <input type="hidden" name="action" value="regenerate">
+    <button class="btn btn-quiet btn-sm" type="submit">Replace with a new link</button>
+  </form>
+  <span class="tiny faint">Replace it if it's been shared somewhere it shouldn't be.</span>
+</div>
+
+<section class="list-card" id="approvals" style="margin-top:22px">
+  <div class="list-card-head">
+    <div>
+      <h2>Waiting for your approval</h2>
+      <p class="tiny faint mb-0">They've signed. Approve once payment is arranged and their portal opens.</p>
+    </div>
+    <span class="todo-count {{ 'hot' if waiting else '' }}">{{ waiting | length }}</span>
+  </div>
+  {% for w in waiting %}
+    <div class="approve-row">
+      <a class="approve-who" href="{{ url_for('admin_client_detail', user_id=w.id) }}">
+        <span class="thread-avatar" aria-hidden="true">{{ (w.first_name or w.email)[:1] | upper }}</span>
+        <span>
+          <strong>{{ w.first_name }} {{ w.last_name }}</strong>
+          <span class="tiny faint">{{ w.phone }} · {{ w.email }} · signed up {{ w.signed_up_at | datetime }}</span>
+        </span>
+      </a>
+      <form method="post" action="{{ url_for('enroll.approve', order_id=w.order_id) }}" class="approve-form"
+            data-confirm="Approve {{ w.first_name }} {{ w.last_name }} and open their portal?">
+        {{ csrf_field() }}
+        <input type="hidden" name="next" value="{{ url_for('enroll.admin_link') }}#approvals">
+        <label class="field-mini"><span>Paid</span>
+          <input class="input input-sm" name="amount" inputmode="decimal" value="{{ '%.2f' | format(w.amount_cents / 100) }}" aria-label="Amount paid"></label>
+        <label class="field-mini"><span>How</span>
+          <select class="select select-sm" name="method">{% for m in methods %}<option>{{ m }}</option>{% endfor %}</select></label>
+        <button class="btn btn-primary btn-sm" type="submit">Approve</button>
+      </form>
+    </div>
+  {% else %}
+    <p class="empty">No one is waiting. New sign-ups appear here and you'll get an email.</p>
+  {% endfor %}
+</section>
+{% endblock %}

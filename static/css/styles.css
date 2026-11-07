@@ -2863,3 +2863,58 @@ html.js .bulk-bar:not(.is-on) { display: none; }
   .bulk-bar { bottom: calc(76px + env(safe-area-inset-bottom)); }
   .stay-card { flex-wrap: wrap; }
 }
+
+/* --- Private sign-up link ------------------------------------------------- */
+.join-page { padding-top: 28px; }
+.join-page .card { border-radius: 20px; border-color: transparent; box-shadow: 0 1px 2px rgba(13,27,47,.05), 0 8px 24px rgba(13,27,47,.07); margin-bottom: 16px; }
+.join-page .input, .join-page .select, .join-page .check, .join-page .alert, .join-page .agreement-scroll { border-radius: 14px; }
+.join-page .btn { border-radius: 14px; }
+.join-page .btn-lg { min-height: 56px; }
+.join-hero { text-align: center; margin-bottom: 22px; }
+.join-hero h1 { font-size: clamp(1.8rem, 6vw, 2.4rem); letter-spacing: -.02em; margin: 10px 0 6px; }
+.join-hero .lead { font-size: 1rem; color: var(--text-muted); }
+.join-badge {
+  display: inline-block; padding: 5px 12px; border-radius: 99px;
+  background: rgba(19, 100, 223, .1); color: var(--accent-deep); font-size: .76rem; font-weight: 750; letter-spacing: .04em; text-transform: uppercase;
+}
+.join-progress { list-style: none; display: flex; justify-content: center; gap: 8px; padding: 0; margin: 18px 0 0; flex-wrap: wrap; }
+.join-progress li { display: inline-flex; align-items: center; gap: 7px; font-size: .82rem; font-weight: 650; color: var(--text-muted); background: #fff; padding: 6px 12px 6px 6px; border-radius: 99px; box-shadow: 0 1px 3px rgba(13,27,47,.08); }
+.join-progress span { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--gradient); color: #fff; font-size: .72rem; font-weight: 800; }
+.join-step-head { display: flex; gap: 14px; align-items: flex-start; margin-bottom: 18px; }
+.join-step-head h2 { font-size: 1.2rem; margin: 2px 0 2px; }
+.join-step-head p { margin: 0; font-size: .88rem; color: var(--text-muted); }
+.join-num { flex: none; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--gradient); color: #fff; font-weight: 800; }
+.join-addr { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, .9fr) minmax(0, 1fr); gap: 12px; }
+.join-sign { font-family: "Brush Script MT", "Segoe Script", cursive; font-size: 1.35rem; }
+@media (max-width: 560px) {
+  .join-page { padding-top: 16px; }
+  .join-page .card { padding: 20px 18px; }
+  .join-addr { grid-template-columns: 1fr 1fr; }
+  .join-addr .field:first-child { grid-column: 1 / -1; }
+}
+
+.wait-steps { list-style: none; margin: 0 0 16px; padding: 0; display: grid; gap: 10px; }
+.wait-steps li { display: flex; gap: 12px; align-items: flex-start; }
+.wait-steps li > span { flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-3); color: var(--text-muted); font-weight: 800; font-size: .8rem; }
+.wait-steps li.done > span { background: var(--success); color: #fff; }
+.wait-steps li.current > span { background: var(--gradient); color: #fff; box-shadow: 0 0 0 4px rgba(19,100,223,.15); }
+.wait-steps div { display: grid; font-size: .9rem; }
+.wait-steps em { font-style: normal; font-size: .8rem; color: var(--text-muted); }
+
+.link-card .link-url {
+  margin: 12px 0 16px; padding: 14px 16px; border-radius: 14px; background: rgba(255,255,255,.14);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .95rem; overflow-wrap: anywhere; user-select: all;
+}
+.link-actions { display: flex; flex-wrap: wrap; gap: 8px; position: relative; z-index: 1; }
+.btn-light { background: #fff; color: var(--accent-deep); }
+.btn-light-ghost { background: rgba(255,255,255,.14); color: #fff; }
+.btn-light-ghost:hover { background: rgba(255,255,255,.22); }
+.link-controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 14px; }
+.link-controls form { margin: 0; }
+.approve-row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 20px; border-top: 1px solid rgba(13,27,47,.06); }
+.approve-who { display: flex; gap: 12px; align-items: center; min-width: 0; }
+.approve-who > span:last-child { display: grid; min-width: 0; }
+.approve-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; margin: 0; }
+.approve-form .input { width: 110px; }
+.approve-inline { margin: 6px 0 10px; padding: 10px; border-radius: 12px; background: var(--warn-bg); }
+.join-page .container-form { max-width: 640px; }

@@ -10,7 +10,10 @@
       {%- if q %} matching &ldquo;{{ q }}&rdquo;{% endif %}.</p>
   </div>
   {% if is_admin %}
-    <a class="btn btn-primary btn-sm" href="{{ url_for('admin_client_new') }}">Add a client</a>
+    <div class="row" style="gap:8px">
+      <a class="btn btn-soft btn-sm" href="{{ url_for('enroll.admin_link') }}">Sign-up link</a>
+      <a class="btn btn-primary btn-sm" href="{{ url_for('admin_client_new') }}">Add a client</a>
+    </div>
   {% endif %}
 </div>
 
@@ -119,6 +122,8 @@
                   <span class="badge badge-success">Paid</span>
                 {% elif c.order_status == 'refunded' %}
                   <span class="badge badge-danger">Refunded</span>
+                {% elif c.order_status == 'pending' %}
+                  <span class="badge badge-warn">Awaiting approval</span>
                 {% else %}
                   <span class="badge badge-warn">Unpaid</span>
                 {% endif %}

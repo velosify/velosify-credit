@@ -2,6 +2,40 @@
 {% block title %}Your account | {{ cfg.BRAND_NAME }}{% endblock %}
 
 {% block body %}
+{#  Signed up through the private link and waiting on approval: say exactly
+    where they are and what happens next, rather than "nothing to do". #}
+{% if pending and pending.source == 'signup_link' %}
+<div class="hello">
+  <p class="hello-sub">Thanks for enrolling</p>
+  <h1 class="hello-name">You're almost in, {{ user.first_name }}</h1>
+</div>
+
+<section class="next-card">
+  <span class="next-kicker">What happens now</span>
+  <h2 class="next-title">We're reviewing your enrollment</h2>
+  <p class="next-body">
+    We'll contact you at <strong>{{ user.phone }}</strong> to confirm payment
+    ({{ pending.amount_cents | money }}). As soon as that's done, your portal opens
+    and you'll get an email and text.
+  </p>
+  <ol class="wait-steps">
+    <li class="done"><span>✓</span><div><strong>Agreement signed</strong><em>{{ user.agreement_signed_at | datetime }}</em></div></li>
+    <li class="current"><span>2</span><div><strong>Payment confirmed</strong><em>We'll reach out shortly</em></div></li>
+    <li><span>3</span><div><strong>Upload your documents</strong><em>Photo ID, proof of address and more, right from your phone</em></div></li>
+  </ol>
+  <div class="next-actions">
+    {% if cfg.SUPPORT_PHONE %}
+      <a class="btn btn-primary btn-block btn-xl" href="tel:{{ cfg.SUPPORT_PHONE_TEL }}">Call us now to finish faster</a>
+    {% endif %}
+    <a class="btn btn-soft btn-block btn-xl" href="mailto:{{ cfg.SUPPORT_EMAIL }}">Email us</a>
+  </div>
+</section>
+
+<p class="small faint" style="margin:6px 4px">
+  Changed your mind? You can cancel within {{ cfg.CANCELLATION_DAYS }} business days for a full refund.
+  <a href="{{ url_for('notice_of_cancellation') }}" style="text-decoration:underline">How to cancel</a>.
+</p>
+{% else %}
 <div class="page-head">
   <h1>Almost there</h1>
   <p class="muted mb-0">Your account exists, but there's no open case on it yet.</p>
@@ -33,4 +67,5 @@
     and we'll go through your report with you. Nothing is charged for that.
   </p>
 </div>
+{% endif %}
 {% endblock %}

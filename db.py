@@ -391,6 +391,12 @@ _ADDED_COLUMNS = [
     ("letter_items", "delivered_at", "TEXT"),
     # Set only by the client switching reminder texts on; cleared when off.
     ("users", "sms_opt_in_at", "TEXT"),
+    # Mailing address, collected by the private sign-up link. Dispute letters
+    # are sent from it, so staff see it on the client file.
+    ("users", "street", "TEXT NOT NULL DEFAULT ''"),
+    ("users", "city", "TEXT NOT NULL DEFAULT ''"),
+    ("users", "state", "TEXT NOT NULL DEFAULT ''"),
+    ("users", "zip", "TEXT NOT NULL DEFAULT ''"),
 ]
 
 

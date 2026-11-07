@@ -16,6 +16,9 @@
       {% if client.phone %}<a href="tel:{{ client.phone }}">{{ client.phone }}</a>{% endif %}
       <span>Enrolled {{ client.created_at | date }}</span>
     </div>
+    {% if client.street %}
+      <div class="profile-meta" style="margin-top:2px"><span>{{ client.street }}, {{ client.city }}, {{ client.state }} {{ client.zip }}</span></div>
+    {% endif %}
     <div class="profile-chips">
       <span class="badge badge-accent">{{ CASE_STAGE_LABELS.get(client.case_stage, client.case_stage) }}</span>
       <span class="badge {{ 'badge-success' if checklist.complete else 'badge-warn' }}">
@@ -491,9 +494,20 @@
             {% elif o.status == 'refunded' %}
               <span class="badge badge-danger">Refunded</span>
             {% else %}
-              <span class="badge badge-warn">Pending</span>
+              <span class="badge badge-warn">{{ 'Awaiting approval' if o.source == 'signup_link' else 'Pending' }}</span>
             {% endif %}
           </div>
+          {% if o.status == 'pending' and is_admin %}
+            <form method="post" action="{{ url_for('enroll.approve', order_id=o.id) }}" class="approve-form approve-inline"
+                  data-confirm="Approve {{ client.first_name }} and open their portal?">
+              {{ csrf_field() }}
+              <label class="field-mini"><span>Paid</span>
+                <input class="input input-sm" name="amount" inputmode="decimal" value="{{ '%.2f' | format(o.amount_cents / 100) }}" aria-label="Amount paid"></label>
+              <label class="field-mini"><span>How</span>
+                <select class="select select-sm" name="method">{% for m in ['Zelle','Cash App','Card by phone','Invoice','Cash or check','Other'] %}<option>{{ m }}</option>{% endfor %}</select></label>
+              <button class="btn btn-primary btn-sm" type="submit">Approve &amp; open portal</button>
+            </form>
+          {% endif %}
           {#  An order marked paid with no Stripe session behind it needs to
               say so on the file, not only in the audit log. #}
           {% if o.source == 'admin' %}

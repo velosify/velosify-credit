@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block title %}Enroll | {{ cfg.BRAND_NAME }}{% endblock %}
+{% block head %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+
+{#  The private sign-up link. Three short numbered steps on one page, so a
+    client on a phone always knows how far they have to go. The Credit Repair
+    Organizations Act order is kept: the credit file rights disclosure is
+    acknowledged before the agreement is signed, and the cancellation notice
+    sits in bold beside the signature. #}
+{% block body %}
+<section class="section-tight join-page">
+  <div class="container container-form">
+    <div class="join-hero">
+      <span class="join-badge">Private enrollment</span>
+      <h1>Let's get you enrolled</h1>
+      <p class="lead mb-0">Three quick steps, about five minutes. Have your phone handy for the documents afterwards.</p>
+      <ol class="join-progress" aria-hidden="true">
+        <li><span>1</span>Your details</li>
+        <li><span>2</span>Your login</li>
+        <li><span>3</span>Sign</li>
+      </ol>
+    </div>
+
+    {% if error %}<div class="alert alert-error" role="alert">{{ error }}</div>{% endif %}
+
+    <form method="post" action="{{ url_for('enroll.join_submit', code=code) }}" data-guard autocomplete="on">
+      {{ csrf_field() }}
+
+      <div class="card join-step">
+        <div class="join-step-head"><span class="join-num">1</span><div><h2>Your details</h2><p>Exactly as they appear on your ID.</p></div></div>
+        <div class="field-row">
+          <div class="field">
+            <label for="first_name">First name</label>
+            <input class="input" id="first_name" name="first_name" required maxlength="60"
+                   autocomplete="given-name" value="{{ form.first_name }}" autofocus>
+          </div>
+          <div class="field">
+            <label for="last_name">Last name</label>
+            <input class="input" id="last_name" name="last_name" required maxlength="60"
+                   autocomplete="family-name" value="{{ form.last_name }}">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="email">Email</label>
+            <input class="input" id="email" name="email" type="email" required
+                   autocomplete="email" inputmode="email" value="{{ form.email }}">
+          </div>
+          <div class="field">
+            <label for="phone">Mobile phone</label>
+            <input class="input" id="phone" name="phone" type="tel" required
+                   autocomplete="tel" inputmode="tel" placeholder="(555) 123-4567" value="{{ form.phone }}">
+          </div>
+        </div>
+        <div class="field">
+          <label for="street">Current mailing address</label>
+          <input class="input" id="street" name="street" required maxlength="120"
+                 autocomplete="street-address" placeholder="Street and apartment" value="{{ form.street }}">
+          <div class="hint">Your dispute letters are mailed from this address, so make sure it's current.</div>
+        </div>
+        <div class="join-addr">
+          <div class="field">
+            <label for="city">City</label>
+            <input class="input" id="city" name="city" required maxlength="60"
+                   autocomplete="address-level2" value="{{ form.city }}">
+          </div>
+          <div class="field">
+            <label for="state">State</label>
+            <select class="select" id="state" name="state" required autocomplete="address-level1">
+              <option value="" disabled {{ 'selected' if not form.state }}>Pick</option>
+              {% for s in states %}<option value="{{ s }}" {{ 'selected' if form.state == s }}>{{ s }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="field">
+            <label for="zip">ZIP</label>
+            <input class="input" id="zip" name="zip" required inputmode="numeric" maxlength="5"
+                   pattern="[0-9]{5}" autocomplete="postal-code" value="{{ form.zip }}">
+          </div>
+        </div>
+      </div>
+
+      <div class="card join-step">
+        <div class="join-step-head"><span class="join-num">2</span><div><h2>Your login</h2><p>You'll use your email and this password to sign in to your portal.</p></div></div>
+        <div class="field-row">
+          <div class="field">
+            <label for="password">Choose a password</label>
+            <input class="input" id="password" name="password" type="password" required minlength="8"
+                   autocomplete="new-password">
+            <div class="hint">At least 8 characters.</div>
+          </div>
+          <div class="field">
+            <label for="password_confirm">Type it again</label>
+            <input class="input" id="password_confirm" name="password_confirm" type="password" required
+                   minlength="8" autocomplete="new-password">
+          </div>
+        </div>
+      </div>
+
+      <div class="card join-step">
+        <div class="join-step-head"><span class="join-num">3</span><div><h2>Read and sign</h2><p>Federal law requires these before you sign.</p></div></div>
+
+        <div class="field">
+          <label class="check">
+            <input type="checkbox" name="accept_disclosure" value="yes" required>
+            <span>
+              I have received and read the
+              <a href="{{ url_for('credit_file_rights') }}" target="_blank" style="text-decoration:underline">Consumer Credit File Rights</a>
+              disclosure.
+            </span>
+          </label>
+        </div>
+
+        <div class="field">
+          <label>Service agreement</label>
+          <div class="agreement-scroll">
+            {% include "legal/_agreement_body.html" %}
+          </div>
+          <div class="hint">
+            <a href="{{ url_for('agreement_preview') }}" target="_blank" style="text-decoration:underline">Open the full agreement in a new tab</a>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="check">
+            <input type="checkbox" name="accept_agreement" value="yes" required>
+            <span>
+              I have read and agree to the service agreement, the
+              <a href="{{ url_for('terms') }}" target="_blank" style="text-decoration:underline">terms of service</a>,
+              the <a href="{{ url_for('privacy') }}" target="_blank" style="text-decoration:underline">privacy policy</a>
+              and the <a href="{{ url_for('esign') }}" target="_blank" style="text-decoration:underline">consent to electronic records and signatures</a>.
+              I understand I may cancel within {{ cfg.CANCELLATION_DAYS }} business days for a full refund.
+            </span>
+          </label>
+        </div>
+
+        {#  15 U.S.C. 1679d(b)(4): this wording, in bold, next to the signature. #}
+        <p class="croa-bold sign-notice">
+          You may cancel this contract without penalty or obligation at any time
+          before midnight of the 3rd business day after the date on which you
+          signed the contract. See the attached
+          <a href="{{ url_for('notice_of_cancellation') }}" target="_blank">notice
+          of cancellation form</a> for an explanation of this right.
+        </p>
+
+        <div class="field">
+          <label for="signature">Electronic signature</label>
+          <input class="input join-sign" id="signature" name="signature" required
+                 placeholder="Type your full name" autocomplete="off" value="{{ form.signature }}">
+          <div class="hint" id="signature-hint">Type your first and last name exactly as you entered them above.</div>
+        </div>
+
+        <button class="btn btn-primary btn-lg btn-block" type="submit" data-busy="Enrolling…">Sign and enroll</button>
+        <p class="tiny faint text-center" style="margin:12px 0 0">
+          Nothing is charged on this page. We'll contact you to arrange payment, then open your portal.
+        </p>
+      </div>
+    </form>
+  </div>
+</section>
+{% endblock %}

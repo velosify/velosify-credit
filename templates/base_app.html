@@ -40,6 +40,7 @@
     ('Calls',    'phone', url_for('admin_leads'),    '/admin/leads'),
     ('Messages', 'chat', url_for('admin_messages'), '/admin/messages'),
     ('Follow-ups', 'check', url_for('casework.followups_page'), '/admin/follow-ups'),
+    ('Sign-up link', 'link', url_for('enroll.admin_link'), '/admin/signup-link'),
     ('Replies',  'reply', url_for('casework.replies_page'), '/admin/replies'),
     ('Team',     'team', url_for('admin_team'),     '/admin/team'),
     ('Affiliates', 'share', url_for('affiliates.admin_list'), '/admin/affiliates'),
@@ -109,6 +110,7 @@
   {%- elif name == 'external' -%}<path d="M14 4h6v6"/><path d="M20 4 11 13"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>
   {%- elif name == 'check' -%}<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4"/><path d="m8.5 14 2.5 2.5 5-5"/>
   {%- elif name == 'reply' -%}<path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 6 6v5"/>
+  {%- elif name == 'link' -%}<path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/>
   {%- elif name == 'plus' -%}<path d="M12 5v14M5 12h14"/>
   {%- elif name == 'more' -%}<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>
   {%- elif name == 'user' -%}<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>
@@ -152,6 +154,8 @@
       <span>Velosify<span class="gradient-text">Credit</span></span>
     </a>
 
+    {#  Until an enrollment is approved, only Home and Account lead anywhere. #}
+    {% if client_open %}
     <a class="side-cta" href="{{ url_for('portal_documents', scan=scan_doc.key) if scan_doc else url_for('portal_documents') }}">
       <span class="side-cta-ico">{{ icon('camera') }}</span>
       <span class="side-cta-text">
@@ -159,6 +163,7 @@
         <span>{{ 'Next: ' ~ scan_doc.short if scan_doc else 'Add anything else' }}</span>
       </span>
     </a>
+    {% endif %}
 
     {% for label, ico, href, path in [
          ('Home', 'home', url_for('portal'), '/portal'),
@@ -166,7 +171,8 @@
          ('Messages', 'chat', url_for('portal_messages'), '/portal/messages'),
          ('Letters', 'pen', url_for('letters.portal_list'), '/portal/letters'),
          ('Agreement', 'doc', url_for('portal_agreement'), '/portal/agreement'),
-         ('Account', 'user', url_for('portal_account'), '/portal/account')] %}
+         ('Account', 'user', url_for('portal_account'), '/portal/account')]
+       if client_open or label in ('Home', 'Account') %}
       <a class="side-link {{ is_active(path) }}" href="{{ href }}">
         <span class="ico">{{ icon(ico) }}</span> {{ label }}
         {% if label == 'Messages' and unread %}<span class="pill-count">{{ unread }}</span>{% endif %}
@@ -277,6 +283,12 @@
   {% set scan_doc = doc_status.next_scan if doc_status else None %}
   {% set fifth = ('Letters', 'pen', url_for('letters.portal_list'), '/portal/letters') if letters_pending
                  else ('Account', 'user', url_for('portal_account'), '/portal/account') %}
+  {% if not client_open %}
+  <nav class="app-tabs client-tabs" style="grid-template-columns: repeat(2, 1fr)" aria-label="Sections">
+    <a class="app-tab {{ is_active('/portal') }}" href="{{ url_for('portal') }}"><span class="app-tab-ico">{{ icon('home') }}</span><span class="app-tab-label">Home</span></a>
+    <a class="app-tab {{ is_active('/portal/account') }}" href="{{ url_for('portal_account') }}"><span class="app-tab-ico">{{ icon('user') }}</span><span class="app-tab-label">Account</span></a>
+  </nav>
+  {% else %}
   <nav class="app-tabs client-tabs" aria-label="Sections">
     {% for label, ico, href, path in [
          ('Home', 'home', url_for('portal'), '/portal'),
@@ -303,6 +315,7 @@
       </a>
     {% endfor %}
   </nav>
+  {% endif %}
 {% else %}
 {#  Staff on a phone: the first four destinations, then More, which opens a
     sheet with everything else. Pure CSS (:target), so it needs no script. #}
