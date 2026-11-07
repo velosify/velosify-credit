@@ -16,6 +16,8 @@
   <h1 class="hello-name">Hi {{ user.first_name or 'there' }}</h1>
 </div>
 
+{#  Side by side on a wide screen, stacked on a phone. #}
+<div class="home-top">
 <!-- ---------- Summary card ---------- -->
 <section class="hero-card" aria-label="Your case">
   <div class="hero-card-top">
@@ -109,6 +111,7 @@
     </a>
   {% endif %}
 </section>
+</div>
 
 {#  A nudge, not a wall. Everything stays usable whether or not the address
     has been confirmed. #}

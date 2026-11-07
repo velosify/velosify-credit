@@ -168,6 +168,8 @@
   </div>
 {% endif %}
 
+<div class="docs-layout">
+<div class="docs-main">
 <h2 class="section-label">Required</h2>
 <ol class="steps">
   {% for item in required %}{{ step(item, loop.index, nxt) }}{% endfor %}
@@ -179,6 +181,48 @@
     {% for item in optional %}{{ step(item, '+', nxt) }}{% endfor %}
   </ol>
 {% endif %}
+
+</div>
+
+{#  Wide screens only. On a phone the ring is already in the header and the
+    tips would push the steps below the fold. #}
+<aside class="docs-rail" aria-label="Progress and tips">
+  <div class="rail-card rail-progress">
+    <div class="ring ring-lg" style="--p: {{ checklist.percent }}" aria-hidden="true">
+      <span>{{ checklist.required_done }}<small>/{{ checklist.required_total }}</small></span>
+    </div>
+    <div>
+      <strong>{{ 'All documents in' if checklist.complete else (checklist.required_total - checklist.required_done) ~ ' left to go' }}</strong>
+      <span>
+        {% if checklist.complete %}We'll take it from here.
+        {% elif nxt %}Next: {{ nxt.short }}{% endif %}
+      </span>
+    </div>
+  </div>
+
+  <div class="rail-card">
+    <h3>For a clear photo</h3>
+    <ul class="tips">
+      <li><span>1</span>Lay it flat on a dark surface</li>
+      <li><span>2</span>Use daylight or a bright room, no flash glare</li>
+      <li><span>3</span>All four corners inside the frame</li>
+      <li><span>4</span>Text sharp enough to read</li>
+    </ul>
+  </div>
+
+  <div class="rail-card">
+    <h3>No webcam?</h3>
+    <p>Sign in on your phone and tap the camera button at the bottom of the
+       screen. It opens straight to whatever is still missing.</p>
+  </div>
+
+  <div class="rail-card rail-quiet">
+    <h3>Questions?</h3>
+    <p>Not sure which document to send?
+      <a href="{{ url_for('portal_messages') }}">Message your case team</a>.</p>
+  </div>
+</aside>
+</div>
 
 <p class="secure-note">
   <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>

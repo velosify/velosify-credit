@@ -2434,3 +2434,112 @@ html.js .nojs-only { display: none !important; }
   .next-kicker::before, .sheet-done-ico, .cam-flash.go { animation: none; }
   .sheet-panel, .sheet-backdrop { transition: none; }
 }
+
+/* --- Client portal on a wide screen --------------------------------------
+   The same app as on the phone: same cards, same icons, same raised camera
+   action (in the sidebar rather than a tab bar), laid out in columns so a
+   1440px screen isn't one long strip of full-width buttons.
+   ------------------------------------------------------------------------ */
+.client-side { padding: 22px 16px 18px; gap: 4px; }
+.client-side .brand { padding: 4px 10px 18px; }
+.client-side .side-link { padding: 11px 14px; font-weight: 600; color: var(--text-muted); }
+.client-side .side-link .ico { width: 22px; display: grid; place-items: center; opacity: 1; }
+.client-side .side-link .ico svg { width: 21px; height: 21px; }
+.client-side .side-link.active { color: var(--accent); }
+.pill-soft { background: var(--surface-3) !important; color: var(--text-muted) !important; }
+.side-cta {
+  display: flex; align-items: center; gap: 12px;
+  margin: 0 0 14px; padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--gradient); color: #fff;
+  box-shadow: 0 10px 22px rgba(19, 100, 223, .3);
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.side-cta:hover { transform: translateY(-1px); box-shadow: 0 14px 28px rgba(19, 100, 223, .36); }
+.side-cta-ico {
+  flex: none; display: grid; place-items: center;
+  width: 40px; height: 40px; border-radius: 12px; background: rgba(255, 255, 255, .18);
+}
+.side-cta-ico svg { width: 22px; height: 22px; }
+.side-cta-text { display: grid; line-height: 1.25; min-width: 0; }
+.side-cta-text strong { font-size: .92rem; }
+.side-cta-text span { font-size: .76rem; opacity: .85; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.side-profile { border-top: 0; padding-top: 12px; display: grid; gap: 4px; }
+.side-me {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px; border-radius: 14px; background: var(--surface-2);
+}
+.side-me .topbar-avatar { margin: 0; flex: none; }
+.side-me-text { display: grid; min-width: 0; line-height: 1.3; }
+.side-me-text strong { font-size: .86rem; }
+.side-me-text span { font-size: .74rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.docs-rail { display: none; }
+
+@media (min-width: 981px) {
+  .is-client .app-shell { grid-template-columns: 264px 1fr; background: linear-gradient(to right, #fff 0 264px, var(--border) 264px 265px, transparent 265px); }
+  .is-client .app-main { max-width: 1180px; width: 100%; margin: 0 auto; padding: 36px 40px 70px; }
+  .is-client .page-head h1 { letter-spacing: -.02em; }
+
+  /* Home: summary and next step side by side, equal height. */
+  .home-top {
+    display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    gap: 20px; align-items: stretch; margin-bottom: 20px;
+  }
+  .home-top .hero-card, .home-top .next-card { margin-bottom: 0; }
+  .home-top .hero-card { display: flex; flex-direction: column; padding: 28px; }
+  .home-top .hero-card-stage { font-size: 1.9rem; margin-bottom: auto; padding-bottom: 22px; }
+  .home-top .next-card { padding: 26px; display: flex; flex-direction: column; }
+  .home-top .next-actions { margin-top: auto; }
+  .hello { margin-bottom: 20px; }
+
+  /* Shortcuts become a row of tiles rather than floating icons. */
+  .quick { gap: 14px; margin: 0 0 20px; }
+  .quick-item {
+    grid-template-columns: auto 1fr; justify-items: start; align-items: center; gap: 12px;
+    background: #fff; border-radius: 18px; box-shadow: var(--shadow-card);
+    padding: 14px 16px; font-size: .92rem;
+    transition: transform .15s ease, box-shadow .15s ease;
+  }
+  .quick-item:hover { transform: translateY(-2px); box-shadow: 0 2px 4px rgba(13,27,47,.05), 0 14px 30px rgba(13,27,47,.09); }
+  .quick-ico { width: 44px; height: 44px; border-radius: 13px; background: rgba(19, 100, 223, .09); box-shadow: none; }
+  .quick-badge { border-color: #fff; }
+  .is-client .portal-split { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 20px; }
+  .list-row:hover { background: var(--surface-2); }
+
+  /* Documents: steps beside a sticky rail. */
+  .docs-head .ring { display: none; }
+  .docs-layout {
+    display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 24px; align-items: start;
+  }
+  .docs-rail { display: grid; gap: 14px; position: sticky; top: 24px; }
+  .rail-card {
+    background: #fff; border-radius: var(--radius-card); box-shadow: var(--shadow-card);
+    padding: 18px 20px;
+  }
+  .rail-card h3 { font-size: .95rem; margin: 0 0 10px; }
+  .rail-card p { font-size: .86rem; color: var(--text-muted); margin: 0; }
+  .rail-card a { color: var(--accent); font-weight: 600; }
+  .rail-quiet { background: transparent; box-shadow: none; border: 1px dashed var(--border-strong); }
+  .rail-progress { display: flex; align-items: center; gap: 16px; }
+  .rail-progress > div:last-child { display: grid; }
+  .rail-progress strong { font-size: 1rem; }
+  .rail-progress span { font-size: .84rem; color: var(--text-muted); }
+  .ring-lg { width: 84px; height: 84px; }
+  .ring-lg { background:
+    radial-gradient(closest-side, #fff 78%, transparent 79%),
+    conic-gradient(var(--accent) calc(var(--p) * 1%), var(--surface-3) 0); }
+  .tips { list-style: none; margin: 0; padding: 0; display: grid; gap: 9px; }
+  .tips li { display: flex; gap: 10px; align-items: flex-start; font-size: .86rem; color: var(--text-muted); }
+  .tips li span {
+    flex: none; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center;
+    background: rgba(19, 100, 223, .09); color: var(--accent); font-size: .72rem; font-weight: 800;
+  }
+  .step > summary { padding: 16px 20px; }
+  .step-body { padding: 0 20px 20px 66px; }
+  .step:hover:not([open]) { box-shadow: 0 2px 4px rgba(13,27,47,.05), 0 14px 30px rgba(13,27,47,.09); }
+  /* Two buttons side by side instead of two 900px bars. */
+  .upload-actions { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+  .step .btn-dark { width: auto; padding-inline: 26px; }
+  .secure-note { margin-top: 18px; }
+}

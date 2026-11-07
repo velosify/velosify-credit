@@ -83,6 +83,23 @@
   {{ 'active' if (request.path == path if path == '/portal' else request.path.startswith(path)) }}
 {%- endmacro %}
 
+{#  Line icons for the client's sidebar and tab bar. Glyphs from the font render at
+    different sizes and weights on every phone; these do not. #}
+{% macro icon(name) -%}
+<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor"
+     stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  {%- if name == 'home' -%}<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20h5v-6h4v6h5V9.5"/>
+  {%- elif name == 'docs' -%}<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/>
+  {%- elif name == 'camera' -%}<path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.6"/>
+  {%- elif name == 'chat' -%}<path d="M20 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2z"/>
+  {%- elif name == 'pen' -%}<path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4z"/>
+  {%- elif name == 'doc' -%}<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>
+  {%- elif name == 'out' -%}<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/>
+  {%- elif name == 'user' -%}<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>
+  {%- endif -%}
+</svg>
+{%- endmacro %}
+
 <div class="app-shell">
 
   {#  Phone only. Keeps the brand and the two things that do not belong in a
@@ -106,6 +123,53 @@
     </div>
   </header>
 
+  {% if is_client %}
+  {#  The client's sidebar mirrors the phone: the same icons, the same
+      raised camera action at the top, and who is signed in at the bottom. #}
+  {% set scan_doc = doc_status.next_scan if doc_status else None %}
+  <aside class="sidebar client-side">
+    <a class="brand" href="{{ url_for('landing') }}">
+      <span class="brand-mark">V</span>
+      <span>Velosify<span class="gradient-text">Credit</span></span>
+    </a>
+
+    <a class="side-cta" href="{{ url_for('portal_documents', scan=scan_doc.key) if scan_doc else url_for('portal_documents') }}">
+      <span class="side-cta-ico">{{ icon('camera') }}</span>
+      <span class="side-cta-text">
+        <strong>{{ 'Scan a document' if scan_doc else 'Upload a document' }}</strong>
+        <span>{{ 'Next: ' ~ scan_doc.short if scan_doc else 'Add anything else' }}</span>
+      </span>
+    </a>
+
+    {% for label, ico, href, path in [
+         ('Home', 'home', url_for('portal'), '/portal'),
+         ('Documents', 'docs', url_for('portal_documents'), '/portal/documents'),
+         ('Messages', 'chat', url_for('portal_messages'), '/portal/messages'),
+         ('Letters', 'pen', url_for('letters.portal_list'), '/portal/letters'),
+         ('Agreement', 'doc', url_for('portal_agreement'), '/portal/agreement'),
+         ('Account', 'user', url_for('portal_account'), '/portal/account')] %}
+      <a class="side-link {{ is_active(path) }}" href="{{ href }}">
+        <span class="ico">{{ icon(ico) }}</span> {{ label }}
+        {% if label == 'Messages' and unread %}<span class="pill-count">{{ unread }}</span>{% endif %}
+        {% if label == 'Letters' and letters_pending %}<span class="pill-count">{{ letters_pending }}</span>{% endif %}
+        {% if label == 'Documents' and doc_status and not doc_status.complete %}
+          <span class="pill-count pill-soft">{{ doc_status.required_done }}/{{ doc_status.required_total }}</span>
+        {% endif %}
+      </a>
+    {% endfor %}
+
+    <div class="side-foot side-profile">
+      <a class="side-me" href="{{ url_for('portal_account') }}">
+        <span class="topbar-avatar">{{ (user.first_name or user.email or '?')[:1] | upper }}{{ (user.last_name or '')[:1] | upper }}</span>
+        <span class="side-me-text">
+          <strong>{{ user.first_name }} {{ user.last_name }}</strong>
+          <span>{{ user.email }}</span>
+        </span>
+      </a>
+      <a class="side-link" href="{{ url_for('logout') }}"><span class="ico">{{ icon('out') }}</span> Sign out</a>
+    </div>
+  </aside>
+  {% else %}
   <aside class="sidebar">
     <a class="brand" href="{{ url_for('landing') }}">
       <span class="brand-mark">V</span>
@@ -136,6 +200,7 @@
       <a class="side-link" href="{{ url_for('logout') }}"><span class="ico">⏻</span> Sign out</a>
     </div>
   </aside>
+  {% endif %}
 
   <main class="app-main">
     {#  Not dismissible, and on every staff page rather than tucked into
@@ -168,20 +233,7 @@
   </main>
 </div>
 
-{#  Line icons for the client's tab bar. Glyphs from the font render at
-    different sizes and weights on every phone; these do not. #}
-{% macro icon(name) -%}
-<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor"
-     stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-  {%- if name == 'home' -%}<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20h5v-6h4v6h5V9.5"/>
-  {%- elif name == 'docs' -%}<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/>
-  {%- elif name == 'camera' -%}<path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.6"/>
-  {%- elif name == 'chat' -%}<path d="M20 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2z"/>
-  {%- elif name == 'pen' -%}<path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4z"/>
-  {%- elif name == 'user' -%}<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>
-  {%- endif -%}
-</svg>
-{%- endmacro %}
+
 
 {#  Phone only, fixed to the bottom. Outside .app-shell so it is positioned
     against the viewport rather than a grid cell. #}

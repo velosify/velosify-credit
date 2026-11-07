@@ -148,7 +148,7 @@
     });
     var noun = photos ? (n === 1 ? "photo" : "photos") : (n === 1 ? "file" : "files");
     sSend.textContent = "Upload " + n + " " + noun;
-    sMore.innerHTML = hasCamera(active.form)
+    sMore.innerHTML = hasCamera(active.form) && photos
       ? ICON_CAM + " Add another page"
       : ICON_PLUS + " Add another file";
     sHint.hidden = !photos;
@@ -198,12 +198,13 @@
   sMore.addEventListener("click", function () {
     if (sending || !active) return;
     var form = active.form;
-    if (hasCamera(form) && canStream) {
+    var photos = active.files.every(function (x) { return isImage(x.file); });
+    if (hasCamera(form) && photos && canStream) {
       sheet.classList.remove("is-open");
       sheet.hidden = true;
       openCamera(form);
     } else {
-      var input = form.querySelector(hasCamera(form) ? "[data-camera-btn] input" : "input[type=file]");
+      var input = form.querySelector(hasCamera(form) && photos ? "[data-camera-btn] input" : "label:not([data-camera-btn]) input[type=file]");
       input.click();
     }
   });
