@@ -14,6 +14,19 @@
   </p>
 </div>
 
+{#  Letters waiting on a signature hold the case up, so they lead the page. #}
+{% if letters_pending %}
+  <div class="alert alert-info" style="margin-bottom:24px">
+    <strong>Your letters are ready to sign.</strong>
+    {{ letters_pending }} packet{{ '' if letters_pending == 1 else 's' }} of dispute
+    letters {{ 'is' if letters_pending == 1 else 'are' }} waiting for you. Read them
+    and sign once so we can mail them.
+    <div style="margin-top:10px">
+      <a class="btn btn-primary btn-sm" href="{{ url_for('letters.portal_list') }}">Review and sign</a>
+    </div>
+  </div>
+{% endif %}
+
 {#  A nudge, not a wall. Everything below stays usable whether or not the
     address has been confirmed. #}
 {% if not user.email_verified_at %}

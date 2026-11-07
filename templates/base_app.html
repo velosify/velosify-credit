@@ -65,6 +65,12 @@
     pages above it, which is why the list is ordered by how often it is
     wanted rather than alphabetically. #}
 {% set tab_items = nav_items[:4] %}
+{#  Letters is fifth, so it is off the phone tab bar. While a packet is waiting
+    on the client it takes Account's slot, because a client on a phone has no
+    other way to reach it and signing is the thing holding their case up. #}
+{% if user and user.role == 'client' and letters_pending %}
+  {% set tab_items = nav_items[:3] + [nav_items[4]] %}
+{% endif %}
 
 {% macro is_active(path) -%}
   {#- Overview must match exactly, or every /portal/* page lights it up too. -#}
@@ -160,6 +166,7 @@
       <span class="app-tab-ico" aria-hidden="true">
         {{ icon }}
         {% if label == 'Messages' and unread %}<span class="tab-dot"></span>{% endif %}
+        {% if label == 'Letters' and letters_pending %}<span class="tab-dot"></span>{% endif %}
       </span>
       <span class="app-tab-label">{{ label }}</span>
     </a>
