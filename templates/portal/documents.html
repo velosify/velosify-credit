@@ -1,162 +1,195 @@
 {% extends "base_app.html" %}
 {% block title %}Documents | {{ cfg.BRAND_NAME }}{% endblock %}
 
-{% block body %}
-<div class="page-head">
-  <h1>Documents</h1>
-  <p class="muted mb-0">
-    Accepted formats: PDF, JPG, PNG or Word, up to {{ cfg.MAX_UPLOAD_MB }} MB per file.
-    Photos of a document are fine as long as all four corners are visible and
-    the text is readable.
-  </p>
-</div>
+{#  A numbered list of steps rather than a grid of upload boxes. The step the
+    client should do next is open and highlighted; finished steps fold away
+    with a green tick; anything we turned down opens in red. Each step offers
+    "Take a photo" first wherever a phone camera is the right tool, because
+    that is how most people have these documents to hand.
 
-<div class="card" style="margin-bottom:26px">
-  <div class="row-between">
-    <div>
-      <div class="card-title">
-        {{ checklist.required_done }} of {{ checklist.required_total }} required documents received
-      </div>
-      <p class="small muted mb-0">
-        {% if checklist.complete %}
-          Everything we need is in. You don't have to do anything else.
-        {% else %}
-          We can't file disputes on your behalf until all four are in.
-        {% endif %}
-      </p>
-    </div>
-    {% if checklist.complete %}<span class="badge badge-success">Complete</span>{% endif %}
-  </div>
-  <div class="score-track" style="margin-bottom:0">
-    <div class="score-fill" style="width: {{ checklist.percent }}%"></div>
-  </div>
-</div>
+    Every control works without script: the photo button is a file input
+    with capture="environment", which opens the phone's own camera, and the
+    form submits normally. uploader.js upgrades it to an in-page camera with
+    a document outline, multi-page capture, a review sheet and a progress
+    bar. #}
 
-{#  Placed above the checklist rather than inside the credit report card,
-    because it is the one document people get stuck on and the card is a poor
-    place for four sentences. It disappears once the report is in. #}
-{% set report = checklist['items'] | selectattr('key', 'equalto', 'credit_report') | first %}
-{% if report and not report.satisfied and cfg.CREDIT_REPORT_URL %}
-  <div class="card report-source" style="margin-bottom:26px">
-    <div class="card-title">Step 1: Get your credit report</div>
-    <p class="small muted">
-      We work from <strong>{{ cfg.CREDIT_REPORT_PROVIDER }}</strong>. Their
-      report puts all three bureaus side by side and includes the account
-      numbers, dates and balances a dispute has to quote.
-    </p>
-    <p class="small muted">
-      Please sign up through the button below so we can access your report.
-      We can't work from reports from other sources.
-    </p>
-    <a class="btn btn-primary btn-sm" href="{{ cfg.CREDIT_REPORT_URL }}"
-       target="_blank" rel="noopener">
-      Get my report from {{ cfg.CREDIT_REPORT_PROVIDER }} &rarr;
-    </a>
-    <p class="tiny faint" style="margin:14px 0 0">
-      {% if cfg.CREDIT_REPORT_AFFILIATE %}
-        We may be paid a commission if you sign up through this link. It costs
-        you nothing extra.
-        {{ cfg.BRAND_NAME }} is not affiliated with {{ cfg.CREDIT_REPORT_PROVIDER }}
-        beyond that referral.
+{% macro upload_form(item) %}
+  <form class="upload-form" method="post" action="{{ url_for('portal_upload') }}"
+        enctype="multipart/form-data" data-upload
+        data-doc="{{ item.key }}" data-label="{{ item.short }}"
+        data-tip="{{ item.capture_tip }}" data-frame="{{ item.frame }}">
+    {{ csrf_field() }}
+    <input type="hidden" name="doc_type" value="{{ item.key }}">
+    {% set first_time = not item.satisfied %}
+    <div class="upload-actions">
+      {% if item.camera %}
+        <label class="btn {{ 'btn-primary' if first_time else 'btn-soft' }} btn-xl btn-block btn-ico" data-camera-btn>
+          <input class="file-hidden" type="file" name="files" accept="image/*" capture="environment" multiple>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.6"/></svg>
+          {{ 'Take a photo' if first_time else 'Add another photo' }}
+        </label>
+        <label class="btn btn-soft btn-xl btn-block btn-ico">
+          <input class="file-hidden" type="file" name="files" multiple accept=".pdf,.png,.jpg,.jpeg,.heic,.webp,.doc,.docx">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
+          {{ 'Choose a file or photo' if first_time else 'Add another file' }}
+        </label>
       {% else %}
-        {{ cfg.BRAND_NAME }} is not affiliated with {{ cfg.CREDIT_REPORT_PROVIDER }}
-        beyond recommending them.
+        <label class="btn {{ 'btn-primary' if first_time else 'btn-soft' }} btn-xl btn-block btn-ico">
+          <input class="file-hidden" type="file" name="files" multiple accept=".pdf,.png,.jpg,.jpeg,.heic,.webp,.doc,.docx">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
+          {{ 'Upload my PDF' if first_time else 'Add another file' }}
+        </label>
       {% endif %}
-    </p>
-  </div>
-{% endif %}
+    </div>
+    {#  Script handles sending as soon as something is picked. Without it,
+        this is the button that sends. #}
+    <button class="btn btn-primary btn-block nojs-only" type="submit">Send</button>
+  </form>
+{% endmacro %}
 
+{% macro step(item, number, nxt) %}
+  {% set is_next = nxt and nxt.key == item.key %}
+  {% set state = 'is-done' if item.satisfied else ('is-fix' if item.needs_fix else ('is-next' if is_next else '')) %}
+  <li class="step-wrap" id="doc-{{ item.key }}">
+    <details class="step {{ state }}" {{ 'open' if is_next or item.needs_fix }}>
+      <summary>
+        <span class="status-dot {{ 'ok' if item.satisfied else ('bad' if item.needs_fix else ('next' if is_next else '')) }}" aria-hidden="true">
+          {% if item.satisfied %}✓{% elif item.needs_fix %}!{% else %}{{ number }}{% endif %}
+        </span>
+        <span class="step-head">
+          <span class="step-title">{{ item.label }}</span>
+          <span class="step-sub">
+            {% if item.satisfied %}
+              {% set statuses = item.files | map(attribute='status') | list %}
+              {{ 'Accepted' if 'accepted' in statuses else 'Received · we\'re reviewing it' }}
+            {% elif item.needs_fix %}We need a new copy
+            {% elif is_next %}Do this next
+            {% elif not item.required %}Optional
+            {% else %}Still needed{% endif %}
+          </span>
+        </span>
+        {% if is_next %}<span class="chip-next">Next</span>{% endif %}
+        <span class="chev" aria-hidden="true">›</span>
+      </summary>
+
+      <div class="step-body">
+        <p class="step-help">{{ item.help }}</p>
+
+        {% if item.key == 'credit_report' and not item.satisfied and cfg.CREDIT_REPORT_URL %}
+          <ol class="mini-steps">
+            <li><strong>Sign up</strong> with {{ cfg.CREDIT_REPORT_PROVIDER }} using the button below. We can't work from reports from other sources.</li>
+            <li><strong>Download</strong> your 3-bureau report as a PDF.</li>
+            <li><strong>Come back here</strong> and tap <em>Upload my PDF</em>.</li>
+          </ol>
+          <a class="btn btn-dark btn-xl btn-block" href="{{ cfg.CREDIT_REPORT_URL }}" target="_blank" rel="noopener">
+            Get my report from {{ cfg.CREDIT_REPORT_PROVIDER }} &rarr;
+          </a>
+          <p class="tiny faint" style="margin:10px 0 16px">
+            {% if cfg.CREDIT_REPORT_AFFILIATE %}
+              We may be paid a commission if you sign up through this link. It costs
+              you nothing extra. {{ cfg.BRAND_NAME }} is not affiliated with
+              {{ cfg.CREDIT_REPORT_PROVIDER }} beyond that referral.
+            {% else %}
+              {{ cfg.BRAND_NAME }} is not affiliated with {{ cfg.CREDIT_REPORT_PROVIDER }}
+              beyond recommending them.
+            {% endif %}
+          </p>
+        {% endif %}
+
+        {% if item.files %}
+          <div class="files">
+            {% for f in item.files %}
+              <div class="file-row">
+                <span class="file-ico">{{ f.original_name.rsplit('.', 1)[-1][:4] | upper }}</span>
+                <span class="name">
+                  <a href="{{ url_for('preview_document', doc_id=f.id) }}">{{ f.original_name }}</a>
+                  <span class="tiny faint">{{ f.size_bytes | filesize }} · {{ f.uploaded_at | date }}</span>
+                </span>
+                {% if f.status == 'accepted' %}
+                  <span class="badge badge-success">Accepted</span>
+                {% elif f.status == 'rejected' %}
+                  <span class="badge badge-danger">Replace</span>
+                {% else %}
+                  <span class="badge">In review</span>
+                {% endif %}
+                {% if f.status != 'accepted' %}
+                  <form method="post" action="{{ url_for('portal_delete_document', doc_id=f.id) }}"
+                        data-confirm="Remove {{ f.original_name }}?">
+                    {{ csrf_field() }}
+                    <button class="btn btn-quiet btn-sm" type="submit" aria-label="Remove {{ f.original_name }}">✕</button>
+                  </form>
+                {% else %}
+                  <span></span>
+                {% endif %}
+              </div>
+              {% if f.status == 'rejected' and f.review_note %}
+                <p class="file-note">{{ f.review_note }}</p>
+              {% endif %}
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        {{ upload_form(item) }}
+      </div>
+    </details>
+  </li>
+{% endmacro %}
+
+{% block body %}
+{% set nxt = checklist.next %}
 {% set required = checklist['items'] | selectattr('required') | list %}
 {% set optional = checklist['items'] | rejectattr('required') | list %}
 
-{% for group, heading, note in [
-     (required, 'What we need from you', 'All four before we can file on your behalf.'),
-     (optional, 'Helpful, but not required', 'Only if they apply to you.')] %}
-  {% if group %}
-    <div class="doc-group-head">
-      <h2>{{ heading }}</h2>
-      <p class="small muted mb-0">{{ note }}</p>
-    </div>
-    <div class="doc-grid">
-    {% for item in group %}
-  <div class="doc-item {{ 'satisfied' if item.satisfied }}">
-    <div class="doc-head">
-      <div class="doc-title-wrap">
-        <span class="doc-check">✓</span>
-        <div>
-          <div class="card-title" style="margin-bottom:2px">
-            {{ item.label }}
-            {% if not item.required %}<span class="badge" style="margin-left:6px">Optional</span>{% endif %}
-          </div>
-          <p class="small muted mb-0">{{ item.help }}</p>
-        </div>
-      </div>
-    </div>
-
-    {% if item.files %}
-      <div style="margin-top:16px">
-        {% for f in item.files %}
-          <div class="file-row">
-            <span class="file-ico">{{ f.original_name.rsplit('.', 1)[-1][:4] | upper }}</span>
-            <span class="name">
-              <a href="{{ url_for('preview_document', doc_id=f.id) }}">{{ f.original_name }}</a>
-              <span class="tiny faint"> · {{ f.size_bytes | filesize }} · {{ f.uploaded_at | date }}</span>
-            </span>
-
-            {% if f.status == 'accepted' %}
-              <span class="badge badge-success">Accepted</span>
-            {% elif f.status == 'rejected' %}
-              <span class="badge badge-danger">Needs replacing</span>
-            {% else %}
-              <span class="badge">In review</span>
-            {% endif %}
-
-            {% if f.status != 'accepted' %}
-              <form method="post" action="{{ url_for('portal_delete_document', doc_id=f.id) }}"
-                    data-confirm="Remove {{ f.original_name }}?" style="margin:0">
-                {{ csrf_field() }}
-                <button class="btn btn-quiet btn-sm" type="submit" title="Remove">✕</button>
-              </form>
-            {% endif %}
-          </div>
-          {% if f.status == 'rejected' and f.review_note %}
-            <p class="tiny" style="color:var(--danger);margin:6px 0 0 44px">{{ f.review_note }}</p>
-          {% endif %}
-        {% endfor %}
-      </div>
-    {% endif %}
-
-    <form method="post" action="{{ url_for('portal_upload') }}"
-          enctype="multipart/form-data" data-guard style="margin-top:16px">
-      {{ csrf_field() }}
-      <input type="hidden" name="doc_type" value="{{ item.key }}">
-      <label class="dropzone" tabindex="0">
-        <input type="file" name="files" multiple
-               accept=".pdf,.png,.jpg,.jpeg,.heic,.webp,.doc,.docx">
-        <span class="dropzone-ico" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-               stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 16V4"/><path d="m7 9 5-5 5 5"/>
-            <path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/>
-          </svg>
-        </span>
-        <span data-zone-label>
-          <strong style="color:var(--text)">Choose files</strong> or drag them here
-        </span>
-      </label>
-      <button class="btn btn-primary btn-sm mt-2" type="submit" data-busy="Uploading…">
-        Upload files
-      </button>
-    </form>
+<div class="docs-head">
+  <div>
+    <h1>Documents</h1>
+    <p class="muted mb-0">
+      {% if checklist.complete %}
+        Everything we need is in.
+      {% else %}
+        {{ checklist.required_total - checklist.required_done }} to go. Most people finish in about five minutes.
+      {% endif %}
+    </p>
   </div>
-    {% endfor %}
-    </div>
-  {% endif %}
-{% endfor %}
+  {#  A ring rather than a bar: it reads at a glance, like a balance. #}
+  <div class="ring" style="--p: {{ checklist.percent }}" role="img"
+       aria-label="{{ checklist.required_done }} of {{ checklist.required_total }} required documents received">
+    <span>{{ checklist.required_done }}<small>/{{ checklist.required_total }}</small></span>
+  </div>
+</div>
 
-<p class="tiny faint text-center mt-2" style="max-width:60ch;margin-inline:auto">
-  Your documents are stored privately and are visible only to you and the case
-  team working your file. Read how we handle them in our
-  <a href="{{ url_for('privacy') }}" style="text-decoration:underline">privacy policy</a>.
+{% if checklist.complete %}
+  <div class="done-banner">
+    <span class="done-banner-ico" aria-hidden="true">✓</span>
+    <div>
+      <strong>You're all set</strong>
+      <span>We have everything we need to start on your file. You don't have to do anything else here.</span>
+    </div>
+  </div>
+{% endif %}
+
+<h2 class="section-label">Required</h2>
+<ol class="steps">
+  {% for item in required %}{{ step(item, loop.index, nxt) }}{% endfor %}
+</ol>
+
+{% if optional %}
+  <h2 class="section-label">Only if they apply to you</h2>
+  <ol class="steps">
+    {% for item in optional %}{{ step(item, '+', nxt) }}{% endfor %}
+  </ol>
+{% endif %}
+
+<p class="secure-note">
+  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+  <span>
+    Stored privately. Only you and your case team can see these.
+    PDF, JPG, PNG, HEIC or Word, up to {{ cfg.MAX_UPLOAD_MB }} MB at a time.
+    <a href="{{ url_for('privacy') }}">Privacy policy</a>
+  </span>
 </p>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/uploader.js') }}"></script>
 {% endblock %}

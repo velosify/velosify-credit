@@ -1,164 +1,219 @@
 {% extends "base_app.html" %}
-{% block title %}Overview | {{ cfg.BRAND_NAME }}{% endblock %}
+{% block title %}Home | {{ cfg.BRAND_NAME }}{% endblock %}
+
+{#  Laid out like a banking app's home screen: a summary card at the top,
+    then ONE thing to do next, then shortcuts, then everything else. The
+    client should never have to work out what is wanted of them; the card
+    under the summary always says it, and its button always does it. #}
 
 {% block body %}
-<div class="page-head">
-  <h1>Hi {{ user.first_name or 'there' }}</h1>
-  <p class="muted mb-0">
-    {% if not checklist.complete %}
-      You're {{ checklist.required_total - checklist.required_done }} document{{ '' if checklist.required_total - checklist.required_done == 1 else 's' }}
-      away from us starting work on your file.
-    {% else %}
-      Your documents are all in. Here's where your case stands.
-    {% endif %}
-  </p>
+{% set stage_label = CASE_STAGE_LABELS.get(user.case_stage, 'Intake') %}
+{% set nxt = checklist.next %}
+{% set nouns = {'credit_report': 'credit report', 'photo_id': 'photo ID', 'proof_of_address': 'proof of address', 'ssn_proof': 'proof of Social Security number'} %}
+
+<div class="hello">
+  <p class="hello-sub">Welcome back</p>
+  <h1 class="hello-name">Hi {{ user.first_name or 'there' }}</h1>
 </div>
 
-{#  Letters waiting on a signature hold the case up, so they lead the page. #}
-{% if letters_pending %}
-  <div class="alert alert-info" style="margin-bottom:24px">
-    <strong>Your letters are ready to sign.</strong>
-    {{ letters_pending }} packet{{ '' if letters_pending == 1 else 's' }} of dispute
-    letters {{ 'is' if letters_pending == 1 else 'are' }} waiting for you. Read them
-    and sign once so we can mail them.
-    <div style="margin-top:10px">
-      <a class="btn btn-primary btn-sm" href="{{ url_for('letters.portal_list') }}">Review and sign</a>
+<!-- ---------- Summary card ---------- -->
+<section class="hero-card" aria-label="Your case">
+  <div class="hero-card-top">
+    <span class="hero-card-kicker">Your credit case</span>
+    <span class="hero-chip">Step {{ stage_index + 1 }} of {{ CASE_STAGES | length }}</span>
+  </div>
+  <div class="hero-card-stage">{{ stage_label }}</div>
+
+  <div class="hero-steps" aria-hidden="true">
+    {% for key, label in CASE_STAGES %}
+      <span class="{% if loop.index0 < stage_index %}done{% elif loop.index0 == stage_index %}current{% endif %}"></span>
+    {% endfor %}
+  </div>
+
+  <div class="hero-card-foot">
+    <div>
+      <div class="hero-stat">{{ checklist.required_done }}<span>/{{ checklist.required_total }}</span></div>
+      <div class="hero-stat-label">Documents in</div>
+    </div>
+    <div>
+      <div class="hero-stat">{{ letters_pending or 0 }}</div>
+      <div class="hero-stat-label">Letters to sign</div>
+    </div>
+    <div>
+      <div class="hero-stat">{{ unread or 0 }}</div>
+      <div class="hero-stat-label">New messages</div>
     </div>
   </div>
-{% endif %}
+</section>
 
-{#  A nudge, not a wall. Everything below stays usable whether or not the
-    address has been confirmed. #}
+<!-- ---------- Next step ---------- -->
+{#  Exactly one. Ordered by what holds the case up longest. #}
+<section class="next-card {{ 'is-done' if not letters_pending and checklist.complete }}" aria-label="Your next step">
+  {% if letters_pending %}
+    <span class="next-kicker">Your next step</span>
+    <h2 class="next-title">Sign your dispute letters</h2>
+    <p class="next-body">
+      {{ letters_pending }} packet{{ '' if letters_pending == 1 else 's' }} ready.
+      Read them, then sign once with your finger. We mail them as soon as you do.
+    </p>
+    <a class="btn btn-primary btn-block btn-xl" href="{{ url_for('letters.portal_list') }}">Review and sign</a>
+
+  {% elif nxt %}
+    <span class="next-kicker">
+      Your next step &middot; {{ checklist.required_done + 1 }} of {{ checklist.required_total }}
+    </span>
+    {% if nxt.needs_fix %}
+      <h2 class="next-title">Replace your {{ nouns.get(nxt.key, nxt.short) }}</h2>
+      {% set rejected = nxt.files | selectattr('status', 'equalto', 'rejected') | first %}
+      <p class="next-body">
+        We couldn't use the last one{% if rejected and rejected.review_note %}: {{ rejected.review_note }}{% else %}.{% endif %}
+      </p>
+    {% elif nxt.key == 'credit_report' %}
+      <h2 class="next-title">Get your credit report</h2>
+      <p class="next-body">
+        Sign up with {{ cfg.CREDIT_REPORT_PROVIDER or 'our report provider' }}, download your
+        3-bureau report as a PDF, then upload it here.
+      </p>
+    {% else %}
+      <h2 class="next-title">Add your {{ nouns.get(nxt.key, nxt.short) }}</h2>
+      <p class="next-body">{{ nxt.help }}</p>
+    {% endif %}
+
+    <div class="next-actions">
+      {% if nxt.key == 'credit_report' %}
+        {% if cfg.CREDIT_REPORT_URL %}
+          <a class="btn btn-primary btn-block btn-xl" href="{{ cfg.CREDIT_REPORT_URL }}" target="_blank" rel="noopener">
+            Get my report &rarr;
+          </a>
+        {% endif %}
+        <a class="btn {{ 'btn-soft' if cfg.CREDIT_REPORT_URL else 'btn-primary' }} btn-block btn-xl"
+           href="{{ url_for('portal_documents') }}#doc-credit_report">I have it, upload now</a>
+      {% else %}
+        <a class="btn btn-primary btn-block btn-xl btn-ico" href="{{ url_for('portal_documents', scan=nxt.key) }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.6"/></svg>
+          Take a photo
+        </a>
+        <a class="btn btn-soft btn-block btn-xl" href="{{ url_for('portal_documents') }}#doc-{{ nxt.key }}">Upload a file instead</a>
+      {% endif %}
+    </div>
+
+  {% else %}
+    <span class="next-kicker">You're all set</span>
+    <h2 class="next-title">Nothing needed from you right now</h2>
+    <p class="next-body">
+      All your documents are in and we're working on your file. We'll message
+      you here and by email the moment something needs you.
+    </p>
+    <a class="btn btn-soft btn-block btn-xl" href="{{ url_for('portal_messages') }}">
+      {% if unread %}Read {{ unread }} new message{{ '' if unread == 1 else 's' }}{% else %}Message your case team{% endif %}
+    </a>
+  {% endif %}
+</section>
+
+{#  A nudge, not a wall. Everything stays usable whether or not the address
+    has been confirmed. #}
 {% if not user.email_verified_at %}
-  <div class="alert alert-warn" style="margin-bottom:24px">
-    <strong>Confirm your email.</strong> Case updates, dispute results and
-    your agreement all go to
-    <strong>{{ user.email }}</strong>. Click the link in the confirmation
-    message so we know it reaches you.
-    <form method="post" action="{{ url_for('resend_verification') }}"
-          style="display:inline">
+  <div class="notice-row">
+    <span class="notice-ico" aria-hidden="true">!</span>
+    <div class="notice-text">
+      <strong>Confirm your email</strong>
+      <span>Updates go to {{ user.email }}</span>
+    </div>
+    <form method="post" action="{{ url_for('resend_verification') }}">
       {{ csrf_field() }}
-      <button class="btn btn-quiet btn-sm" type="submit"
-              style="padding:2px 6px;text-decoration:underline">Send it again</button>
+      <button class="btn btn-soft btn-sm" type="submit">Resend</button>
     </form>
   </div>
 {% endif %}
 
-<!-- ---------- Case progress ---------- -->
-<div class="card" style="margin-bottom:24px">
-  <div class="row-between" style="margin-bottom:20px">
-    <span class="strong">Case progress</span>
-    <span class="badge badge-accent">{{ CASE_STAGE_LABELS.get(user.case_stage, 'Intake') }}</span>
-  </div>
+<!-- ---------- Shortcuts ---------- -->
+<nav class="quick" aria-label="Shortcuts">
+  <a class="quick-item" href="{{ url_for('portal_documents') }}">
+    <span class="quick-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg></span>
+    <span>Upload</span>
+  </a>
+  <a class="quick-item" href="{{ url_for('portal_messages') }}">
+    <span class="quick-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2z"/></svg>
+      {% if unread %}<span class="quick-badge">{{ unread }}</span>{% endif %}</span>
+    <span>Messages</span>
+  </a>
+  <a class="quick-item" href="{{ url_for('letters.portal_list') }}">
+    <span class="quick-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4z"/></svg>
+      {% if letters_pending %}<span class="quick-badge">{{ letters_pending }}</span>{% endif %}</span>
+    <span>Letters</span>
+  </a>
+  <a class="quick-item" href="{{ url_for('portal_agreement') }}">
+    <span class="quick-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg></span>
+    <span>Agreement</span>
+  </a>
+</nav>
 
-  <div class="tracker">
-    {% for key, label in CASE_STAGES %}
-      <div class="tracker-step {% if loop.index0 < stage_index %}done{% elif loop.index0 == stage_index %}current{% endif %}">
-        <span class="knob"></span>
-        <span class="name">{{ label }}</span>
-      </div>
-    {% endfor %}
-  </div>
-
-  {#  Shown only on a phone, where the per-step labels are hidden. #}
-  <p class="tracker-caption">
-    Step {{ stage_index + 1 }} of {{ CASE_STAGES | length }} &mdash;
-    <strong>{{ CASE_STAGE_LABELS.get(user.case_stage, 'Intake') }}</strong>
-  </p>
-</div>
-
-<!-- ---------- Documents ---------- -->
-<div class="card" style="margin-bottom:24px">
-  <div class="row-between" style="margin-bottom:16px">
-    <div>
-      <div class="card-title">Your documents</div>
-      <p class="small muted mb-0">
-        {{ checklist.required_done }} of {{ checklist.required_total }} required documents received
-      </p>
-    </div>
-    <a class="btn btn-primary btn-sm" href="{{ url_for('portal_documents') }}">
-      {{ 'Manage documents' if checklist.complete else 'Upload documents' }}
-    </a>
-  </div>
-
-  <div class="score-track" style="margin:0 0 18px">
-    <div class="score-fill" style="width: {{ checklist.percent }}%"></div>
-  </div>
-
-  <div class="grid grid-2" style="gap:10px">
-    {% for item in checklist['items'] if item.required %}
-      <div class="row" style="gap:10px;align-items:center">
-        <span class="doc-check" style="width:22px;height:22px;
-              {% if item.satisfied %}background:var(--success);border-color:var(--success);color:#fff{% endif %}">✓</span>
-        <span class="small {{ '' if item.satisfied else 'muted' }}">{{ item.label }}</span>
-      </div>
-    {% endfor %}
-  </div>
-</div>
-
-<!-- ---------- Timeline + side panel ---------- -->
 <div class="grid portal-split" id="case-grid">
-  <div class="card">
-    <div class="card-title" style="margin-bottom:20px">Case activity</div>
-    {% if events %}
-      <ul class="timeline">
-        {% for e in events %}
-          <li>
-            <div class="t-title">{{ e.title }}</div>
-            <div class="t-meta">{{ e.created_at | datetime }}</div>
-            {% if e.body %}<div class="t-body">{{ e.body }}</div>{% endif %}
-          </li>
-        {% endfor %}
-      </ul>
-    {% else %}
-      <p class="small muted mb-0">Nothing here yet. Updates will appear as your case moves.</p>
-    {% endif %}
+  <div class="stack">
+    <!-- ---------- Checklist ---------- -->
+    <section class="list-card">
+      <div class="list-card-head">
+        <h2>Your documents</h2>
+        <a class="link-more" href="{{ url_for('portal_documents') }}">See all</a>
+      </div>
+      {% for item in checklist['items'] if item.required %}
+        <a class="list-row" href="{{ url_for('portal_documents') }}#doc-{{ item.key }}">
+          <span class="status-dot {{ 'ok' if item.satisfied else ('bad' if item.needs_fix else ('next' if nxt and nxt.key == item.key else '')) }}" aria-hidden="true">
+            {% if item.satisfied %}✓{% elif item.needs_fix %}!{% else %}{{ loop.index }}{% endif %}
+          </span>
+          <span class="list-row-main">
+            <span class="list-row-title">{{ item.short }}</span>
+            <span class="list-row-sub">
+              {% if item.satisfied %}
+                {% set statuses = item.files | map(attribute='status') | list %}
+                {{ 'Accepted' if 'accepted' in statuses else 'Received, in review' }}
+              {% elif item.needs_fix %}Needs replacing
+              {% elif nxt and nxt.key == item.key %}Next up
+              {% else %}Still needed{% endif %}
+            </span>
+          </span>
+          <span class="chev" aria-hidden="true">›</span>
+        </a>
+      {% endfor %}
+    </section>
+
+    <!-- ---------- Activity ---------- -->
+    <section class="list-card">
+      <div class="list-card-head"><h2>Recent activity</h2></div>
+      {% if events %}
+        <ul class="activity">
+          {% for e in events[:8] %}
+            <li>
+              <span class="activity-dot" aria-hidden="true"></span>
+              <div>
+                <div class="activity-title">{{ e.title }}</div>
+                {% if e.body %}<div class="activity-body">{{ e.body }}</div>{% endif %}
+                <div class="activity-when">{{ e.created_at | datetime }}</div>
+              </div>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="small muted mb-0" style="padding:4px 20px 18px">Updates will appear here as your case moves.</p>
+      {% endif %}
+    </section>
   </div>
 
   <div class="stack">
-    <div class="card card-pad-sm">
-      <div class="card-title" style="font-size:.95rem">
-        Your case team
-        {% if unread %}<span class="pill-count">{{ unread }}</span>{% endif %}
-      </div>
-      <p class="small muted">
-        {% if user.assigned_to %}
-          A specialist is on your file. Ask them anything &mdash; what a bureau
-          said, what happens next, what a letter means.
-        {% else %}
-          Questions about your case go to our team here, and the answer stays
-          on your file so you can find it again.
-        {% endif %}
-      </p>
-      <a class="btn {{ 'btn-primary' if unread else 'btn-ghost' }} btn-sm btn-block"
-         href="{{ url_for('portal_messages') }}">
-        {% if unread %}Read {{ unread }} new message{{ '' if unread == 1 else 's' }}
-        {% else %}Message us{% endif %}
+    <section class="list-card">
+      <div class="list-card-head"><h2>Your program</h2></div>
+      <div class="kv"><span>Paid</span><strong>{{ order.amount_cents | money }}</strong></div>
+      <div class="kv"><span>Enrolled</span><strong>{{ order.paid_at | date }}</strong></div>
+      <div class="kv"><span>Billing</span><span class="badge badge-success">One time · complete</span></div>
+      <a class="list-row" href="{{ url_for('portal_agreement') }}">
+        <span class="list-row-main"><span class="list-row-title">View my agreement</span></span>
+        <span class="chev" aria-hidden="true">›</span>
       </a>
-    </div>
-
-    <div class="card card-pad-sm">
-      <div class="card-title" style="font-size:.95rem">Your program</div>
-      <div class="row-between small">
-        <span class="muted">Paid</span>
-        <span class="strong">{{ order.amount_cents | money }}</span>
-      </div>
-      <div class="row-between small" style="margin-top:8px">
-        <span class="muted">Enrolled</span>
-        <span>{{ order.paid_at | date }}</span>
-      </div>
-      <div class="row-between small" style="margin-top:8px">
-        <span class="muted">Billing</span>
-        <span class="badge badge-success">One time · complete</span>
-      </div>
-      <a class="btn btn-ghost btn-sm btn-block mt-2" href="{{ url_for('portal_agreement') }}">
-        View my agreement
-      </a>
-    </div>
+    </section>
 
     {% if cancel_by %}
-      <div class="card card-pad-sm">
-        <div class="card-title" style="font-size:.95rem">Right to cancel</div>
+      <section class="list-card list-card-pad">
+        <h2 class="list-card-h">Right to cancel</h2>
         <p class="small muted mb-0">
           You may cancel without penalty until
           <strong style="color:var(--text)">{{ cancel_by | date }}</strong>.
@@ -167,29 +222,35 @@
           <a href="{{ url_for('notice_of_cancellation') }}" style="text-decoration:underline">cancellation form</a>.
           Either way you get a full refund, and you do not have to tell us why.
         </p>
-      </div>
+      </section>
     {% endif %}
 
-    <div class="card card-pad-sm">
-      <div class="card-title" style="font-size:.95rem">Need a hand?</div>
-      <p class="small muted">
-        Anything at all: a document you can't find, a letter that arrived,
-        a question about the process.
-      </p>
-      <a class="btn btn-ghost btn-sm btn-block" href="mailto:{{ cfg.SUPPORT_EMAIL }}">
-        Email your case team
+    <section class="list-card">
+      <div class="list-card-head"><h2>Need a hand?</h2></div>
+      <a class="list-row" href="{{ url_for('portal_messages') }}">
+        <span class="list-row-main">
+          <span class="list-row-title">Message your case team</span>
+          <span class="list-row-sub">Answers stay on your file</span>
+        </span>
+        <span class="chev" aria-hidden="true">›</span>
       </a>
       {% if cfg.SUPPORT_PHONE %}
-        <p class="small muted text-center" style="margin:12px 0 0">
-          Or call
-          <a href="tel:{{ cfg.SUPPORT_PHONE_TEL }}" style="text-decoration:underline">{{ cfg.SUPPORT_PHONE }}</a>
-        </p>
+        <a class="list-row" href="tel:{{ cfg.SUPPORT_PHONE_TEL }}">
+          <span class="list-row-main">
+            <span class="list-row-title">Call us</span>
+            <span class="list-row-sub">{{ cfg.SUPPORT_PHONE }}</span>
+          </span>
+          <span class="chev" aria-hidden="true">›</span>
+        </a>
       {% endif %}
-    </div>
+      <a class="list-row" href="mailto:{{ cfg.SUPPORT_EMAIL }}">
+        <span class="list-row-main">
+          <span class="list-row-title">Email us</span>
+          <span class="list-row-sub">{{ cfg.SUPPORT_EMAIL }}</span>
+        </span>
+        <span class="chev" aria-hidden="true">›</span>
+      </a>
+    </section>
   </div>
 </div>
-
-<style>
-  @media (max-width: 900px) { #case-grid { grid-template-columns: 1fr; } }
-</style>
 {% endblock %}

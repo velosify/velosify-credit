@@ -23,7 +23,15 @@ import config
 DOCUMENT_TYPES = [
     {
         "key": "credit_report",
+        # Whether the portal offers "Take a photo". A credit report is a
+        # downloaded PDF, so pointing a camera at a screen is the wrong tool.
+        "camera": False,
+        "capture_tip": "Upload the PDF you downloaded from your report provider.",
+        # Outline drawn in the camera view: "card" is ID-card shaped,
+        # "page" is letter-paper shaped.
+        "frame": "report",
         "label": "Credit report",
+        "short": "Credit report",
         "required": True,
         # The provider is named on the documents page itself, where there is
         # room to say why and to carry the disclosure that goes with a
@@ -33,35 +41,55 @@ DOCUMENT_TYPES = [
     },
     {
         "key": "photo_id",
+        "camera": True,
+        "capture_tip": "Front of your ID. Lay it on a dark, flat surface and fit it inside the frame.",
+        "frame": "card",
         "label": "Government-issued photo ID",
+        "short": "Photo ID",
         "required": True,
         "help": "Driver's license, state ID or passport. Make sure all four "
                 "corners are visible and the text is readable.",
     },
     {
         "key": "proof_of_address",
+        "camera": True,
+        "capture_tip": "Lay the page flat in good light so your name and address are readable.",
+        "frame": "page",
         "label": "Proof of address",
+        "short": "Proof of address",
         "required": True,
         "help": "A utility bill, bank statement or lease dated within the "
                 "last 60 days showing your name and current address.",
     },
     {
         "key": "ssn_proof",
+        "camera": True,
+        "capture_tip": "Your Social Security card, W-2 or SSA letter, flat and in good light.",
+        "frame": "card",
         "label": "Proof of Social Security number",
+        "short": "Proof of SSN",
         "required": True,
         "help": "Social Security card, W-2 or SSA letter. Bureaus require "
                 "this to process a dispute on your behalf.",
     },
     {
         "key": "ftc_report",
+        "camera": False,
+        "capture_tip": "Upload the PDF from identitytheft.gov.",
+        "frame": "report",
         "label": "FTC identity theft report",
+        "short": "FTC report",
         "required": False,
         "help": "Only if fraudulent accounts are on your report. File at "
                 "identitytheft.gov and upload the PDF.",
     },
     {
         "key": "other",
+        "camera": True,
+        "capture_tip": "Photograph each page. You can take several before uploading.",
+        "frame": "page",
         "label": "Anything else",
+        "short": "Other documents",
         "required": False,
         "help": "Bureau letters you've received, collection notices, court "
                 "documents, or anything else you think we should see.",
@@ -501,8 +529,19 @@ def document_status_for(conn: sqlite3.Connection, user_id: int) -> dict:
         1 for i in items if i["required"] and i["satisfied"]
     )
     required_total = len(REQUIRED_DOCUMENT_KEYS)
+    for i in items:
+        # Something was sent and every copy was turned down: the client has
+        # to act again, and the page says so in red rather than "needed".
+        i["needs_fix"] = bool(i["files"]) and not i["satisfied"]
+    todo = [i for i in items if i["required"] and not i["satisfied"]]
     return {
         "items": items,
+        # The single thing the portal points the client at. Order follows
+        # DOCUMENT_TYPES, so the credit report always comes first.
+        "next": todo[0] if todo else None,
+        # What the camera button in the tab bar opens to: the first missing
+        # document that can sensibly be photographed.
+        "next_scan": next((i for i in todo if i.get("camera")), None),
         "required_done": required_done,
         "required_total": required_total,
         "complete": required_done >= required_total,

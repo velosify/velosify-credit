@@ -178,6 +178,19 @@ def inject_globals() -> dict:
     }
 
 
+@app.context_processor
+def _client_doc_status() -> dict:
+    """The client's document checklist on every portal page, so the camera
+    button in the tab bar can open straight to whatever is still missing."""
+    try:
+        user = current_user()
+        if user and user["role"] == "client":
+            return {"doc_status": document_status_for(get_db(), int(user["id"]))}
+    except Exception:  # pragma: no cover - a nav button must never break a page
+        pass
+    return {"doc_status": None}
+
+
 def _nav_unread() -> int:
     """The number on the Messages tab, for whoever is signed in.
 
@@ -614,13 +627,16 @@ def _security_headers(resp):
     resp.headers.setdefault("X-Frame-Options", "DENY")
     resp.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
     resp.headers.setdefault("Permissions-Policy",
-                            "geolocation=(), microphone=(), camera=(), payment=()")
+                            "geolocation=(), microphone=(), camera=(self), payment=()")
     resp.headers.setdefault("Content-Security-Policy", "; ".join([
         "default-src 'self'",
         "script-src 'self'",
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
         "font-src 'self' https://fonts.gstatic.com",
-        "img-src 'self' data:",
+        # blob: for the thumbnails of photos a client has just taken, shown
+        # before they upload. Never a remote origin.
+        "img-src 'self' data: blob:",
+        "media-src 'self' blob:",
         "form-action 'self'",
         "frame-ancestors 'none'",
         "base-uri 'none'",
@@ -1298,15 +1314,25 @@ def portal_upload():
     if not _paid_order(user["id"]):
         return redirect(url_for("portal"))
 
+    def done():
+        # The in-page uploader posts with fetch. Following a redirect there
+        # would render the next page inside the request and use up the flash
+        # messages before the client ever saw them, so it gets the address to
+        # go to instead and the flashes wait in the session.
+        target = url_for("portal_documents")
+        if request.headers.get("X-Requested-With") == "fetch":
+            return jsonify({"redirect": target})
+        return redirect(target)
+
     doc_type = (request.form.get("doc_type") or "").strip()
     if doc_type not in DOCUMENT_TYPE_KEYS:
         flash("Pick which document you're uploading.", "error")
-        return redirect(url_for("portal_documents"))
+        return done()
 
     files = [f for f in request.files.getlist("files") if f and f.filename]
     if not files:
         flash("Choose at least one file to upload.", "error")
-        return redirect(url_for("portal_documents"))
+        return done()
 
     conn = get_db()
     saved = 0
@@ -1336,10 +1362,17 @@ def portal_upload():
                   body=f"{saved} file{'s' if saved != 1 else ''} received.",
                   created_by="client")
         conn.commit()
-        flash(f"{saved} file{'s' if saved != 1 else ''} uploaded.", "success")
+        status = document_status_for(conn, user["id"])
+        got = f"{label} received." if saved == 1 else f"{label}: {saved} files received."
+        if status["complete"]:
+            flash(f"{got} That's everything we need. We'll take it from here.", "success")
+        elif status["next"]:
+            flash(f"{got} Next up: {status['next']['short']}.", "success")
+        else:
+            flash(got, "success")
         _advance_if_documents_complete(conn, user)
 
-    return redirect(url_for("portal_documents"))
+    return done()
 
 
 def _advance_if_documents_complete(conn, client) -> None:
