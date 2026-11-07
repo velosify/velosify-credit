@@ -367,6 +367,13 @@ _ADDED_COLUMNS = [
     # a lead is who sent it. Plain integer for the same reason as assigned_to.
     ("users", "affiliate_code", "TEXT"),
     ("leads", "affiliate_id", "INTEGER"),
+    # How far a client has got with a letter packet before signing it:
+    # opened the page, how often, and whether they scrolled through every
+    # letter to the signature box. Shown to staff as the packet's stage.
+    ("letter_packets", "first_opened_at", "TEXT"),
+    ("letter_packets", "last_opened_at", "TEXT"),
+    ("letter_packets", "open_count", "INTEGER NOT NULL DEFAULT 0"),
+    ("letter_packets", "read_through_at", "TEXT"),
 ]
 
 

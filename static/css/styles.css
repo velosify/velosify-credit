@@ -2681,3 +2681,39 @@ html.js .nojs-only { display: none !important; }
 @media (max-width: 720px) {
   table.data.stack-phone td { justify-items: start; }
 }
+
+/* --- Letter packet progress (staff) ---------------------------------------
+   Unopened → Opened & viewed → Signed, with the times behind each step. */
+.pp { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.pp-step { position: relative; display: flex; gap: 14px; padding-bottom: 18px; }
+.pp-step:last-child { padding-bottom: 0; }
+.pp-step::before {
+  content: ""; position: absolute; left: 15px; top: 32px; bottom: 0; width: 2px;
+  background: var(--surface-3);
+}
+.pp-step:last-child::before { display: none; }
+.pp-step.passed::before { background: var(--accent); }
+.pp-dot {
+  flex: none; width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--surface-3); color: var(--text-muted); font-size: .8rem; font-weight: 800;
+}
+.pp-step.reached .pp-dot { background: var(--accent); color: #fff; }
+.pp-step.reached:not(.passed) .pp-dot { box-shadow: 0 0 0 4px rgba(19, 100, 223, .16); }
+.pp-step:last-child.reached .pp-dot { background: var(--success); box-shadow: none; }
+.pp-step > div { display: grid; gap: 1px; padding-top: 5px; font-size: .86rem; color: var(--text-muted); }
+.pp-step strong { color: var(--text); font-size: .95rem; }
+.pp-ok { color: var(--success); font-weight: 600; }
+.pp-now { color: var(--warn); font-weight: 600; }
+
+.packet-list { display: grid; gap: 8px; margin-top: 8px; }
+.packet-row {
+  display: flex; align-items: center; gap: 12px; padding: 10px 12px;
+  border-radius: 12px; background: var(--surface-2); transition: background .12s ease;
+}
+.packet-row:hover { background: var(--surface-3); }
+.packet-row-main { flex: 1; min-width: 0; display: grid; }
+.packet-row-title { font-weight: 620; font-size: .9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.packet-row .badge { flex: none; }
+.pp-mini { flex: none; display: grid; grid-auto-flow: column; gap: 3px; }
+.pp-mini i { width: 6px; height: 18px; border-radius: 3px; background: var(--surface-3); }
+.pp-mini i.on { background: var(--accent); }

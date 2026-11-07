@@ -63,7 +63,12 @@ CREATE TABLE IF NOT EXISTS letter_packets (
     created_at   TEXT    NOT NULL,
     created_by   INTEGER,
     signed_at    TEXT,
-    voided_at    TEXT
+    voided_at    TEXT,
+    -- Client progress before signing. See packet_stage().
+    first_opened_at TEXT,
+    last_opened_at  TEXT,
+    open_count      INTEGER NOT NULL DEFAULT 0,
+    read_through_at TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_letter_packets_client ON letter_packets(client_id, status);
 
@@ -400,6 +405,44 @@ def _record_pdf(packet, sig, titles) -> bytes:
 
 
 # --------------------------------------------------------------------------
+# where the client is with a packet
+# --------------------------------------------------------------------------
+PACKET_STAGES = [
+    ("unopened", "Unopened"),
+    ("opened", "Opened & viewed"),
+    ("signed", "Signed"),
+]
+
+
+@bp.app_template_filter("packet_stage")
+def packet_stage(packet: dict) -> dict:
+    """The packet's stage for staff, with what to show for it.
+
+    unopened  sent, and the client has not opened the signing page
+    opened    they have opened it; read_through says whether they scrolled
+              through every letter to the signature box
+    signed    completed
+    void      withdrawn by staff
+    """
+    p = dict(packet)
+    if p.get("status") == "void":
+        return {"key": "void", "label": "Voided", "badge": "", "index": -1}
+    if p.get("status") == "signed":
+        return {"key": "signed", "label": "Signed", "badge": "badge-success", "index": 2}
+    if p.get("first_opened_at"):
+        label = "Read all letters" if p.get("read_through_at") else "Opened"
+        return {"key": "opened", "label": label, "badge": "badge-accent", "index": 1}
+    return {"key": "unopened", "label": "Unopened", "badge": "badge-warn", "index": 0}
+
+
+def packets_for(client_id: int) -> list[dict]:
+    """A client's packets, newest first, for the client file."""
+    return [dict(r) for r in get_db().execute(
+        "SELECT * FROM letter_packets WHERE client_id = ? ORDER BY id DESC",
+        (client_id,)).fetchall()]
+
+
+# --------------------------------------------------------------------------
 # staff routes
 # --------------------------------------------------------------------------
 @bp.get("/admin/clients/<int:user_id>/letters")
@@ -531,6 +574,19 @@ def portal_sign(packet_id: int):
     ctx = dict(packet=packet, items=items, consent=CONSENT_TEXT, approve=APPROVE_TEXT,
                today=_long_date(now), error=None, name="", files=[])
 
+    if request.method == "GET" and packet["status"] == "pending":
+        # Staff see this as the packet moving from Unopened to Opened. Only
+        # the client's own visits count; staff never reach this route.
+        now_iso = utcnow()
+        conn.execute(
+            "UPDATE letter_packets SET open_count = open_count + 1, last_opened_at = ?, "
+            "first_opened_at = COALESCE(first_opened_at, ?) WHERE id = ?",
+            (now_iso, now_iso, packet_id))
+        if not packet.get("first_opened_at"):
+            audit("letters.opened", actor=user, target_user_id=int(user["id"]),
+                  detail=f"packet {packet_id}: {packet['title']}", conn=conn)
+        conn.commit()
+
     if packet["status"] == "signed":
         ctx["files"] = [dict(r) for r in conn.execute(
             "SELECT * FROM letter_files WHERE packet_id = ? AND kind = 'letter' ORDER BY rowid",
@@ -619,6 +675,24 @@ def portal_sign(packet_id: int):
         return redirect(url_for("letters.portal_sign", packet_id=packet_id))
 
     return render_template("portal/letters_sign.html", **ctx)
+
+
+@bp.post("/portal/letters/<int:packet_id>/seen")
+@require_login
+def portal_seen(packet_id: int):
+    """Called by sign.js once the client has scrolled past the last letter to
+    the signature box: they have had every letter on screen. Recorded once."""
+    user = _me_client()
+    conn = get_db()
+    cur = conn.execute(
+        "UPDATE letter_packets SET read_through_at = ? WHERE id = ? AND client_id = ? "
+        "AND status = 'pending' AND read_through_at IS NULL",
+        (utcnow(), packet_id, user["id"]))
+    if cur.rowcount:
+        audit("letters.read_through", actor=user, target_user_id=int(user["id"]),
+              detail=f"packet {packet_id}", conn=conn)
+    conn.commit()
+    return ("", 204)
 
 
 # --------------------------------------------------------------------------

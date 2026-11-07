@@ -34,7 +34,8 @@
     </article>
   {% endfor %}
 
-  <form method="post" id="sign-form" class="card" data-guard autocomplete="off">
+  <form method="post" id="sign-form" class="card" data-guard autocomplete="off"
+        data-seen-url="{{ url_for('letters.portal_seen', packet_id=packet.id) }}">
     {{ csrf_field() }}
     <input type="hidden" name="content_hash" value="{{ packet.content_hash }}">
     <input type="hidden" name="signature" id="sign-data">

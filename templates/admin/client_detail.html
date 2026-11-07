@@ -1,4 +1,5 @@
 {% extends "base_app.html" %}
+{% from "admin/_packet_progress.html" import packet_line %}
 {% block title %}{{ client.first_name }} {{ client.last_name }} | {{ cfg.BRAND_NAME }} admin{% endblock %}
 
 {% block body %}
@@ -418,9 +419,32 @@
     {% endif %}
 
     <div class="card card-pad-sm">
-      <div class="card-title" style="font-size:.95rem">Letters</div>
-      <p class="small muted">Dispute letters the client reviews and e-signs in the portal.</p>
-      <a class="btn btn-ghost btn-sm" href="{{ url_for('letters.staff_list', user_id=client.id) }}">Open letters</a>
+      <div class="row-between" style="margin-bottom:6px">
+        <div class="card-title mb-0" style="font-size:.95rem">Letters</div>
+        <a class="link-more" href="{{ url_for('letters.staff_new', user_id=client.id) }}">New packet</a>
+      </div>
+      {% set live = letter_packets | rejectattr('status', 'equalto', 'void') | list %}
+      {% if live %}
+        <div class="packet-list">
+          {% for p in live[:4] %}
+            {% set st = p | packet_stage %}
+            <a class="packet-row" href="{{ url_for('letters.staff_view', user_id=client.id, packet_id=p.id) }}">
+              <span class="pp-mini" aria-hidden="true">
+                {% for i in range(3) %}<i class="{{ 'on' if i <= st.index }}"></i>{% endfor %}
+              </span>
+              <span class="packet-row-main">
+                <span class="packet-row-title">{{ p.title }}</span>
+                <span class="tiny faint">{{ packet_line(p) }}</span>
+              </span>
+              <span class="badge {{ st.badge }}">{{ st.label }}</span>
+            </a>
+          {% endfor %}
+        </div>
+        <a class="btn btn-ghost btn-sm" style="margin-top:12px" href="{{ url_for('letters.staff_list', user_id=client.id) }}">All letters</a>
+      {% else %}
+        <p class="small muted">Dispute letters the client reviews and e-signs in the portal. None sent yet.</p>
+        <a class="btn btn-ghost btn-sm" href="{{ url_for('letters.staff_list', user_id=client.id) }}">Open letters</a>
+      {% endif %}
     </div>
 
     <div class="card card-pad-sm">

@@ -1,15 +1,18 @@
 {% extends "base_app.html" %}
+{% from "admin/_packet_progress.html" import packet_progress %}
 {% block title %}{{ packet.title }} | {{ cfg.BRAND_NAME }}{% endblock %}
 
 {% block body %}
 <div class="page-head">
   <p class="small"><a href="{{ url_for('letters.staff_list', user_id=client.id) }}">← Letters for {{ client.first_name }} {{ client.last_name }}</a></p>
   <h1>{{ packet.title }}</h1>
-  <p class="muted mb-0">
-    {% if packet.status == 'signed' %}<span class="badge badge-success">Signed</span> {{ packet.signed_at | datetime }}
-    {% elif packet.status == 'void' %}<span class="badge">Voided</span>
-    {% else %}<span class="badge badge-warn">Waiting on client</span>{% endif %}
-  </p>
+  {% set st = packet | packet_stage %}
+  <p class="muted mb-0"><span class="badge {{ st.badge }}">{{ st.label }}</span></p>
+</div>
+
+<div class="card" style="margin-bottom:22px">
+  <div class="card-title" style="margin-bottom:14px">Where {{ client.first_name or 'the client' }} is with it</div>
+  {{ packet_progress(packet) }}
 </div>
 
 {% if sig %}

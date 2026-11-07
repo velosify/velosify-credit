@@ -1,4 +1,5 @@
 {% extends "base_app.html" %}
+{% from "admin/_packet_progress.html" import packet_line %}
 {% block title %}Letters | {{ client.first_name }} {{ client.last_name }}{% endblock %}
 
 {% block body %}
@@ -19,9 +20,9 @@
       <tr>
         <td><a href="{{ url_for('letters.staff_view', user_id=client.id, packet_id=p.id) }}">{{ p.title }}</a></td>
         <td>
-          {% if p.status == 'signed' %}<span class="badge badge-success">Signed</span>
-          {% elif p.status == 'void' %}<span class="badge">Voided</span>
-          {% else %}<span class="badge badge-warn">Waiting on client</span>{% endif %}
+          {% set st = p | packet_stage %}
+          <span class="badge {{ st.badge }}">{{ st.label }}</span>
+          <div class="tiny faint" style="margin-top:4px">{{ packet_line(p) }}</div>
         </td>
         <td>{{ p.created_at | datetime }}</td>
       </tr>

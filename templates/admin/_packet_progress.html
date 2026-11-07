@@ -1,0 +1,62 @@
+{#  Where a client is with one letter packet: Unopened → Opened & viewed →
+    Signed. Shared by the client file, the packet list and the packet page.
+
+      packet_progress(p)          the three-step tracker with times
+      packet_line(p)              one line of detail for a list row       #}
+
+{% macro packet_line(p) -%}
+  {%- set st = p | packet_stage -%}
+  {%- if st.key == 'signed' -%}
+    Signed {{ p.signed_at | datetime }}
+  {%- elif st.key == 'opened' -%}
+    Opened {{ p.open_count }}&times; &middot; last {{ p.last_opened_at | datetime }}
+    {%- if p.read_through_at %} &middot; read every letter{% else %} &middot; hasn't reached the signature yet{% endif %}
+  {%- elif st.key == 'unopened' -%}
+    Sent {{ p.created_at | datetime }} &middot; not opened yet
+  {%- else -%}
+    Voided {{ p.voided_at | datetime if p.voided_at }}
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro packet_progress(p) %}
+  {% set st = p | packet_stage %}
+  {% if st.key == 'void' %}
+    <p class="small muted mb-0">This packet was voided{% if p.voided_at %} {{ p.voided_at | datetime }}{% endif %}. The client can no longer open or sign it.</p>
+  {% else %}
+    <ol class="pp">
+      <li class="pp-step reached {{ 'passed' if st.index > 0 }}">
+        <span class="pp-dot">{% if st.index > 0 %}✓{% else %}1{% endif %}</span>
+        <div>
+          <strong>{{ 'Unopened' if st.index == 0 else 'Sent' }}</strong>
+          <span>Sent {{ p.created_at | datetime }}</span>
+          {% if st.index == 0 %}<span class="pp-now">Waiting for the client to open it</span>{% endif %}
+        </div>
+      </li>
+      <li class="pp-step {{ 'reached' if st.index >= 1 }} {{ 'passed' if st.index > 1 }}">
+        <span class="pp-dot">{% if st.index > 1 %}✓{% else %}2{% endif %}</span>
+        <div>
+          <strong>Opened &amp; viewed</strong>
+          {% if p.first_opened_at %}
+            <span>First opened {{ p.first_opened_at | datetime }}</span>
+            <span>Opened {{ p.open_count }} time{{ '' if p.open_count == 1 else 's' }}{% if p.open_count > 1 %}, last {{ p.last_opened_at | datetime }}{% endif %}</span>
+            {% if p.read_through_at %}
+              <span class="pp-ok">Scrolled through every letter {{ p.read_through_at | datetime }}</span>
+            {% elif st.index == 1 %}
+              <span class="pp-now">Hasn't scrolled down to the signature yet</span>
+            {% endif %}
+          {% else %}
+            <span>Not yet</span>
+          {% endif %}
+        </div>
+      </li>
+      <li class="pp-step {{ 'reached passed' if st.index >= 2 }}">
+        <span class="pp-dot">{% if st.index >= 2 %}✓{% else %}3{% endif %}</span>
+        <div>
+          <strong>Signed</strong>
+          {% if p.signed_at %}<span class="pp-ok">Completed {{ p.signed_at | datetime }}</span>
+          {% else %}<span>Not yet</span>{% endif %}
+        </div>
+      </li>
+    </ol>
+  {% endif %}
+{% endmacro %}

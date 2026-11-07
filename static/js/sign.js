@@ -5,6 +5,27 @@
   var form = document.getElementById("sign-form");
   if (!form) return;
 
+  /* Tell staff the client has scrolled through every letter to here. Sent
+     once, the first time the signature box comes into view. */
+  (function () {
+    var url = form.getAttribute("data-seen-url");
+    var tok = form.querySelector("[name=csrf_token]");
+    if (!url || !tok || !("IntersectionObserver" in window)) return;
+    var sent = false;
+    var io = new IntersectionObserver(function (entries) {
+      if (sent || !entries.some(function (e) { return e.isIntersecting; })) return;
+      sent = true;
+      io.disconnect();
+      var fd = new FormData();
+      fd.append("csrf_token", tok.value);
+      if (navigator.sendBeacon && navigator.sendBeacon(url, fd)) return;
+      var x = new XMLHttpRequest();
+      x.open("POST", url);
+      x.send(fd);
+    }, { threshold: 0.2 });
+    io.observe(form);
+  })();
+
   var pad = document.getElementById("sign-pad");
   var ctx = pad.getContext("2d");
   var go = document.getElementById("sign-go");
