@@ -121,7 +121,7 @@
 
   <!-- ---------- Left: documents ---------- -->
   <div class="stack">
-    <div class="card">
+    <div class="card" id="documents">
       <div class="row-between" style="margin-bottom:16px">
         <div class="card-title mb-0">
           Documents: {{ checklist.required_done }}/{{ checklist.required_total }} required
@@ -193,6 +193,42 @@
           nothing, the required set is complete.
         {% endif %}
       </div>
+
+      {#  Staff upload on the client's behalf: a report pulled from the
+          affiliate dashboard, or a photo the client texted or AirDropped. #}
+      <form method="post" action="{{ url_for('admin_upload_document', user_id=client.id) }}"
+            enctype="multipart/form-data" data-guard
+            style="border-top:1px solid var(--border);margin-top:14px;padding-top:14px">
+        {{ csrf_field() }}
+        <div class="small strong" style="margin-bottom:8px">Upload for this client</div>
+        <select class="select" name="doc_type" required aria-label="Document type"
+                style="margin-bottom:10px;width:100%">
+          <option value="" disabled
+            {{ 'selected' if not (checklist['items'] | selectattr('required') | rejectattr('satisfied') | list) }}>Which document is this?</option>
+          {% set ns = namespace(picked=false) %}
+          {% for item in checklist['items'] %}
+            {% set pick = (not ns.picked) and item.required and not item.satisfied %}
+            {% if pick %}{% set ns.picked = true %}{% endif %}
+            <option value="{{ item.key }}" {{ 'selected' if pick }}>
+              {{ item.label }}{% if item.satisfied %} (already have one){% endif %}
+            </option>
+          {% endfor %}
+        </select>
+        <label class="dropzone" tabindex="0">
+          <input type="file" name="files" multiple required
+                 accept=".pdf,.png,.jpg,.jpeg,.heic,.webp,.doc,.docx">
+          <span data-zone-label>
+            <strong style="color:var(--text)">Choose files</strong> or drag them here
+          </span>
+        </label>
+        <p class="tiny faint" style="margin:6px 0 0">
+          PDF, JPG, PNG, HEIC or Word, up to {{ cfg.MAX_UPLOAD_MB }} MB each. Files you
+          add are marked accepted and show on the client's timeline.
+        </p>
+        <button class="btn btn-primary btn-sm mt-2" type="submit" data-busy="Uploading…">
+          Upload files
+        </button>
+      </form>
     </div>
 
     <div class="card thread-card">

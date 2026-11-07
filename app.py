@@ -1337,20 +1337,84 @@ def portal_upload():
                   created_by="client")
         conn.commit()
         flash(f"{saved} file{'s' if saved != 1 else ''} uploaded.", "success")
-
-        # Nudge the team the moment the required set is complete.
-        status = document_status_for(conn, user["id"])
-        if status["complete"] and user["case_stage"] == "documents":
-            conn.execute("UPDATE users SET case_stage = 'analysis' WHERE id = ?",
-                         (user["id"],))
-            add_event(conn, user["id"],
-                      title="All documents received",
-                      body="Your file is complete and has moved to report analysis.",
-                      stage="analysis")
-            conn.commit()
-            mailer.send_documents_complete(user)
+        _advance_if_documents_complete(conn, user)
 
     return redirect(url_for("portal_documents"))
+
+
+def _advance_if_documents_complete(conn, client) -> None:
+    """Move the case to report analysis the moment the required set is
+    complete, whoever uploaded the last file."""
+    status = document_status_for(conn, client["id"])
+    if status["complete"] and client["case_stage"] == "documents":
+        conn.execute("UPDATE users SET case_stage = 'analysis' WHERE id = ?",
+                     (client["id"],))
+        add_event(conn, client["id"],
+                  title="All documents received",
+                  body="Your file is complete and has moved to report analysis.",
+                  stage="analysis")
+        conn.commit()
+        mailer.send_documents_complete(client)
+
+
+@app.post("/admin/clients/<int:user_id>/documents/upload")
+@require_staff
+def admin_upload_document(user_id: int):
+    """Staff upload a document on a client's behalf: a credit report pulled
+    from the affiliate dashboard, or a photo of an ID the client texted over.
+
+    Same storage, allow-list and serving rules as a client upload. The file is
+    marked accepted, since a team member chose it, and the timeline and audit
+    log both record who added it.
+    """
+    client = _visible_client(user_id)
+    actor = current_user()
+    back = redirect(url_for("admin_client_detail", user_id=user_id) + "#documents")
+
+    doc_type = (request.form.get("doc_type") or "").strip()
+    if doc_type not in DOCUMENT_TYPE_KEYS:
+        flash("Pick which document you're uploading.", "error")
+        return back
+    files = [f for f in request.files.getlist("files") if f and f.filename]
+    if not files:
+        flash("Choose at least one file to upload.", "error")
+        return back
+
+    conn = get_db()
+    saved = 0
+    for f in files:
+        if not _safe_ext(f.filename):
+            flash(f"{_display_name(f.filename)} isn't a file type we accept. "
+                  f"Use PDF, JPG, PNG, HEIC, WEBP or Word.", "error")
+            continue
+        stored_name, size, mime = _store_upload(f, user_id)
+        if size == 0:
+            (config.UPLOAD_DIR / stored_name).unlink(missing_ok=True)
+            flash(f"{_display_name(f.filename)} appears to be empty.", "error")
+            continue
+        cur = conn.execute(
+            "INSERT INTO documents (user_id, doc_type, original_name, stored_name, "
+            "mime_type, size_bytes, status, uploaded_at, reviewed_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, 'accepted', ?, ?)",
+            (user_id, doc_type, _display_name(f.filename), stored_name,
+             mime, size, utcnow(), utcnow()),
+        )
+        audit("admin.document_uploaded", actor=actor, target_user_id=user_id,
+              target_doc_id=cur.lastrowid, detail=f"{doc_type}: {_display_name(f.filename)}",
+              conn=conn)
+        saved += 1
+
+    if saved:
+        label = next((d["label"] for d in DOCUMENT_TYPES if d["key"] == doc_type), doc_type)
+        add_event(conn, user_id,
+                  title=f"Added by our team: {label}",
+                  body=f"We added {saved} file{'s' if saved != 1 else ''} to your file for you.",
+                  created_by=actor["email"])
+        conn.commit()
+        flash(f"{saved} file{'s' if saved != 1 else ''} added to "
+              f"{client.get('first_name') or 'the client'}'s {label.lower()}.", "success")
+        _advance_if_documents_complete(conn, client)
+    return back
 
 
 @app.post("/portal/documents/<int:doc_id>/delete")
