@@ -19,7 +19,7 @@
 
 {% set unassigned = clients | rejectattr('assigned_to') | list | length %}
 
-<div class="grid grid-3" style="margin-bottom:26px">
+<div class="grid grid-3 stat-row" style="margin-bottom:26px">
   <div class="stat">
     <div class="k">Active cases</div>
     <div class="v">{{ clients | length - complete }}</div>
@@ -79,7 +79,7 @@
 
 {% if clients %}
   <div class="table-wrap">
-    <table class="data">
+    <table class="data stack-phone">
       <thead>
         <tr>
           <th>Client</th>
@@ -93,23 +93,23 @@
       <tbody>
         {% for c in clients %}
           <tr>
-            <td>
+            <td class="cell-main">
               <div class="strong">
                 {{ c.first_name }} {{ c.last_name }}
                 {% if c.unread %}<span class="pill-count">{{ c.unread }}</span>{% endif %}
               </div>
               <div class="tiny faint">{{ c.email }}</div>
             </td>
-            <td><span class="badge badge-accent">{{ CASE_STAGE_LABELS.get(c.case_stage, c.case_stage) }}</span></td>
+            <td data-label="Stage"><span class="badge badge-accent">{{ CASE_STAGE_LABELS.get(c.case_stage, c.case_stage) }}</span></td>
             {% if is_admin %}
-              <td>
+              <td data-label="Assigned">
                 {% if c.assigned_to %}
                   <span class="small">{{ c.spec_first }} {{ c.spec_last }}</span>
                 {% else %}
                   <span class="badge badge-warn">Nobody</span>
                 {% endif %}
               </td>
-              <td>
+              <td data-label="Payment">
                 {% if c.order_status == 'paid' %}
                   <span class="badge badge-success">Paid</span>
                 {% elif c.order_status == 'refunded' %}
@@ -119,14 +119,14 @@
                 {% endif %}
               </td>
             {% endif %}
-            <td>
+            <td data-label="Documents">
               {{ c.doc_count }}
               {% if c.unreviewed_count %}
                 <span class="badge badge-warn" style="margin-left:6px">{{ c.unreviewed_count }} new</span>
               {% endif %}
             </td>
-            <td class="tiny faint">{{ c.created_at | date }}</td>
-            <td><a class="btn btn-ghost btn-sm" href="{{ url_for('admin_client_detail', user_id=c.id) }}">Open</a></td>
+            <td class="tiny faint" data-label="Enrolled">{{ c.created_at | date }}</td>
+            <td class="cell-action"><a class="btn btn-soft btn-sm" href="{{ url_for('admin_client_detail', user_id=c.id) }}">Open</a></td>
           </tr>
         {% endfor %}
       </tbody>

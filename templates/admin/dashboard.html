@@ -13,38 +13,109 @@
 {%- endmacro %}
 
 {% block body %}
-<div class="page-head">
-  <h1>Dashboard</h1>
-  <p class="muted mb-0">The business at a glance. "This month" means since {{ month_label }} 1st.</p>
+<div class="hello">
+  <p class="greet-date">{{ month_label }} &middot; your business at a glance</p>
+  <h1 class="hello-name">Hi {{ user.first_name or 'there' }}</h1>
 </div>
 
-{#  Things a person here has to act on. First, because the numbers below
-    keep, and a client waiting on a reply does not. #}
 {% set todo = leads.new + waiting.documents + waiting.messages + clients.unassigned %}
-{% if todo %}
-  <div class="dash-todo">
-    <span class="strong">Waiting on you:</span>
-    {% if leads.new %}<a href="{{ url_for('admin_leads') }}">{{ leads.new }} call request{{ '' if leads.new == 1 else 's' }} to return</a>{% endif %}
-    {% if waiting.messages %}<a href="{{ url_for('admin_messages') }}">{{ waiting.messages }} unread message{{ '' if waiting.messages == 1 else 's' }}</a>{% endif %}
-    {% if waiting.documents %}<a href="{{ url_for('admin_clients') }}">{{ waiting.documents }} document{{ '' if waiting.documents == 1 else 's' }} to review</a>{% endif %}
-    {% if clients.unassigned %}<a href="{{ url_for('admin_clients') }}">{{ clients.unassigned }} client{{ '' if clients.unassigned == 1 else 's' }} not assigned</a>{% endif %}
-  </div>
-{% endif %}
+<div class="admin-top">
+  {#  The number people open this page for, on the same card the clients
+      see their case on. #}
+  <section class="hero-card" aria-label="This month">
+    <div class="hero-card-top">
+      <span class="hero-card-kicker">Collected this month</span>
+      <span class="hero-chip">{{ trend(revenue.month, revenue.last_month, money=True) | striptags | trim }}</span>
+    </div>
+    <div class="hero-card-stage">{{ revenue.month | money }}</div>
+    <div class="hero-card-foot" style="margin-top:auto">
+      <a href="{{ url_for('admin_clients') }}">
+        <div class="hero-stat">{{ clients.active }}</div>
+        <div class="hero-stat-label">Active clients</div>
+      </a>
+      <a href="{{ url_for('admin_leads', status='all') }}">
+        <div class="hero-stat">{{ leads.month }}</div>
+        <div class="hero-stat-label">Leads this month</div>
+      </a>
+      <div>
+        <div class="hero-stat">{{ waiting.letters }}</div>
+        <div class="hero-stat-label">Letters to be signed</div>
+      </div>
+    </div>
+  </section>
 
-<div class="grid grid-4" style="margin-bottom:16px">
+  {#  Things a person here has to act on, each one tap from the fix. First,
+      because the numbers keep and a client waiting on a reply does not. #}
+  <section class="todo-card" aria-label="Waiting on you">
+    <div class="list-card-head">
+      <h2>{{ 'Waiting on you' if todo else 'Your to-do list' }}</h2>
+      {% if todo %}<span class="badge badge-accent">{{ todo }}</span>{% endif %}
+    </div>
+    {% if todo %}
+      {% if leads.new %}
+        <a class="list-row" href="{{ url_for('admin_leads') }}">
+          <span class="todo-count hot">{{ leads.new }}</span>
+          <span class="list-row-main">
+            <span class="list-row-title">Call request{{ '' if leads.new == 1 else 's' }} to return</span>
+            <span class="list-row-sub">Call back today. These go cold fast.</span>
+          </span>
+          <span class="chev" aria-hidden="true">›</span>
+        </a>
+      {% endif %}
+      {% if waiting.messages %}
+        <a class="list-row" href="{{ url_for('admin_messages') }}">
+          <span class="todo-count">{{ waiting.messages }}</span>
+          <span class="list-row-main">
+            <span class="list-row-title">Unread message{{ '' if waiting.messages == 1 else 's' }}</span>
+            <span class="list-row-sub">Clients waiting on a reply</span>
+          </span>
+          <span class="chev" aria-hidden="true">›</span>
+        </a>
+      {% endif %}
+      {% if waiting.documents %}
+        <a class="list-row" href="{{ url_for('admin_clients') }}">
+          <span class="todo-count warn">{{ waiting.documents }}</span>
+          <span class="list-row-main">
+            <span class="list-row-title">Document{{ '' if waiting.documents == 1 else 's' }} to review</span>
+            <span class="list-row-sub">Accept or ask for a new copy</span>
+          </span>
+          <span class="chev" aria-hidden="true">›</span>
+        </a>
+      {% endif %}
+      {% if clients.unassigned %}
+        <a class="list-row" href="{{ url_for('admin_clients', assigned='none') }}">
+          <span class="todo-count warn">{{ clients.unassigned }}</span>
+          <span class="list-row-main">
+            <span class="list-row-title">Client{{ '' if clients.unassigned == 1 else 's' }} not assigned</span>
+            <span class="list-row-sub">Pick who works each file</span>
+          </span>
+          <span class="chev" aria-hidden="true">›</span>
+        </a>
+      {% endif %}
+    {% else %}
+      <div class="caught-up">
+        <span class="sheet-done-ico">✓</span>
+        <strong>You're all caught up</strong>
+        <span>No calls, messages or documents waiting.</span>
+      </div>
+    {% endif %}
+  </section>
+</div>
+
+<div class="stat-grid">
   <a class="stat stat-link" href="{{ url_for('admin_leads', status='all') }}">
-    <div class="k">Leads this month</div>
-    <div class="v">{{ leads.month }}</div>
-    <div class="s">{{ trend(leads.month, leads.last_month) }}</div>
+    <div class="k">Leads all time</div>
+    <div class="v">{{ leads.total }}</div>
+    <div class="s">{{ trend(leads.month, leads.last_month) }} · {{ leads.referred }} from affiliates</div>
   </a>
   <div class="stat">
-    <div class="k">Collected this month</div>
-    <div class="v">{{ revenue.month | money }}</div>
-    <div class="s">{{ trend(revenue.month, revenue.last_month, money=True) }}</div>
+    <div class="k">Collected all time</div>
+    <div class="v">{{ revenue.total | money }}</div>
+    <div class="s">{{ revenue.payments }} payment{{ '' if revenue.payments == 1 else 's' }}{% if revenue.refunded %} · {{ revenue.refunded | money }} refunded{% endif %}</div>
   </div>
   <a class="stat stat-link" href="{{ url_for('admin_clients') }}">
-    <div class="k">Active clients</div>
-    <div class="v">{{ clients.active }}</div>
+    <div class="k">Completed cases</div>
+    <div class="v">{{ clients.complete }}</div>
     <div class="s">{{ clients.month }} enrolled this month</div>
   </a>
   <a class="stat stat-link" href="{{ url_for('affiliates.admin_list') }}">
@@ -54,34 +125,11 @@
   </a>
 </div>
 
-<div class="grid grid-4" style="margin-bottom:30px">
-  <div class="stat">
-    <div class="k">Leads all time</div>
-    <div class="v">{{ leads.total }}</div>
-    <div class="s">{{ leads.referred }} from affiliates</div>
-  </div>
-  <div class="stat">
-    <div class="k">Collected all time</div>
-    <div class="v">{{ revenue.total | money }}</div>
-    <div class="s">{{ revenue.payments }} payment{{ '' if revenue.payments == 1 else 's' }}{% if revenue.refunded %} · {{ revenue.refunded | money }} refunded{% endif %}</div>
-  </div>
-  <div class="stat">
-    <div class="k">Completed cases</div>
-    <div class="v">{{ clients.complete }}</div>
-    <div class="s">cases taken all the way through</div>
-  </div>
-  <div class="stat">
-    <div class="k">Letters awaiting signature</div>
-    <div class="v">{{ waiting.letters }}</div>
-    <div class="s">sent to clients, not yet signed</div>
-  </div>
-</div>
-
 <div class="dash-cols">
-  <div class="card card-pad-sm">
-    <div class="row-between" style="margin-bottom:10px">
-      <div class="card-title mb-0" style="font-size:.95rem">Clients by stage</div>
-      <a class="tiny" href="{{ url_for('admin_clients') }}" style="text-decoration:underline">All clients</a>
+  <section class="list-card">
+    <div class="list-card-head">
+      <h2>Clients by stage</h2>
+      <a class="link-more" href="{{ url_for('admin_clients') }}">All clients</a>
     </div>
     {% set biggest = [stage_counts.values() | max, 1] | max %}
     {% for key, label in CASE_STAGES %}
@@ -91,12 +139,12 @@
         <span class="small strong" style="text-align:right">{{ stage_counts[key] }}</span>
       </div>
     {% endfor %}
-  </div>
+  </section>
 
-  <div class="card card-pad-sm">
-    <div class="row-between" style="margin-bottom:10px">
-      <div class="card-title mb-0" style="font-size:.95rem">Latest call requests</div>
-      <a class="tiny" href="{{ url_for('admin_leads', status='all') }}" style="text-decoration:underline">All calls</a>
+  <section class="list-card">
+    <div class="list-card-head">
+      <h2>Latest call requests</h2>
+      <a class="link-more" href="{{ url_for('admin_leads', status='all') }}">All calls</a>
     </div>
     {% for l in recent_leads %}
       <div class="dash-row">
@@ -110,12 +158,12 @@
         <span class="badge {{ 'badge-accent' if l.status == 'new' }}">{{ lead_status_labels.get(l.status, l.status) }}</span>
       </div>
     {% else %}
-      <p class="small muted mb-0">No call requests yet.</p>
+      <p class="empty">No call requests yet.</p>
     {% endfor %}
-  </div>
+  </section>
 
-  <div class="card card-pad-sm">
-    <div class="card-title" style="font-size:.95rem;margin-bottom:10px">Latest payments</div>
+  <section class="list-card">
+    <div class="list-card-head"><h2>Latest payments</h2></div>
     {% for p in recent_payments %}
       <div class="dash-row">
         <div>
@@ -126,8 +174,8 @@
         <span class="small strong">{{ p.amount_cents | money }}</span>
       </div>
     {% else %}
-      <p class="small muted mb-0">No payments recorded yet.</p>
+      <p class="empty">No payments recorded yet.</p>
     {% endfor %}
-  </div>
+  </section>
 </div>
 {% endblock %}

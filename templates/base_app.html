@@ -19,7 +19,7 @@
 {% block head %}{% endblock %}
 </head>
 {%- set is_client = user and user.role == 'client' -%}
-<body class="app-body{{ ' is-client' if is_client }}">
+<body class="app-body app-modern{{ ' is-client' if is_client }}">
 
 {#  One list, rendered twice: as a sidebar on a wide screen and as a bottom
     tab bar on a phone. Defining it once means the two can never drift apart,
@@ -34,25 +34,25 @@
       running on it: a call request that goes unanswered for a day is usually
       gone. Everything else keeps. #}
   {% set nav_items = [
-    ('Dashboard', '▦', url_for('admin_dashboard'), '/admin/dashboard'),
-    ('Clients',  '◫', url_for('admin_clients'),  '/admin/clients'),
-    ('Calls',    '☎', url_for('admin_leads'),    '/admin/leads'),
-    ('Messages', '✉', url_for('admin_messages'), '/admin/messages'),
-    ('Team',     '◎', url_for('admin_team'),     '/admin/team'),
-    ('Affiliates', '⇄', url_for('affiliates.admin_list'), '/admin/affiliates'),
-    ('Audit',    '⧉', url_for('admin_audit'),    '/admin/audit'),
-    ('System',   '◇', url_for('admin_system'),   '/admin/system')
+    ('Dashboard', 'grid', url_for('admin_dashboard'), '/admin/dashboard'),
+    ('Clients',  'users', url_for('admin_clients'),  '/admin/clients'),
+    ('Calls',    'phone', url_for('admin_leads'),    '/admin/leads'),
+    ('Messages', 'chat', url_for('admin_messages'), '/admin/messages'),
+    ('Team',     'team', url_for('admin_team'),     '/admin/team'),
+    ('Affiliates', 'share', url_for('affiliates.admin_list'), '/admin/affiliates'),
+    ('Audit',    'list', url_for('admin_audit'),    '/admin/audit'),
+    ('System',   'gear', url_for('admin_system'),   '/admin/system')
   ] %}
 {% elif is_specialist %}
   {#  A specialist has two places to be: their files, and what has been said
       on them. Nothing else on this list would show them anything. #}
   {% set nav_items = [
-    ('My clients', '◫', url_for('admin_clients'),  '/admin/clients'),
-    ('Messages',   '✉', url_for('admin_messages'), '/admin/messages')
+    ('My clients', 'users', url_for('admin_clients'),  '/admin/clients'),
+    ('Messages',   'chat', url_for('admin_messages'), '/admin/messages')
   ] %}
 {% elif user and user.role == 'affiliate' %}
   {% set nav_items = [
-    ('Referrals', '⇄', url_for('affiliates.dashboard'), '/affiliate')
+    ('Referrals', 'share', url_for('affiliates.dashboard'), '/affiliate')
   ] %}
 {% else %}
   {% set nav_items = [
@@ -95,6 +95,16 @@
   {%- elif name == 'pen' -%}<path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4z"/>
   {%- elif name == 'doc' -%}<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>
   {%- elif name == 'out' -%}<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/>
+  {%- elif name == 'grid' -%}<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>
+  {%- elif name == 'users' -%}<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8"/><path d="M18 14.2a6.5 6.5 0 0 1 3.5 5.8"/>
+  {%- elif name == 'phone' -%}<path d="M5 3h3l2 5-2.5 1.5a11 11 0 0 0 7 7L16 14l5 2v3a2 2 0 0 1-2 2A16 16 0 0 1 3 5a2 2 0 0 1 2-2"/>
+  {%- elif name == 'team' -%}<circle cx="12" cy="7" r="3.2"/><path d="M6 20a6 6 0 0 1 12 0"/><circle cx="4.5" cy="10" r="2"/><circle cx="19.5" cy="10" r="2"/>
+  {%- elif name == 'share' -%}<circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="6" r="2.6"/><circle cx="18" cy="18" r="2.6"/><path d="m8.4 10.8 7.2-3.6M8.4 13.2l7.2 3.6"/>
+  {%- elif name == 'list' -%}<path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/>
+  {%- elif name == 'gear' -%}<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>
+  {%- elif name == 'external' -%}<path d="M14 4h6v6"/><path d="M20 4 11 13"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>
+  {%- elif name == 'plus' -%}<path d="M12 5v14M5 12h14"/>
+  {%- elif name == 'more' -%}<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>
   {%- elif name == 'user' -%}<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>
   {%- endif -%}
 </svg>
@@ -110,6 +120,9 @@
       <span>Velosify<span class="gradient-text">Credit</span></span>
     </a>
     <div class="app-topbar-actions">
+      {% if user and not is_client %}
+        <span class="topbar-avatar" aria-hidden="true">{{ (user.first_name or user.email or '?')[:1] | upper }}{{ (user.last_name or '')[:1] | upper }}</span>
+      {% endif %}
       {% if is_client %}
         <a class="topbar-avatar" href="{{ url_for('portal_account') }}"
            aria-label="My account">{{ (user.first_name or user.email or '?')[:1] | upper }}{{ (user.last_name or '')[:1] | upper }}</a>
@@ -170,34 +183,46 @@
     </div>
   </aside>
   {% else %}
-  <aside class="sidebar">
+  {#  Staff and affiliates: the same sidebar as the client's, with the
+      administrator's most common job (adding a client) as the raised
+      button where the client's camera sits. #}
+  <aside class="sidebar client-side">
     <a class="brand" href="{{ url_for('landing') }}">
       <span class="brand-mark">V</span>
       <span>Velosify<span class="gradient-text">Credit</span></span>
     </a>
 
-    {% for label, icon, href, path in nav_items %}
+    {% if is_admin %}
+      <a class="side-cta" href="{{ url_for('admin_client_new') }}">
+        <span class="side-cta-ico">{{ icon('plus') }}</span>
+        <span class="side-cta-text">
+          <strong>Add a client</strong>
+          <span>Enroll someone by hand</span>
+        </span>
+      </a>
+    {% endif %}
+
+    {% for label, ico, href, path in nav_items %}
       <a class="side-link {{ is_active(path) }}" href="{{ href }}">
-        <span class="ico">{{ icon }}</span> {{ label }}
-        {% if label == 'Messages' and unread %}
-          <span class="pill-count">{{ unread }}</span>
-        {% endif %}
-        {% if label == 'Letters' and letters_pending %}
-          <span class="pill-count">{{ letters_pending }}</span>
-        {% endif %}
+        <span class="ico">{{ icon(ico) }}</span> {{ label }}
+        {% if label == 'Messages' and unread %}<span class="pill-count">{{ unread }}</span>{% endif %}
       </a>
     {% endfor %}
     {% if is_admin %}
-      <a class="side-link" href="{{ url_for('landing') }}"><span class="ico">↗</span> Public site</a>
+      <a class="side-link" href="{{ url_for('landing') }}"><span class="ico">{{ icon('external') }}</span> Public site</a>
     {% endif %}
 
-    <div class="side-foot">
+    <div class="side-foot side-profile">
       {% if user %}
-        <div class="tiny faint" style="padding:0 14px 8px">
-          {{ user.first_name }} {{ user.last_name }}
+        <div class="side-me">
+          <span class="topbar-avatar">{{ (user.first_name or user.email or '?')[:1] | upper }}{{ (user.last_name or '')[:1] | upper }}</span>
+          <span class="side-me-text">
+            <strong>{{ ((user.first_name or '') ~ ' ' ~ (user.last_name or '')) | trim or user.email }}</strong>
+            <span>{{ {'admin': 'Administrator', 'specialist': 'Credit specialist', 'affiliate': 'Affiliate'}.get(user.role, user.email) }}</span>
+          </span>
         </div>
       {% endif %}
-      <a class="side-link" href="{{ url_for('logout') }}"><span class="ico">⏻</span> Sign out</a>
+      <a class="side-link" href="{{ url_for('logout') }}"><span class="ico">{{ icon('out') }}</span> Sign out</a>
     </div>
   </aside>
   {% endif %}
@@ -273,18 +298,47 @@
     {% endfor %}
   </nav>
 {% else %}
-<nav class="app-tabs" aria-label="Sections">
-  {% for label, icon, href, path in tab_items %}
+{#  Staff on a phone: the first four destinations, then More, which opens a
+    sheet with everything else. Pure CSS (:target), so it needs no script. #}
+{% set has_more = nav_items | length > 4 %}
+<nav class="app-tabs client-tabs" style="grid-template-columns: repeat({{ (tab_items | length) + (1 if has_more else 0) }}, 1fr)" aria-label="Sections">
+  {% for label, ico, href, path in tab_items %}
     <a class="app-tab {{ is_active(path) }}" href="{{ href }}">
-      <span class="app-tab-ico" aria-hidden="true">
-        {{ icon }}
+      <span class="app-tab-ico">
+        {{ icon(ico) }}
         {% if label == 'Messages' and unread %}<span class="tab-dot"></span>{% endif %}
-        {% if label == 'Letters' and letters_pending %}<span class="tab-dot"></span>{% endif %}
       </span>
       <span class="app-tab-label">{{ label }}</span>
     </a>
   {% endfor %}
+  {% if has_more %}
+    {% set more_active = nav_items[4:] | selectattr(3, 'in', request.path) | list %}
+    <a class="app-tab {{ 'active' if more_active }}" href="#more">
+      <span class="app-tab-ico">{{ icon('more') }}</span>
+      <span class="app-tab-label">More</span>
+    </a>
+  {% endif %}
 </nav>
+{% if has_more %}
+  <div class="more-sheet" id="more" aria-label="More sections">
+    <a class="more-backdrop" href="#" aria-label="Close"></a>
+    <div class="more-panel">
+      <div class="sheet-grab" aria-hidden="true"></div>
+      <div class="more-grid">
+        {% for label, ico, href, path in nav_items[4:] %}
+          <a class="more-item {{ is_active(path) }}" href="{{ href }}">
+            <span class="quick-ico">{{ icon(ico) }}</span><span>{{ label }}</span>
+          </a>
+        {% endfor %}
+        {% if is_admin %}
+          <a class="more-item" href="{{ url_for('admin_client_new') }}"><span class="quick-ico">{{ icon('plus') }}</span><span>Add client</span></a>
+          <a class="more-item" href="{{ url_for('landing') }}"><span class="quick-ico">{{ icon('external') }}</span><span>Public site</span></a>
+        {% endif %}
+      </div>
+      <a class="btn btn-soft btn-xl btn-block" href="#">Close</a>
+    </div>
+  </div>
+{% endif %}
 {% endif %}
 
 <script src="{{ url_for('static', filename='js/app.js') }}"></script>

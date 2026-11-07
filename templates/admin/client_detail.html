@@ -4,16 +4,49 @@
 {% block body %}
 <a class="btn btn-quiet btn-sm" href="{{ url_for('admin_clients') }}">← All clients</a>
 
-<div class="page-head" style="margin-top:14px">
-  <h1>{{ client.first_name }} {{ client.last_name }}</h1>
-  <p class="muted mb-0">
-    <a href="mailto:{{ client.email }}">{{ client.email }}</a>
-    {% if client.phone %} · {{ client.phone }}{% endif %}
-    · enrolled {{ client.created_at | date }}
-  </p>
+{#  The file opens on who this is and the three ways to reach them, the way
+    a contact card does. Everything that changes the case is below. #}
+<section class="profile-card">
+  <span class="profile-avatar" aria-hidden="true">{{ (client.first_name or client.email or '?')[:1] | upper }}{{ (client.last_name or '')[:1] | upper }}</span>
+  <div class="profile-main">
+    <h1>{{ client.first_name }} {{ client.last_name }}</h1>
+    <div class="profile-meta">
+      <a href="mailto:{{ client.email }}">{{ client.email }}</a>
+      {% if client.phone %}<a href="tel:{{ client.phone }}">{{ client.phone }}</a>{% endif %}
+      <span>Enrolled {{ client.created_at | date }}</span>
+    </div>
+    <div class="profile-chips">
+      <span class="badge badge-accent">{{ CASE_STAGE_LABELS.get(client.case_stage, client.case_stage) }}</span>
+      <span class="badge {{ 'badge-success' if checklist.complete else 'badge-warn' }}">
+        Documents {{ checklist.required_done }}/{{ checklist.required_total }}
+      </span>
+      {% if not assigned %}<span class="badge badge-warn">Not assigned</span>
+      {% else %}<span class="badge">{{ assigned.first_name }} {{ (assigned.last_name or '')[:1] }}.</span>{% endif %}
+    </div>
+  </div>
+  <div class="profile-actions">
+    <a class="round-btn" href="#thread">
+      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2z"/></svg></span>
+      <span>Message</span>
+    </a>
+    {% if client.phone %}
+      <a class="round-btn" href="tel:{{ client.phone }}">
+        <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h3l2 5-2.5 1.5a11 11 0 0 0 7 7L16 14l5 2v3a2 2 0 0 1-2 2A16 16 0 0 1 3 5a2 2 0 0 1 2-2"/></svg></span>
+        <span>Call</span>
+      </a>
+    {% endif %}
+    <a class="round-btn" href="mailto:{{ client.email }}">
+      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></span>
+      <span>Email</span>
+    </a>
+    <a class="round-btn" href="#documents">
+      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg></span>
+      <span>Docs</span>
+    </a>
+  </div>
   {% if is_admin %}
-    <details style="margin-top:10px">
-      <summary class="small" style="cursor:pointer;color:var(--text-muted)">Edit name</summary>
+    <details class="profile-edit">
+      <summary>Edit name</summary>
       <form method="post" class="row" style="gap:8px;flex-wrap:wrap;margin-top:8px;align-items:stretch"
             action="{{ url_for('admin_client_rename', user_id=client.id) }}">
         {{ csrf_field() }}
@@ -27,7 +60,7 @@
       </form>
     </details>
   {% endif %}
-</div>
+</section>
 
 {% if activation_link %}
   <div class="notice-strong">
