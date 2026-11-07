@@ -134,6 +134,13 @@ app.register_blueprint(letters.bp)
 import affiliates  # noqa: E402  referral links, sign-up and dashboards
 app.register_blueprint(affiliates.bp)
 
+import notify  # noqa: E402  push, texts and automatic reminders
+app.register_blueprint(notify.bp)
+notify.start_reminder_loop(app)
+
+import casework  # noqa: E402  scores, dispute items, follow-ups, staff tools
+app.register_blueprint(casework.bp)
+
 if config.STORAGE_AT_RISK:
     # Loud, and at boot, because the failure it describes is silent. The app
     # starts perfectly well on an empty database; the only symptom is that
@@ -470,7 +477,10 @@ def site_webmanifest():
     return jsonify({
         "name": config.BRAND_NAME,
         "short_name": config.BRAND_NAME,
-        "start_url": "/",
+        # Opened from a home screen, the portal is what people came for. A
+        # visitor who is not signed in is sent to the sign-in page from there.
+        "start_url": "/portal",
+        "scope": "/",
         "display": "standalone",
         "background_color": "#f6f9fd",
         "theme_color": "#ffffff",
@@ -1285,6 +1295,7 @@ def portal():
     ).fetchall()]
     stage_index = (CASE_STAGE_KEYS.index(user["case_stage"])
                    if user["case_stage"] in CASE_STAGE_KEYS else 0)
+    disputes = casework.dispute_summary(user["id"], conn)
     return render_template(
         "portal/dashboard.html",
         order=order,
@@ -1292,6 +1303,12 @@ def portal():
         events=events,
         stage_index=stage_index,
         cancel_by=_cancellation_deadline(order),
+        scores=casework.score_summary(user["id"], conn),
+        disputes=disputes,
+        referral=casework.referral_for(user, order.get("paid_at"), disputes, conn),
+        sms_enabled=config.SMS_ENABLED,
+        sms_consent=notify.SMS_CONSENT_TEXT,
+        push_available=notify.push_available(),
     )
 
 
@@ -1612,6 +1629,13 @@ def preview_document_image(doc_id: int):
     return resp
 
 
+@app.context_processor
+def _notification_settings() -> dict:
+    """What the account page and home screen need to offer texts and push."""
+    return {"sms_enabled": config.SMS_ENABLED, "sms_consent": notify.SMS_CONSENT_TEXT,
+            "push_available": notify.push_available()}
+
+
 @app.get("/portal/account")
 @require_login
 def portal_account():
@@ -1757,6 +1781,7 @@ def admin_dashboard():
         "messages": sum(unread_by_client(conn).values()),
         "letters": one("SELECT COUNT(*) FROM letter_packets WHERE status = 'pending'"),
     }
+    follow = casework.followups(conn)
     recent_leads = [dict(r) for r in conn.execute(
         "SELECT l.id, l.full_name, l.debt_amount, l.status, l.created_at, "
         "a.first_name AS aff_first, a.last_name AS aff_last "
@@ -1770,7 +1795,7 @@ def admin_dashboard():
     return render_template(
         "admin/dashboard.html", leads=leads, revenue=revenue, clients=clients,
         stage_counts=stage_counts, affiliates=affiliates_summary, waiting=waiting,
-        recent_leads=recent_leads, recent_payments=recent_payments,
+        recent_leads=recent_leads, recent_payments=recent_payments, follow=follow,
         month_label=(datetime.now(_DISPLAY_TZ) if _DISPLAY_TZ
                      else datetime.now(timezone.utc)).strftime("%B"),
         lead_status_labels=LEAD_STATUS_LABELS,
@@ -1876,6 +1901,15 @@ def _client_detail_page(user_id: int, activation_link: str | None = None,
         specialists=_specialists(),
         checklist=document_status_for(conn, user_id),
         letter_packets=letters.packets_for(user_id),
+        scores=casework.score_summary(user_id, conn),
+        disputes=casework.dispute_summary(user_id, conn),
+        bureaus=casework.BUREAUS,
+        item_types=casework.ITEM_TYPES,
+        dispute_statuses=casework.DISPUTE_STATUSES,
+        saved_replies=[dict(r, filled=casework.fill_reply(r["body"], client))
+                       for r in casework.saved_replies(conn)],
+        today=datetime.now(_DISPLAY_TZ).strftime("%Y-%m-%d") if _DISPLAY_TZ
+              else datetime.now(timezone.utc).strftime("%Y-%m-%d"),
         activation_link=activation_link,
         mail_error=mail_error,
         temp_password=temp_password,
@@ -2488,6 +2522,9 @@ def portal_message_send():
             mailer.send_message_to_staff(to, user)
     else:
         mailer.send_message_unassigned(user)
+    notify.push_to_case_team(user, f"Message from {user.get('first_name') or 'a client'}",
+                             body[:120], url_for("admin_client_detail", user_id=user["id"]) + "#thread",
+                             conn=conn)
     flash("Sent. We'll reply here.", "success")
     return redirect(url_for("portal_messages"))
 
@@ -2511,6 +2548,8 @@ def admin_message_send(user_id: int):
     conn.commit()
 
     mailer.send_message_to_client(client, _staff_name(me))
+    notify.push_to_user(user_id, f"New message from {_staff_name(me)}", body[:120],
+                        "/portal/messages", conn=conn)
     return redirect(url_for("admin_client_detail", user_id=user_id) + "#thread")
 
 
@@ -2942,6 +2981,7 @@ def admin_client_delete(user_id: int):
         except OSError:
             app.logger.warning("could not remove %s", doc["stored_name"])
     letters.purge_client(conn, user_id)
+    casework.purge_client(conn, user_id)
     conn.execute("DELETE FROM documents WHERE user_id = ?", (user_id,))
     conn.execute("DELETE FROM messages WHERE client_id = ?", (user_id,))
     conn.execute("DELETE FROM orders WHERE user_id = ?", (user_id,))
@@ -3347,6 +3387,10 @@ def admin_document_status(doc_id: int):
                                "Please upload a replacement.",
                   created_by=current_user()["email"])
     conn.commit()
+    if status == "rejected":
+        notify.push_to_user(int(row["user_id"]), f"Please resend your {label.lower()}",
+                            note or "We couldn't use the file you sent.",
+                            f"/portal/documents#doc-{row['doc_type']}", conn=conn)
     flash("Document updated.", "success")
     return redirect(url_for("admin_client_detail", user_id=row["user_id"]))
 

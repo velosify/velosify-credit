@@ -7,6 +7,7 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#ffffff">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="csrf-token" content="{{ csrf_token() }}">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 {#  Marks the page as scripted before first paint, so controls that only work
     with JS never flash on screen. A file, because the CSP forbids inline. #}
@@ -38,6 +39,8 @@
     ('Clients',  'users', url_for('admin_clients'),  '/admin/clients'),
     ('Calls',    'phone', url_for('admin_leads'),    '/admin/leads'),
     ('Messages', 'chat', url_for('admin_messages'), '/admin/messages'),
+    ('Follow-ups', 'check', url_for('casework.followups_page'), '/admin/follow-ups'),
+    ('Replies',  'reply', url_for('casework.replies_page'), '/admin/replies'),
     ('Team',     'team', url_for('admin_team'),     '/admin/team'),
     ('Affiliates', 'share', url_for('affiliates.admin_list'), '/admin/affiliates'),
     ('Audit',    'list', url_for('admin_audit'),    '/admin/audit'),
@@ -48,7 +51,8 @@
       on them. Nothing else on this list would show them anything. #}
   {% set nav_items = [
     ('My clients', 'users', url_for('admin_clients'),  '/admin/clients'),
-    ('Messages',   'chat', url_for('admin_messages'), '/admin/messages')
+    ('Messages',   'chat', url_for('admin_messages'), '/admin/messages'),
+    ('Follow-ups', 'check', url_for('casework.followups_page'), '/admin/follow-ups')
   ] %}
 {% elif user and user.role == 'affiliate' %}
   {% set nav_items = [
@@ -103,6 +107,8 @@
   {%- elif name == 'list' -%}<path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/>
   {%- elif name == 'gear' -%}<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>
   {%- elif name == 'external' -%}<path d="M14 4h6v6"/><path d="M20 4 11 13"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>
+  {%- elif name == 'check' -%}<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4"/><path d="m8.5 14 2.5 2.5 5-5"/>
+  {%- elif name == 'reply' -%}<path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 6 6v5"/>
   {%- elif name == 'plus' -%}<path d="M12 5v14M5 12h14"/>
   {%- elif name == 'more' -%}<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>
   {%- elif name == 'user' -%}<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>
@@ -342,6 +348,7 @@
 {% endif %}
 
 <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+{% if user %}<script src="{{ url_for('static', filename='js/push.js') }}"></script>{% endif %}
 {% block scripts %}{% endblock %}
 </body>
 </html>

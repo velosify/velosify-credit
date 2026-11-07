@@ -265,6 +265,110 @@
       </form>
     </div>
 
+    <!-- ---------- Credit scores ---------- -->
+    <div class="card" id="scores">
+      <div class="row-between" style="margin-bottom:12px">
+        <div class="card-title mb-0">Credit scores</div>
+        {% if scores %}<span class="tiny faint">The client sees these on their Home screen</span>{% endif %}
+      </div>
+      {% if scores %}
+        <div class="score-trio compact">
+          {% for c in scores.cards %}
+            <div class="score-tile">
+              <span class="score-bureau" style="--c: {{ c.color or 'var(--text-faint)' }}">{{ c.label }}</span>
+              {% if c.score %}
+                <strong class="score-num">{{ c.score }}</strong>
+                <span class="score-delta {{ 'up' if c.change > 0 else ('down' if c.change < 0 else '') }}">
+                  {% if c.change %}{{ '▲' if c.change > 0 else '▼' }} {{ c.change | abs }} since {{ c.since | date }}{% else %}{{ c.as_of | date }}{% endif %}
+                </span>
+              {% else %}<strong class="score-num faint">&mdash;</strong>{% endif %}
+            </div>
+          {% endfor %}
+        </div>
+        <details class="mini-details">
+          <summary>History ({{ scores.rows | length }})</summary>
+          <div class="score-history">
+            {% for r in scores.rows %}
+              <div class="score-hist-row">
+                <span>{{ r.as_of | date }}</span><span>{{ r.bureau | title if r.bureau != 'transunion' else 'TransUnion' }}</span><strong>{{ r.score }}</strong>
+                <form method="post" action="{{ url_for('casework.delete_score', score_id=r.id) }}" data-confirm="Remove this score?">
+                  {{ csrf_field() }}<button class="btn btn-quiet btn-sm" type="submit" aria-label="Remove">✕</button>
+                </form>
+              </div>
+            {% endfor %}
+          </div>
+        </details>
+      {% else %}
+        <p class="small muted">No scores yet. Add the starting scores from their report, then new ones after each round.</p>
+      {% endif %}
+      <form method="post" action="{{ url_for('casework.add_scores', user_id=client.id) }}" class="score-form" data-guard>
+        {{ csrf_field() }}
+        <label class="field-mini"><span>Report date</span><input class="input" type="date" name="as_of" value="{{ today }}" required></label>
+        {% for k, label in bureaus %}
+          <label class="field-mini"><span>{{ label }}</span><input class="input" type="number" name="{{ k }}" min="300" max="850" inputmode="numeric" placeholder="Score"></label>
+        {% endfor %}
+        <button class="btn btn-primary btn-sm" type="submit" data-busy="Saving…">Add scores</button>
+      </form>
+    </div>
+
+    <!-- ---------- Dispute items ---------- -->
+    <div class="card" id="disputes">
+      <div class="row-between" style="margin-bottom:12px">
+        <div class="card-title mb-0">Dispute items</div>
+        {% if disputes %}<span class="badge badge-success">{{ disputes.removed }} of {{ disputes.total }} fixed</span>{% endif %}
+      </div>
+      {% if disputes %}
+        <div class="ditems">
+          {% for it in disputes['items'] %}
+            <form method="post" action="{{ url_for('casework.set_dispute_status', item_id=it.id) }}" class="ditem">
+              {{ csrf_field() }}
+              <div class="ditem-main">
+                <span class="bureau-chip b-{{ it.bureau }}">{{ it.bureau_label[:2] if it.bureau != 'transunion' else 'TU' }}</span>
+                <div>
+                  <strong>{{ it.creditor }}</strong>{% if it.account_ref %} <span class="faint">··{{ it.account_ref }}</span>{% endif %}
+                  <div class="tiny faint">{{ it.bureau_label }} · {{ it.type_label }} · round {{ it.round }} · since {{ it.status_at | date }}</div>
+                </div>
+              </div>
+              <select class="select select-sm" name="status" aria-label="Status for {{ it.creditor }} at {{ it.bureau_label }}">
+                {% for k, staff_label, _c, _b, _r in dispute_statuses %}
+                  <option value="{{ k }}" {{ 'selected' if k == it.status }}>{{ staff_label }}</option>
+                {% endfor %}
+              </select>
+              <input class="input input-sm" name="note" value="{{ it.note }}" placeholder="Note the client sees (optional)" maxlength="300">
+              <button class="btn btn-soft btn-sm" type="submit">Save</button>
+              <button class="btn btn-quiet btn-sm" type="submit" form="ditem-del-{{ it.id }}" aria-label="Remove {{ it.creditor }} from the tracker">✕</button>
+            </form>
+            <form method="post" id="ditem-del-{{ it.id }}" hidden data-confirm="Remove {{ it.creditor }} ({{ it.bureau_label }}) from the tracker? Use this only for mistakes."
+                  action="{{ url_for('casework.delete_dispute', item_id=it.id) }}">{{ csrf_field() }}</form>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="small muted">Nothing tracked yet. Add each negative item you dispute, once per bureau, so the client can watch them come off.</p>
+      {% endif %}
+      <details class="mini-details" {{ 'open' if not disputes }}>
+        <summary>Add an item</summary>
+        <form method="post" action="{{ url_for('casework.add_disputes', user_id=client.id) }}" class="dispute-form" data-guard>
+          {{ csrf_field() }}
+          <div class="field-row">
+            <div class="field"><label for="d-creditor">Creditor or collector</label><input class="input" id="d-creditor" name="creditor" required maxlength="80" placeholder="e.g. Midland Credit"></div>
+            <div class="field"><label for="d-ref">Account (last 4)</label><input class="input" id="d-ref" name="account_ref" inputmode="numeric" maxlength="12" placeholder="1234"></div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label for="d-type">Type</label>
+              <select class="select" id="d-type" name="item_type">{% for k, l in item_types %}<option value="{{ k }}">{{ l }}</option>{% endfor %}</select></div>
+            <div class="field"><label for="d-round">Round</label><input class="input" id="d-round" name="round" type="number" min="1" max="20" value="1"></div>
+          </div>
+          <div class="field"><label>Disputed with</label>
+            <div class="row" style="gap:14px;flex-wrap:wrap">
+              {% for k, l in bureaus %}<label class="inline-check"><input type="checkbox" name="bureaus" value="{{ k }}" checked> {{ l }}</label>{% endfor %}
+            </div>
+          </div>
+          <div class="field"><label for="d-note">Note the client sees (optional)</label><input class="input" id="d-note" name="note" maxlength="300"></div>
+          <button class="btn btn-primary btn-sm" type="submit" data-busy="Adding…">Add item</button>
+        </form>
+      </details>
+    </div>
+
     <div class="card thread-card">
       <div class="row-between" style="margin-bottom:14px">
         <div class="card-title mb-0">Messages</div>

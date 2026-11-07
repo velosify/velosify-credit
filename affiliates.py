@@ -130,9 +130,11 @@ def affiliate_by_code(conn, code: str | None) -> dict | None:
     code = (code or "").strip().lower()
     if not (_CODE_OK.match(code) or _CHOSEN_CODE_OK.match(code)):
         return None
+    # Clients get a refer-a-friend link too (casework.referral_for). Their
+    # account is already vouched for by the enrollment, so no email check.
     row = conn.execute(
-        "SELECT * FROM users WHERE affiliate_code = ? AND role = ? "
-        "AND archived_at IS NULL AND email_verified_at IS NOT NULL",
+        "SELECT * FROM users WHERE affiliate_code = ? AND archived_at IS NULL "
+        "AND ((role = ? AND email_verified_at IS NOT NULL) OR role = 'client')",
         (code, ROLE)).fetchone()
     if row is None:
         # A link from before they renamed it still counts for them.

@@ -73,6 +73,43 @@
     }).catch(function () { return file; });
   }
 
+  /* A quick look at a photo before it is sent: is it blurry, or too dark to
+     read? Measured on a small greyscale copy. The blur figure is the variance
+     of the Laplacian, which drops sharply when edges (like printed text) are
+     smeared. Only ever a warning; the client can still send it. */
+  var BLUR_MIN = 45, DARK_MAX = 55;
+  function checkPhoto(blob) {
+    if (!window.createImageBitmap || !isImage(blob)) return Promise.resolve(null);
+    return createImageBitmap(blob).then(function (bmp) {
+      var scale = 320 / Math.max(bmp.width, bmp.height);
+      var w = Math.max(8, Math.round(bmp.width * scale)), h = Math.max(8, Math.round(bmp.height * scale));
+      var c = document.createElement("canvas");
+      c.width = w; c.height = h;
+      var ctx = c.getContext("2d");
+      ctx.drawImage(bmp, 0, 0, w, h);
+      var d = ctx.getImageData(0, 0, w, h).data;
+      var g = new Float32Array(w * h), sum = 0;
+      for (var i = 0, j = 0; i < g.length; i++, j += 4) {
+        g[i] = 0.299 * d[j] + 0.587 * d[j + 1] + 0.114 * d[j + 2];
+        sum += g[i];
+      }
+      var a = 0, a2 = 0, n = 0;
+      for (var y = 1; y < h - 1; y++) {
+        for (var x = 1; x < w - 1; x++) {
+          var k = y * w + x;
+          var l = 4 * g[k] - g[k - 1] - g[k + 1] - g[k - w] - g[k + w];
+          a += l; a2 += l * l; n++;
+        }
+      }
+      var variance = a2 / n - (a / n) * (a / n);
+      var mean = sum / g.length;
+      if (mean < DARK_MAX) return "dark";
+      if (variance < BLUR_MIN) return "blurry";
+      return null;
+    }).catch(function () { return null; });
+  }
+  var WARN_TEXT = { blurry: "Blurry?", dark: "Too dark" };
+
   /* --------------------------------------------------------- review sheet */
   var sheet = el("div", "sheet");
   sheet.setAttribute("role", "dialog");
@@ -88,6 +125,7 @@
         '<button type="button" class="icon-btn" data-close aria-label="Cancel">' + ICON_X + "</button>" +
       "</div>" +
       '<p class="sheet-hint">Check each one is clear and every corner is in the shot.</p>' +
+      '<p class="sheet-warn" role="status" hidden></p>' +
       '<div class="sheet-grid"></div>' +
       '<div class="sheet-error" role="alert" hidden></div>' +
       '<div class="sheet-progress" hidden><div class="sheet-bar"><span></span></div><div class="sheet-progress-label">Uploading…</div></div>' +
@@ -110,6 +148,7 @@
   var sMore = sheet.querySelector("[data-more]");
   var sActions = sheet.querySelector(".sheet-actions");
   var sHint = sheet.querySelector(".sheet-hint");
+  var sWarn = sheet.querySelector(".sheet-warn");
 
   var active = null;     // { form, files: [{file, url}] , camera: bool }
   var sending = false;
@@ -133,6 +172,7 @@
         tile.appendChild(el("div", "sheet-file", '<span class="sheet-file-ext">' + esc(ext) + '</span><span class="sheet-file-name">' + esc(x.file.name) + "</span>"));
       }
       tile.appendChild(el("span", "sheet-tile-num", String(i + 1)));
+      if (x.warn) tile.appendChild(el("span", "sheet-tile-warn", WARN_TEXT[x.warn]));
       var rm = el("button", "sheet-tile-rm", ICON_X);
       rm.type = "button";
       rm.setAttribute("aria-label", "Remove " + (i + 1));
@@ -152,6 +192,19 @@
       ? ICON_CAM + " Add another page"
       : ICON_PLUS + " Add another file";
     sHint.hidden = !photos;
+    var notes = [];
+    active.files.forEach(function (x, i) {
+      if (x.warn) notes.push((notes.length ? "photo " : "Photo ") + (i + 1) +
+                             (x.warn === "dark" ? " is too dark" : " looks blurry"));
+    });
+    if (notes.length) {
+      var joined = notes.length === 1 ? notes[0] : notes.slice(0, -1).join(", ") + " and " + notes[notes.length - 1];
+      sWarn.textContent = joined + ". For a faster review, remove " + (notes.length === 1 ? "it" : "them") +
+        " with ✕ and retake in good light, holding steady.";
+      sWarn.hidden = false;
+    } else {
+      sWarn.hidden = true;
+    }
   }
 
   function openSheet(form, newFiles) {
@@ -160,7 +213,13 @@
       active = { form: form, files: [] };
     }
     newFiles.forEach(function (f) {
-      active.files.push({ file: f, url: isImage(f) && !/heic/i.test(f.type + f.name) ? URL.createObjectURL(f) : null });
+      var entry = { file: f, url: isImage(f) && !/heic/i.test(f.type + f.name) ? URL.createObjectURL(f) : null, warn: null };
+      active.files.push(entry);
+      var mine = active;
+      checkPhoto(f).then(function (w) {
+        entry.warn = w;
+        if (w && active === mine && !sheet.hidden && !sending) renderSheet();
+      });
     });
     if (!active.files.length) return;
     sErr.hidden = true;
@@ -414,8 +473,17 @@
       if (!blob) return;
       var key = camForm.getAttribute("data-doc");
       var n = shots.length + 1;
-      shots.push(new File([blob], key + "-" + stamp() + "-p" + n + ".jpg", { type: "image/jpeg" }));
+      var shot = new File([blob], key + "-" + stamp() + "-p" + n + ".jpg", { type: "image/jpeg" });
+      shots.push(shot);
       updateCamUi();
+      checkPhoto(shot).then(function (w) {
+        if (!w || shots[shots.length - 1] !== shot) return;
+        cTip.textContent = w === "dark"
+          ? "That one came out dark. Move somewhere brighter and take it again."
+          : "That one looks blurry. Hold steady, let it focus, and take it again.";
+        cTip.classList.add("warn");
+        setTimeout(function () { cTip.classList.remove("warn"); }, 4000);
+      });
     }, "image/jpeg", JPEG_Q);
   });
 

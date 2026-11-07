@@ -61,6 +61,47 @@
       </form>
     </div>
 
+    <div class="card card-pad-sm" id="notifications">
+      <div class="card-title" style="font-size:.95rem">Notifications</div>
+      <p class="small muted">We always email you. You can also get alerts on this phone and text reminders.</p>
+
+      <div class="setting-row">
+        <div>
+          <strong>Alerts on this device</strong>
+          <span class="tiny faint" data-push-state>Checking…</span>
+        </div>
+        <button class="btn btn-soft btn-sm" type="button" data-push-on hidden>Turn on</button>
+        <button class="btn btn-ghost btn-sm" type="button" data-push-off hidden>Turn off</button>
+      </div>
+      <p class="tiny faint" data-push-ios hidden style="margin:6px 0 0">
+        On iPhone, add this portal to your home screen first (Share, then Add to Home Screen) and open it from there.
+      </p>
+
+      {% if sms_enabled %}
+        <div class="setting-row">
+          <div>
+            <strong>Text reminders</strong>
+            <span class="tiny faint">
+              {% if user.sms_opt_in_at %}On, to {{ user.phone }}{% elif not user.phone %}Add your phone number above first{% else %}Off{% endif %}
+            </span>
+          </div>
+          {% if user.sms_opt_in_at %}
+            <form method="post" action="{{ url_for('notify.portal_texts') }}">
+              {{ csrf_field() }}<input type="hidden" name="enable" value="0">
+              <button class="btn btn-ghost btn-sm" type="submit">Turn off</button>
+            </form>
+          {% endif %}
+        </div>
+        {% if not user.sms_opt_in_at and user.phone %}
+          <form method="post" action="{{ url_for('notify.portal_texts') }}" style="margin-top:8px">
+            {{ csrf_field() }}<input type="hidden" name="enable" value="1">
+            <label class="check" style="margin-bottom:10px"><input type="checkbox" name="consent" value="1" required><span>{{ sms_consent }}</span></label>
+            <button class="btn btn-soft btn-sm" type="submit">Turn on texts</button>
+          </form>
+        {% endif %}
+      {% endif %}
+    </div>
+
     {% if order %}
       <div class="card card-pad-sm">
         <div class="card-title" style="font-size:.95rem">Payment</div>

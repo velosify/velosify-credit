@@ -16,7 +16,7 @@ import secrets
 import sqlite3
 from datetime import datetime, timedelta, timezone
 
-from flask import request, session
+from flask import has_request_context, request, session
 
 from db import get_db, utcnow
 
@@ -279,8 +279,9 @@ def audit(action: str, *, actor: dict | None = None, target_user_id: int | None 
              target_user_id,
              target_doc_id,
              detail[:500],
-             client_ip(),
-             (request.headers.get("User-Agent") or "")[:250]),
+             # The reminder loop writes here with no request behind it.
+             client_ip() if has_request_context() else "",
+             (request.headers.get("User-Agent") or "")[:250] if has_request_context() else ""),
         )
     except Exception:  # pragma: no cover - auditing must not break a request
         pass

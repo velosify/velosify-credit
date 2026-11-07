@@ -15,6 +15,30 @@
 </div>
 
 {% if packet.status == 'signed' %}
+  {#  Where each letter is on its way to the bureau. #}
+  <div class="card" style="margin-bottom:22px" id="mailing">
+    <div class="card-title">Where your letters are</div>
+    <div class="mail-list">
+      {% for it in items %}
+        {% set m = it | mail_status %}
+        <div class="mail-row">
+          <div class="mail-title">{{ it.title }}</div>
+          <ol class="mail-steps">
+            <li class="done"><span></span>Signed</li>
+            <li class="{{ 'done' if m.mailed }}"><span></span>{% if m.mailed %}Mailed {{ m.mailed | date }}{% else %}Being mailed{% endif %}</li>
+            <li class="{{ 'done' if m.delivered }}"><span></span>{% if m.delivered %}Delivered {{ m.delivered | date }}{% else %}Delivered{% endif %}</li>
+          </ol>
+          {% if m.due %}
+            <p class="tiny muted mb-0">
+              The bureau should respond by <strong>{{ m.due | date }}</strong>.
+              {% if m.track_url %}<a href="{{ m.track_url }}" target="_blank" rel="noopener">Track with USPS</a>{% endif %}
+            </p>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
   <div class="card" style="margin-bottom:22px">
     <div class="card-title">Signed letters</div>
     <div class="stack">

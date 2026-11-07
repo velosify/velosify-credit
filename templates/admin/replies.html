@@ -1,0 +1,52 @@
+{% extends "base_app.html" %}
+{% block title %}Saved replies | {{ cfg.BRAND_NAME }}{% endblock %}
+
+{% block body %}
+<div class="page-head">
+  <h1>Saved replies</h1>
+  <p class="muted mb-0">
+    Ready-made answers for the questions that come up every week. They appear
+    in the message box on every client file. Write <code>{first_name}</code>
+    where the client's first name should go.
+  </p>
+</div>
+
+<div class="grid portal-split" style="align-items:start">
+  <div class="stack">
+    {% for r in replies %}
+      <details class="card reply-card">
+        <summary>
+          <strong>{{ r.title }}</strong>
+          <span class="small muted reply-preview">{{ r.body }}</span>
+        </summary>
+        <form method="post" style="margin-top:14px">
+          {{ csrf_field() }}
+          <input type="hidden" name="id" value="{{ r.id }}">
+          <div class="field"><label for="t{{ r.id }}">Name</label>
+            <input class="input" id="t{{ r.id }}" name="title" value="{{ r.title }}" maxlength="80" required></div>
+          <div class="field"><label for="b{{ r.id }}">Message</label>
+            <textarea class="input" id="b{{ r.id }}" name="body" rows="5" maxlength="2000" required>{{ r.body }}</textarea></div>
+          <div class="row" style="gap:8px">
+            <button class="btn btn-primary btn-sm" type="submit">Save</button>
+            <button class="btn btn-quiet btn-sm" type="submit" form="del-{{ r.id }}">Delete</button>
+          </div>
+        </form>
+        <form method="post" id="del-{{ r.id }}" hidden data-confirm="Delete “{{ r.title }}”?"
+              action="{{ url_for('casework.delete_reply', reply_id=r.id) }}">{{ csrf_field() }}</form>
+      </details>
+    {% else %}
+      <div class="card"><p class="muted mb-0">No saved replies yet. Add your first one.</p></div>
+    {% endfor %}
+  </div>
+
+  <form method="post" class="card">
+    {{ csrf_field() }}
+    <div class="card-title" style="margin-bottom:14px">Add a reply</div>
+    <div class="field"><label for="new-title">Name</label>
+      <input class="input" id="new-title" name="title" maxlength="80" required placeholder="e.g. How long does it take?"></div>
+    <div class="field"><label for="new-body">Message</label>
+      <textarea class="input" id="new-body" name="body" rows="6" maxlength="2000" required placeholder="Hi {first_name}, …"></textarea></div>
+    <button class="btn btn-primary btn-sm" type="submit">Add reply</button>
+  </form>
+</div>
+{% endblock %}

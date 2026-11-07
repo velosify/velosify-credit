@@ -84,6 +84,17 @@ DOCUMENT_TYPES = [
                 "identitytheft.gov and upload the PDF.",
     },
     {
+        "key": "bureau_letter",
+        "camera": True,
+        "capture_tip": "Lay each page flat in good light. Take every page, including the back if there's printing on it.",
+        "frame": "page",
+        "label": "Letter from a credit bureau",
+        "short": "Bureau letter",
+        "required": False,
+        "help": "Got mail from Experian, Equifax or TransUnion about your disputes? "
+                "Snap every page here so we can act on it right away.",
+    },
+    {
         "key": "other",
         "camera": True,
         "capture_tip": "Photograph each page. You can take several before uploading.",
@@ -374,6 +385,12 @@ _ADDED_COLUMNS = [
     ("letter_packets", "last_opened_at", "TEXT"),
     ("letter_packets", "open_count", "INTEGER NOT NULL DEFAULT 0"),
     ("letter_packets", "read_through_at", "TEXT"),
+    # Certified mail, per letter, once it has been signed and printed.
+    ("letter_items", "tracking_number", "TEXT NOT NULL DEFAULT ''"),
+    ("letter_items", "mailed_at", "TEXT"),
+    ("letter_items", "delivered_at", "TEXT"),
+    # Set only by the client switching reminder texts on; cleared when off.
+    ("users", "sms_opt_in_at", "TEXT"),
 ]
 
 
@@ -411,6 +428,11 @@ def init_db() -> None:
         conn.executescript(_LETTERS_SCHEMA)
         from affiliates import SCHEMA as _AFFILIATES_SCHEMA
         conn.executescript(_AFFILIATES_SCHEMA)
+        from notify import SCHEMA as _NOTIFY_SCHEMA
+        conn.executescript(_NOTIFY_SCHEMA)
+        from casework import SCHEMA as _CASEWORK_SCHEMA, seed_replies
+        conn.executescript(_CASEWORK_SCHEMA)
+        seed_replies(conn)
         _apply_added_columns(conn)
         conn.executescript(LATE_INDEXES)
         conn.commit()

@@ -18,7 +18,7 @@
   <h1 class="hello-name">Hi {{ user.first_name or 'there' }}</h1>
 </div>
 
-{% set todo = leads.new + waiting.documents + waiting.messages + clients.unassigned %}
+{% set todo = leads.new + waiting.documents + waiting.messages + clients.unassigned + follow.total %}
 <div class="admin-top">
   {#  The number people open this page for, on the same card the clients
       see their case on. #}
@@ -92,6 +92,22 @@
           <span class="chev" aria-hidden="true">›</span>
         </a>
       {% endif %}
+      {#  Files stuck on the team rather than the client. #}
+      {% set fu_rows = [
+        ('ready', 'Ready for letters', 'Documents in, nothing drafted', ''),
+        ('unsigned', 'Letters unsigned 3+ days', 'Give them a call', 'warn'),
+        ('to_mail', 'Signed letters to mail', 'Print, mail, add tracking', 'hot'),
+        ('overdue', 'Bureau responses overdue', 'Past 35 days, log the result', 'warn')] %}
+      {% for key, title, sub, tone in fu_rows if follow.counts[key] %}
+        <a class="list-row" href="{{ url_for('casework.followups_page') }}#{{ key }}">
+          <span class="todo-count {{ tone }}">{{ follow.counts[key] }}</span>
+          <span class="list-row-main">
+            <span class="list-row-title">{{ title }}</span>
+            <span class="list-row-sub">{{ sub }}</span>
+          </span>
+          <span class="chev" aria-hidden="true">›</span>
+        </a>
+      {% endfor %}
     {% else %}
       <div class="caught-up">
         <span class="sheet-done-ico">✓</span>

@@ -59,6 +59,56 @@
     thread.scrollTop = thread.scrollHeight;
   })();
 
+  /* ---- Saved replies -------------------------------------------------
+     Picking one puts it in the message box (after anything already typed)
+     and leaves it there to edit. The picker resets so it can be used again. */
+  document.querySelectorAll("select[data-reply-pick]").forEach(function (pick) {
+    var box = pick.closest("form").querySelector("textarea");
+    pick.addEventListener("change", function () {
+      if (!pick.value || !box) return;
+      box.value = box.value.trim() ? box.value.replace(/\s+$/, "") + "\n\n" + pick.value : pick.value;
+      pick.value = "";
+      box.dispatchEvent(new Event("input"));
+      box.focus();
+    });
+  });
+
+  /* ---- Bulk actions on the client list --------------------------------
+     The action bar counts what is ticked, shows the fields for the chosen
+     action, and the header box ticks everything. */
+  (function () {
+    var form = document.getElementById("bulk-form");
+    if (!form) return;
+    var boxes = Array.prototype.slice.call(form.querySelectorAll("input[name=ids]"));
+    var all = form.querySelector("[data-bulk-all]");
+    var bar = form.querySelector(".bulk-bar");
+    var count = form.querySelector("[data-bulk-count]");
+    var action = form.querySelector("select[name=action]");
+    function sync() {
+      var n = boxes.filter(function (b) { return b.checked; }).length;
+      bar.classList.toggle("is-on", n > 0);
+      count.textContent = n + (n === 1 ? " client selected" : " clients selected");
+      if (all) all.checked = n === boxes.length && n > 0;
+    }
+    function fields() {
+      form.querySelectorAll("[data-bulk-for]").forEach(function (el) {
+        el.hidden = el.getAttribute("data-bulk-for") !== action.value;
+      });
+    }
+    boxes.forEach(function (b) { b.addEventListener("change", sync); });
+    if (all) all.addEventListener("change", function () {
+      boxes.forEach(function (b) { b.checked = all.checked; });
+      sync();
+    });
+    action.addEventListener("change", fields);
+    form.querySelector("[data-bulk-clear]").addEventListener("click", function () {
+      boxes.forEach(function (b) { b.checked = false; });
+      sync();
+    });
+    sync();
+    fields();
+  })();
+
   /* ---- Upload dropzones ----------------------------------------------
      Each .dropzone wraps a hidden <input type="file">. Clicking the zone
      opens the picker; dragging files onto it assigns them directly. The

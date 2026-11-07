@@ -1,0 +1,57 @@
+{% extends "base_app.html" %}
+{% block title %}Follow-ups | {{ cfg.BRAND_NAME }}{% endblock %}
+
+{#  Files waiting on the team, grouped by what needs doing. Each row is one
+    tap from the fix. Clients waiting on themselves are not here: the
+    automatic reminders handle those. #}
+{% block body %}
+<div class="page-head row-between">
+  <div>
+    <h1>Follow-ups</h1>
+    <p class="muted mb-0">
+      {% if data.total %}{{ data.total }} thing{{ '' if data.total == 1 else 's' }} waiting on {{ 'you' if is_specialist else 'the team' }}.
+      {% else %}Nothing is stuck. Every file is moving.{% endif %}
+    </p>
+  </div>
+  {% if is_admin %}
+    <form method="post" action="{{ url_for('notify.run_now') }}"
+          data-confirm="Send every reminder that's due now? Clients are only ever reminded once per step.">
+      {{ csrf_field() }}
+      <button class="btn btn-soft btn-sm" type="submit">Send due reminders now</button>
+    </form>
+  {% endif %}
+</div>
+
+<div class="fu-grid">
+  {% for key, title, sub, rows in data.groups %}
+    <section class="list-card" id="{{ key }}">
+      <div class="list-card-head">
+        <div>
+          <h2>{{ title }}</h2>
+          <p class="tiny faint mb-0">{{ sub }}</p>
+        </div>
+        <span class="todo-count {{ 'warn' if rows else '' }}">{{ rows | length }}</span>
+      </div>
+      {% for r in rows %}
+        <a class="list-row" href="{{ r.href }}">
+          <span class="thread-avatar" aria-hidden="true">{{ (r.first_name or r.email or '?')[:1] | upper }}</span>
+          <span class="list-row-main">
+            <span class="list-row-title">{{ r.first_name }} {{ r.last_name }}</span>
+            <span class="list-row-sub">{{ r.why }}</span>
+          </span>
+          <span class="link-more nowrap">{{ r.cta }} ›</span>
+        </a>
+      {% else %}
+        <p class="empty">All clear.</p>
+      {% endfor %}
+    </section>
+  {% endfor %}
+</div>
+
+<p class="small faint" style="margin-top:18px">
+  Clients are reminded automatically by email{{ ', text' if cfg.SMS_ENABLED }} and phone notification
+  24 hours after letters go unopened, 48 hours after they're opened but unsigned, and 2 and 7 days
+  after enrolling if documents are missing. Reminders go out between {{ cfg.REMINDER_HOURS[0] }}:00
+  and {{ cfg.REMINDER_HOURS[1] }}:00, once per step.
+</p>
+{% endblock %}

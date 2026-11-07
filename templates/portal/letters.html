@@ -24,12 +24,15 @@
         <div>
           <div class="card-title">{{ p.title }}</div>
           <p class="small muted mb-0">
-            {% if p.status == 'signed' %}Signed {{ p.signed_at | datetime }}
+            {% if p.status == 'signed' %}
+              {% if p.n_delivered == p.n_letters %}Delivered to the bureaus
+              {% elif p.n_mailed %}{{ p.n_mailed }} of {{ p.n_letters }} mailed{% if p.n_delivered %}, {{ p.n_delivered }} delivered{% endif %}
+              {% else %}Signed {{ p.signed_at | datetime }} &middot; being mailed{% endif %}
             {% else %}Waiting for your signature{% endif %}
           </p>
         </div>
         {% if p.status == 'signed' %}
-          <a class="btn btn-ghost btn-sm" href="{{ url_for('letters.portal_sign', packet_id=p.id) }}">View signed letters</a>
+          <a class="btn btn-ghost btn-sm" href="{{ url_for('letters.portal_sign', packet_id=p.id) }}">Track &amp; view</a>
         {% else %}
           <a class="btn btn-primary btn-sm" href="{{ url_for('letters.portal_sign', packet_id=p.id) }}">Review and sign</a>
         {% endif %}

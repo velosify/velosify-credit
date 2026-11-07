@@ -78,10 +78,14 @@
 {% endif %}
 
 {% if clients %}
+  {#  Admins can tick several rows and act on them at once. The bar sits at
+      the bottom of the screen once anything is ticked. #}
+  {% if is_admin %}<form method="post" action="{{ url_for('casework.bulk') }}" id="bulk-form">{{ csrf_field() }}{% endif %}
   <div class="table-wrap">
     <table class="data stack-phone">
       <thead>
         <tr>
+          {% if is_admin %}<th class="cell-check"><input type="checkbox" data-bulk-all aria-label="Select all clients"></th>{% endif %}
           <th>Client</th>
           <th>Stage</th>
           {% if is_admin %}<th>Assigned</th><th>Payment</th>{% endif %}
@@ -93,6 +97,7 @@
       <tbody>
         {% for c in clients %}
           <tr>
+            {% if is_admin %}<td class="cell-check"><input type="checkbox" name="ids" value="{{ c.id }}" aria-label="Select {{ c.first_name }} {{ c.last_name }}"></td>{% endif %}
             <td class="cell-main">
               <div class="strong">
                 {{ c.first_name }} {{ c.last_name }}
@@ -132,6 +137,34 @@
       </tbody>
     </table>
   </div>
+  {% if is_admin %}
+    <div class="bulk-bar" role="region" aria-label="Bulk actions">
+      <span class="bulk-count" data-bulk-count>0 clients selected</span>
+      <select class="select select-sm" name="action" aria-label="What to do">
+        <option value="assign">Assign to…</option>
+        <option value="stage">Move to stage…</option>
+        <option value="message">Send a message…</option>
+      </select>
+      <span data-bulk-for="assign">
+        <select class="select select-sm" name="specialist_id" aria-label="Specialist">
+          {% for s in specialists %}<option value="{{ s.id }}">{{ s.first_name }} {{ s.last_name }}</option>{% endfor %}
+          <option value="none">Nobody (unassign)</option>
+        </select>
+      </span>
+      <span data-bulk-for="stage" hidden>
+        <select class="select select-sm" name="stage" aria-label="Stage">
+          {% for key, label in CASE_STAGES %}<option value="{{ key }}">{{ label }}</option>{% endfor %}
+        </select>
+      </span>
+      <span data-bulk-for="message" hidden class="bulk-msg">
+        <textarea class="input" name="body" rows="2" maxlength="4000" placeholder="Hi {first_name}, …"></textarea>
+        <span class="tiny faint">{first_name} becomes each client's first name. Sent to each client's own thread.</span>
+      </span>
+      <button class="btn btn-primary btn-sm" type="submit" data-busy="Working…">Apply</button>
+      <button class="btn btn-quiet btn-sm" type="button" data-bulk-clear>Clear</button>
+    </div>
+  </form>
+  {% endif %}
 {% else %}
   <div class="card text-center">
     <p class="muted mb-0">

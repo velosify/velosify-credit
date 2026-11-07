@@ -79,6 +79,29 @@ Set `RESEND_API_KEY` and `MAIL_FROM` to send real mail. Without a key, every
 message is printed to the console instead of disappearing silently. Emails
 sent: client welcome, admin new-client alert, admin documents-complete alert.
 
+### Text message reminders (optional)
+
+Set `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` and `TWILIO_FROM_NUMBER` (in
+`+15551234567` form) to text clients who switch texts on themselves. With any
+of them missing, texting is off and the option is hidden; email reminders
+still go out. The consent wording a client agreed to is in the audit log.
+
+### Reminders
+
+Clients are reminded automatically (email, plus text and phone notification
+where they turned those on) 24 hours after a letter packet goes unopened,
+48 hours after it is opened but unsigned, and 2 and 7 days after enrolling if
+required documents are missing. Each reminder is sent once. They go out
+between 9:00 and 20:00 Detroit time; change with `REMINDER_START_HOUR` and
+`REMINDER_END_HOUR`, or switch off with `REMINDERS_ENABLED=0`. Admins can
+send whatever is due right away from **Follow-ups**.
+
+### Phone notifications
+
+Nothing to configure. The signing keys are generated on first use and kept
+in the database. Clients turn notifications on from the Home screen or
+Account page; on iPhone they first add the portal to the home screen.
+
 ---
 
 ## Deploying to Railway

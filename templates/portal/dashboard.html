@@ -131,9 +131,11 @@
 
 <!-- ---------- Shortcuts ---------- -->
 <nav class="quick" aria-label="Shortcuts">
-  <a class="quick-item" href="{{ url_for('portal_documents') }}">
-    <span class="quick-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg></span>
-    <span>Upload</span>
+  {#  Bureau letters arrive by post weeks after a dispute. This is the one
+      document a client has to act on long after intake, so it gets a tile. #}
+  <a class="quick-item" href="{{ url_for('portal_documents', scan='bureau_letter') }}">
+    <span class="quick-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></span>
+    <span>Scan mail</span>
   </a>
   <a class="quick-item" href="{{ url_for('portal_messages') }}">
     <span class="quick-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2z"/></svg>
@@ -150,6 +152,152 @@
     <span>Agreement</span>
   </a>
 </nav>
+
+
+{#  ---------- Results ----------
+    What the client is paying for: their scores and what has come off their
+    reports. Shown from day one with an empty state, so they know it's coming. #}
+<div class="results-grid">
+  <section class="list-card" id="scores" aria-label="Your credit scores">
+    <div class="list-card-head">
+      <h2>Your credit scores</h2>
+      {% if scores %}
+        {% set dated = scores.cards | selectattr('score') | map(attribute='as_of') | list %}
+        <span class="tiny faint">Updated {{ (dated | max) | date }}</span>
+      {% endif %}
+    </div>
+    {% if scores %}
+      <div class="score-trio">
+        {% for c in scores.cards %}
+          <div class="score-tile">
+            <span class="score-bureau" style="--c: {{ c.color or 'var(--text-faint)' }}">{{ c.label }}</span>
+            {% if c.score %}
+              <strong class="score-num">{{ c.score }}</strong>
+              <span class="score-band band-{{ c.tone }}">{{ c.band }}</span>
+              {% if c.change %}
+                <span class="score-delta {{ 'up' if c.change > 0 else 'down' }}">{{ '▲' if c.change > 0 else '▼' }} {{ c.change | abs }}</span>
+              {% else %}
+                <span class="score-delta">Starting point</span>
+              {% endif %}
+            {% else %}
+              <strong class="score-num faint">&mdash;</strong>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+      {% if scores.chart %}
+        {% set ch = scores.chart %}
+        <svg class="score-chart" viewBox="0 0 {{ ch.w }} {{ ch.h + 22 }}" role="img"
+             aria-label="Score history for each bureau">
+          {% for g in ch.grid %}
+            <line x1="36" x2="{{ ch.w - 10 }}" y1="{{ g.y }}" y2="{{ g.y }}" class="grid"/>
+            <text x="28" y="{{ g.y + 4 }}" class="axis" text-anchor="end">{{ g.v }}</text>
+          {% endfor %}
+          {% for l in ch.labels %}
+            <text x="{{ l.x }}" y="{{ ch.h + 16 }}" class="axis" text-anchor="middle">{{ l.text }}</text>
+          {% endfor %}
+          {% for sr in ch.series %}
+            <polyline points="{{ sr.points }}" fill="none" stroke="{{ sr.color }}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+            {% for x, y, v in sr.dots %}<circle cx="{{ x }}" cy="{{ y }}" r="4" fill="#fff" stroke="{{ sr.color }}" stroke-width="2.5"><title>{{ sr.label }} {{ v }}</title></circle>{% endfor %}
+          {% endfor %}
+        </svg>
+        <div class="chart-key">
+          {% for sr in ch.series %}<span><i style="background: {{ sr.color }}"></i>{{ sr.label }}</span>{% endfor %}
+        </div>
+      {% endif %}
+    {% else %}
+      <div class="empty-state">
+        <span class="empty-ico" aria-hidden="true">📈</span>
+        <p>Your starting scores appear here once we've reviewed your credit report, then again after every round of disputes.</p>
+      </div>
+    {% endif %}
+  </section>
+
+  <section class="list-card" id="disputes" aria-label="Items we're disputing">
+    <div class="list-card-head">
+      <h2>Items we're disputing</h2>
+      {% if disputes %}<span class="badge badge-success">{{ disputes.removed }} of {{ disputes.total }} fixed</span>{% endif %}
+    </div>
+    {% if disputes %}
+      <div class="dispute-progress">
+        <div class="score-track" style="margin:0"><div class="score-fill" style="width: {{ disputes.percent }}%"></div></div>
+        <p class="tiny faint mb-0">
+          {{ disputes.removed }} removed or corrected &middot; {{ disputes.open }} still with the bureaus
+        </p>
+      </div>
+      {% for it in disputes['items'][:8] %}
+        <div class="list-row dispute-row">
+          <span class="bureau-chip b-{{ it.bureau }}">{{ it.bureau_label[:2] if it.bureau != 'transunion' else 'TU' }}</span>
+          <span class="list-row-main">
+            <span class="list-row-title">{{ it.creditor }}{% if it.account_ref %} <span class="faint">··{{ it.account_ref }}</span>{% endif %}</span>
+            <span class="list-row-sub">{{ it.bureau_label }} &middot; {{ it.type_label }}</span>
+            {% if it.status in ('in_review', 'verified') or it.note %}<span class="list-row-sub">{{ it.note or it.st.client }}</span>{% endif %}
+          </span>
+          <span class="badge {{ it.st.badge }}">{{ it.st.chip }}</span>
+        </div>
+      {% endfor %}
+      {% if disputes.total > 8 %}<p class="tiny faint" style="padding:6px 20px 14px;margin:0">and {{ disputes.total - 8 }} more</p>{% endif %}
+    {% else %}
+      <div class="empty-state">
+        <span class="empty-ico" aria-hidden="true">🗂️</span>
+        <p>Every account we challenge will be listed here with its status, so you can watch items come off your reports.</p>
+      </div>
+    {% endif %}
+  </section>
+</div>
+
+{#  ---------- Stay in the loop ---------- #}
+{% set want_sms = sms_enabled and not user.sms_opt_in_at %}
+<div class="stay-grid">
+  {#  Shown by push.js only where the browser can actually do it. #}
+  <section class="stay-card" data-push-card hidden>
+    <span class="stay-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg></span>
+    <div class="stay-text">
+      <strong>Get notified on this phone</strong>
+      <span data-push-copy>We'll let you know the moment letters are ready or something comes off your report.</span>
+    </div>
+    <button class="btn btn-primary btn-sm" type="button" data-push-on>Turn on</button>
+  </section>
+
+  <section class="stay-card" data-push-ios hidden>
+    <span class="stay-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/></svg></span>
+    <div class="stay-text">
+      <strong>Add this portal to your home screen</strong>
+      <span>Tap the Share button <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:-2px"><path d="M12 15V3"/><path d="m7 8 5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg> in Safari, then <strong>Add to Home Screen</strong>. Open it from there to turn on notifications.</span>
+    </div>
+  </section>
+
+  {% if want_sms %}
+    <section class="stay-card">
+      <span class="stay-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2z"/></svg></span>
+      <form method="post" action="{{ url_for('notify.portal_texts') }}" class="stay-text">
+        {{ csrf_field() }}
+        <input type="hidden" name="enable" value="1">
+        <input type="hidden" name="next" value="{{ url_for('portal') }}">
+        <strong>Get text reminders{% if user.phone %} at {{ user.phone }}{% endif %}</strong>
+        <label class="stay-consent"><input type="checkbox" name="consent" value="1" required> {{ sms_consent }}</label>
+        <button class="btn btn-soft btn-sm" type="submit">Turn on texts</button>
+      </form>
+    </section>
+  {% endif %}
+
+  {% if referral %}
+    <section class="stay-card refer-card">
+      <span class="stay-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v9H4v-9"/><path d="M2 7h20v5H2z"/><path d="M12 21V7"/><path d="M12 7H7.5a2.5 2.5 0 1 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 1 0 0-5C13 2 12 7 12 7z"/></svg></span>
+      <div class="stay-text">
+        <strong>Know someone who needs this?</strong>
+        <span>Share your personal link. When a friend books a call through it, we'll know you sent them.
+          {% if referral.referred %}<b>{{ referral.referred }} friend{{ '' if referral.referred == 1 else 's' }} so far, thank you!</b>{% endif %}</span>
+        <div class="token-box" id="ref-link">{{ referral.link }}</div>
+        <div class="row" style="gap:8px">
+          <button class="btn btn-primary btn-sm" type="button" data-share="{{ referral.link }}"
+                  data-share-text="I've been using Velosify Credit to fix my credit report. Book a free call here:">Share</button>
+          <button class="btn btn-soft btn-sm" type="button" data-copy="#ref-link">Copy link</button>
+        </div>
+      </div>
+    </section>
+  {% endif %}
+</div>
 
 <div class="grid portal-split" id="case-grid">
   <div class="stack">

@@ -6,6 +6,8 @@ pillow>=10.0
 # Phone photos arrive as HEIC, which no browser can display. Converted to
 # JPEG on the fly for the in-page preview.
 pillow-heif>=0.18
+# Phone notifications for clients who add the portal to their home screen.
+pywebpush>=2.0
 
 # Optional. Only imported when SENTRY_DSN is set; the app runs without it.
 # sentry-sdk[flask]>=2.0

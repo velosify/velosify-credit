@@ -265,6 +265,21 @@ RESEND_API_KEY = _env("RESEND_API_KEY")
 MAIL_FROM = _env("MAIL_FROM", f"{BRAND_NAME} <no-reply@{BRAND_DOMAIN}>")
 ADMIN_ALERT_EMAIL = _env("ADMIN_ALERT_EMAIL", SUPPORT_EMAIL)
 
+# --- Text messages (Twilio) ----------------------------------------------
+# All three set means reminders also go out by text to clients who opted in.
+# Any one missing and texting is simply off; email reminders still send.
+TWILIO_ACCOUNT_SID = _env("TWILIO_ACCOUNT_SID")
+TWILIO_AUTH_TOKEN = _env("TWILIO_AUTH_TOKEN")
+TWILIO_FROM_NUMBER = _env("TWILIO_FROM_NUMBER")
+SMS_ENABLED = bool(TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN and TWILIO_FROM_NUMBER)
+
+# --- Reminders ------------------------------------------------------------
+# Automatic nudges for unopened or unsigned letters and missing documents.
+# Set REMINDERS_ENABLED=0 to switch them off. They only go out between
+# REMINDER_HOURS (local time, 24h clock), so nobody is texted at 3am.
+REMINDERS_ENABLED = _env("REMINDERS_ENABLED", "1") not in ("0", "false", "no", "off")
+REMINDER_HOURS = (_env_int("REMINDER_START_HOUR", 9), _env_int("REMINDER_END_HOUR", 20))
+
 # --- Admin bootstrap ------------------------------------------------------
 # On first boot, if this email is set, the account is created (or promoted)
 # as an admin with ADMIN_BOOTSTRAP_PASSWORD.

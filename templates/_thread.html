@@ -46,6 +46,18 @@
 
 <form method="post" action="{{ action }}" class="composer" data-guard>
   {{ csrf_field() }}
+  {#  Staff only: one tap drops a prepared answer into the box, already
+      addressed to this client, to edit before sending. #}
+  {% if viewer == 'staff' and saved_replies %}
+    <div class="reply-picker js-only">
+      <label class="sr-only" for="reply-pick">Insert a saved reply</label>
+      <select class="select select-sm" id="reply-pick" data-reply-pick>
+        <option value="">Insert a saved reply…</option>
+        {% for r in saved_replies %}<option value="{{ r.filled }}">{{ r.title }}</option>{% endfor %}
+      </select>
+      {% if is_admin %}<a class="tiny" href="{{ url_for('casework.replies_page') }}">Edit replies</a>{% endif %}
+    </div>
+  {% endif %}
   <label class="sr-only" for="body">Message</label>
   <textarea class="input" id="body" name="body" rows="3" required
             maxlength="4000" data-autogrow

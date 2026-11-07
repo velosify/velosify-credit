@@ -77,7 +77,10 @@ CREATE TABLE IF NOT EXISTS letter_items (
     packet_id INTEGER NOT NULL REFERENCES letter_packets(id) ON DELETE CASCADE,
     position  INTEGER NOT NULL,
     title     TEXT    NOT NULL,
-    body      TEXT    NOT NULL
+    body      TEXT    NOT NULL,
+    tracking_number TEXT NOT NULL DEFAULT '',
+    mailed_at       TEXT,
+    delivered_at    TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_letter_items_packet ON letter_items(packet_id, position);
 
@@ -509,6 +512,12 @@ def staff_new(user_id: int):
                     f"we'll fix it first.\n\nVelosify Credit")
             except Exception:  # an email failure must not undo the packet
                 pass
+            import notify
+            notify.push_to_user(user_id, "Your letters are ready to sign",
+                                f"{form['title']}: {len(pairs)} letter(s). Read them and sign in about 2 minutes.",
+                                url_for("letters.portal_sign", packet_id=pid), conn=conn)
+            notify.text_client(client, f"Your dispute letters are ready to sign: "
+                                       f"{config.APP_BASE_URL.rstrip('/')}{url_for('letters.portal_sign', packet_id=pid)}")
             flash("Packet created and the client has been emailed.", "success")
             return redirect(url_for("letters.staff_view", user_id=user_id, packet_id=pid))
     return render_template("admin/letters_new.html", client=client, form=form, errors=errors)
@@ -545,6 +554,84 @@ def staff_view(user_id: int, packet_id: int):
                            sig=dict(sig) if sig else None, files=files)
 
 
+USPS_TRACK = "https://tools.usps.com/go/TrackConfirmAction?tLabels="
+BUREAU_DAYS = 30   # the FCRA's window, counted from when the bureau receives it
+
+
+def mail_status(item: dict) -> dict:
+    """What to say about one letter's journey, for staff and the client."""
+    from datetime import date, timedelta
+    out = {"mailed": item.get("mailed_at"), "delivered": item.get("delivered_at"),
+           "tracking": item.get("tracking_number") or "", "due": None, "track_url": None}
+    if out["tracking"]:
+        out["track_url"] = USPS_TRACK + out["tracking"]
+    start = out["delivered"] or out["mailed"]
+    if start:
+        try:
+            d = date.fromisoformat(start[:10]) + timedelta(days=BUREAU_DAYS + (0 if out["delivered"] else 5))
+            out["due"] = d.isoformat()
+        except ValueError:
+            pass
+    return out
+
+
+@bp.post("/admin/clients/<int:user_id>/letters/<int:packet_id>/mailing")
+@require_staff
+def staff_mailing(user_id: int, packet_id: int):
+    """Tracking number and dates for each signed letter."""
+    client = _visible_client(user_id)
+    conn = get_db()
+    packet = conn.execute("SELECT * FROM letter_packets WHERE id = ? AND client_id = ? AND status = 'signed'",
+                          (packet_id, user_id)).fetchone()
+    if not packet:
+        abort(404)
+    items = [dict(r) for r in conn.execute(
+        "SELECT * FROM letter_items WHERE packet_id = ? ORDER BY position", (packet_id,)).fetchall()]
+    day = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+    newly_mailed, newly_delivered = [], []
+    for it in items:
+        tn = re.sub(r"[^A-Za-z0-9]", "", request.form.get(f"tracking_{it['id']}") or "")[:40]
+        mailed = (request.form.get(f"mailed_{it['id']}") or "").strip()
+        delivered = (request.form.get(f"delivered_{it['id']}") or "").strip()
+        mailed = mailed if day.match(mailed) else None
+        delivered = delivered if day.match(delivered) else None
+        if mailed and not it["mailed_at"]:
+            newly_mailed.append(it["title"])
+        if delivered and not it["delivered_at"]:
+            newly_delivered.append(it["title"])
+        conn.execute("UPDATE letter_items SET tracking_number = ?, mailed_at = ?, delivered_at = ? WHERE id = ?",
+                     (tn, mailed, delivered, it["id"]))
+    me = current_user()
+    if newly_mailed:
+        add_event(conn, user_id, title="Your letters are in the mail",
+                  body="Sent by certified mail: " + ", ".join(newly_mailed) + ". You can follow the "
+                       "tracking on your Letters page.", created_by=me["email"])
+    if newly_delivered:
+        add_event(conn, user_id, title="Your letters were delivered",
+                  body=", ".join(newly_delivered) + f". The bureau now has {BUREAU_DAYS} days to "
+                       "investigate and respond.", created_by=me["email"])
+    audit("letters.mailing", actor=me, target_user_id=user_id,
+          detail=f"packet {packet_id}: mailed {len(newly_mailed)}, delivered {len(newly_delivered)}", conn=conn)
+    conn.commit()
+    import notify
+    if newly_mailed:
+        notify.push_to_user(user_id, "Your letters are in the mail",
+                            f"{len(newly_mailed)} letter(s) sent by certified mail.",
+                            url_for("letters.portal_sign", packet_id=packet_id), conn=conn)
+    if newly_delivered:
+        notify.push_to_user(user_id, "Your letters were delivered",
+                            f"The bureau now has {BUREAU_DAYS} days to respond.",
+                            url_for("letters.portal_sign", packet_id=packet_id), conn=conn)
+    flash("Mailing details saved." + (" The client has been told." if newly_mailed or newly_delivered else ""),
+          "success")
+    return redirect(url_for("letters.staff_view", user_id=user_id, packet_id=packet_id) + "#mailing")
+
+
+@bp.app_template_filter("mail_status")
+def _mail_status_filter(item: dict) -> dict:
+    return mail_status(dict(item))
+
+
 # --------------------------------------------------------------------------
 # client routes
 # --------------------------------------------------------------------------
@@ -553,7 +640,10 @@ def staff_view(user_id: int, packet_id: int):
 def portal_list():
     user = _me_client()
     packets = [dict(r) for r in get_db().execute(
-        "SELECT * FROM letter_packets WHERE client_id = ? AND status != 'void' ORDER BY id DESC",
+        "SELECT p.*, (SELECT COUNT(*) FROM letter_items i WHERE i.packet_id = p.id) AS n_letters, "
+        "(SELECT COUNT(*) FROM letter_items i WHERE i.packet_id = p.id AND i.mailed_at IS NOT NULL) AS n_mailed, "
+        "(SELECT COUNT(*) FROM letter_items i WHERE i.packet_id = p.id AND i.delivered_at IS NOT NULL) AS n_delivered "
+        "FROM letter_packets p WHERE p.client_id = ? AND p.status != 'void' ORDER BY p.id DESC",
         (user["id"],)).fetchall()]
     return render_template("portal/letters.html", packets=packets)
 
@@ -671,6 +761,11 @@ def portal_sign(packet_id: int):
                 f"{url_for('letters.staff_view', user_id=int(user['id']), packet_id=packet_id)}\n")
         except Exception:  # a notification failure must not affect the signing
             pass
+        import notify
+        notify.push_to_case_team(user, f"{user.get('first_name') or 'A client'} signed their letters",
+                                 f"{packet['title']} is ready to print and mail.",
+                                 url_for("letters.staff_view", user_id=int(user["id"]), packet_id=packet_id),
+                                 conn=conn)
         flash("Signed. We'll mail your letters and update your timeline.", "success")
         return redirect(url_for("letters.portal_sign", packet_id=packet_id))
 

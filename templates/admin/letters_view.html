@@ -38,10 +38,43 @@
   </div>
 {% endif %}
 
+{% if packet.status == 'signed' %}
+  {#  Certified mail, letter by letter. Saving a mailed or delivered date for
+      the first time tells the client on their timeline and phone. #}
+  <form method="post" class="card" id="mailing" style="margin-bottom:22px"
+        action="{{ url_for('letters.staff_mailing', user_id=client.id, packet_id=packet.id) }}" data-guard>
+    {{ csrf_field() }}
+    <div class="row-between" style="margin-bottom:6px">
+      <div class="card-title mb-0">Mailing</div>
+      {% set mailed_n = items | selectattr('mailed_at') | list | length %}
+      <span class="badge {{ 'badge-success' if mailed_n == items|length else 'badge-warn' }}">{{ mailed_n }} of {{ items|length }} mailed</span>
+    </div>
+    <p class="small muted">Print each signed letter, send it certified with return receipt, then enter the tracking number and dates here.</p>
+    <div class="mailing-rows">
+      {% for it in items %}
+        {% set m = it | mail_status %}
+        <div class="mailing-row">
+          <div class="mailing-title">
+            <strong>{{ it.title }}</strong>
+            {% if m.due %}<span class="tiny faint">Response due {{ m.due | date }}{% if m.track_url %} · <a href="{{ m.track_url }}" target="_blank" rel="noopener">USPS tracking</a>{% endif %}</span>{% endif %}
+          </div>
+          <label class="field-mini"><span>Tracking number</span>
+            <input class="input input-sm" name="tracking_{{ it.id }}" value="{{ it.tracking_number }}" placeholder="9407…" autocomplete="off"></label>
+          <label class="field-mini"><span>Mailed</span>
+            <input class="input input-sm" type="date" name="mailed_{{ it.id }}" value="{{ (it.mailed_at or '')[:10] }}"></label>
+          <label class="field-mini"><span>Delivered</span>
+            <input class="input input-sm" type="date" name="delivered_{{ it.id }}" value="{{ (it.delivered_at or '')[:10] }}"></label>
+        </div>
+      {% endfor %}
+    </div>
+    <button class="btn btn-primary btn-sm" type="submit" data-busy="Saving…" style="margin-top:12px">Save mailing details</button>
+  </form>
+{% else %}
 <div class="card" style="margin-bottom:22px">
   <div class="card-title">Letters in this packet</div>
   <div class="stack">{% for it in items %}<div>{{ it.title }}</div>{% endfor %}</div>
 </div>
+{% endif %}
 
 {% if packet.status in ('pending', 'signed') %}
   <form method="post" data-confirm="{% if packet.status == 'signed' %}Void this SIGNED packet? The client will lose access to it and will need to sign a new one. The old files stay in the audit record.{% else %}Void this packet? The client will no longer be able to sign it.{% endif %}">
